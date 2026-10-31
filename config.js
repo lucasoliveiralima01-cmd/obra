@@ -12,8 +12,8 @@
    tudo só no navegador de quem abrir (modo local).
    ===================================================================== */
 window.MAPA_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://bqqcllclzlyauprgpjjo.supabase.co/rest/v1/,
+  supabaseAnonKey: 'sb_publishable_w4e3eZ2J2YxzJh0kN2SxuA_QdomuryJ',
 
   // Nome que aparece na tela de login.
   titulo: 'Mapa de Risco',
