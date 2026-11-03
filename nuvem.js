@@ -9,9 +9,20 @@
    ===================================================================== */
 (function () {
   'use strict';
-  const C = window.MAPA_CONFIG || {};
   let pronto;
   window.NUVEM_PRONTA = new Promise(r => (pronto = r));
+
+  // config.js com erro de digitação (aspa ou vírgula faltando) não define
+  // MAPA_CONFIG; avisa em vez de cair calado no modo local.
+  if (!window.MAPA_CONFIG) {
+    console.error('config.js não carregou ou tem erro de sintaxe.');
+    mostrarFalha('O arquivo config.js não carregou ou tem um erro de digitação (confira aspas e vírgulas). Corrija e recarregue a página.');
+    return;
+  }
+  const C = window.MAPA_CONFIG;
+  // Aceita o endereço copiado com /rest/v1/ ou barra no fim.
+  C.supabaseUrl = String(C.supabaseUrl || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth|storage)\/v1$/i, '');
+  C.supabaseAnonKey = String(C.supabaseAnonKey || '').trim();
 
   const temConfig = !!(C.supabaseUrl && C.supabaseAnonKey);
   if (!temConfig) { pronto(null); return; }
