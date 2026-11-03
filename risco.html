@@ -947,6 +947,7 @@ details summary{cursor:pointer;font-size:.8rem;color:var(--muted)}
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'risco';</script>
 <script src="nuvem.js"></script>
+<script src="carga-start.js"></script>
 <script>(function(){
 'use strict';
 /* ======================= utilidades ======================= */
@@ -2331,6 +2332,10 @@ async function migrateExample(){ if(S.readOnly) return false; const ea=S.areas.f
 (async function boot(){
   renderLegend(); renderChips(); setLoading(true,'Abrindo o painel','Conectando aos dados…',0.02);
   await (window.NUVEM_PRONTA||Promise.resolve(null));
+  // obra Start: termina de preparar (modelo, mapa e concretagens) antes de abrir
+  if(window.Nuvem&&window.CargaStart&&Nuvem.obraId===CargaStart.id&&await CargaStart.precisa(Nuvem)){
+    try{ await CargaStart.rodar(Nuvem,(t,p)=>setLoading(true,'Preparando a obra Start',t,p)) }
+    catch(e){ console.error(e); toast('Não foi possível terminar de preparar a obra Start ('+(e&&e.message||'erro')+'). Recarregue a página para continuar.',9000) } }
   if(await Store.init()===false){
     setLoading(false);
     const naoTem=S.obra===null;
@@ -2340,7 +2345,7 @@ async function migrateExample(){ if(S.readOnly) return false; const ea=S.areas.f
       '<button class="btn ghost" onclick="location.reload()">Recarregar</button><a class="btn" href="index.html?ferramenta=risco" style="text-decoration:none">Ver as obras</a>');
     return;
   }
-  if(Store.kind==='db') document.title=S.obra.nome+' · Mapa de Risco';
+  if(Store.kind==='db'){ document.title=S.obra.nome+' · Mapa de Risco'; $('eDemoM').hidden=true }
   else { $('bObras').href='index.html'; $('bObras').textContent='← Início'; }
   $('modeChip').textContent=Store.kind==='db'?('Online'+(S.readOnly?' · leitura':'')):'Dados neste navegador';
   $('modeChip').title=Store.kind==='db'?(S.readOnly?'Você pode ver o painel, mas não pode alterar.':'Tudo que você registra fica salvo online e aparece para quem entrar nesta obra.'):'Modo local: os registros ficam só neste navegador.';

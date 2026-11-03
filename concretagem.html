@@ -954,6 +954,7 @@ table.prev th{color:var(--muted);font-weight:600}
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'concretagem';</script>
 <script src="nuvem.js"></script>
+<script src="carga-start.js"></script>
 <script data-pv>(function(){
 /* cópia intacta da página (antes de qualquer renderização) para gerar o HTML com os dados embutidos */
 const PAGE0=(()=>{ try{ const sel='title,style[data-pv],link[rel="stylesheet"],link[rel="preconnect"]';
@@ -2179,6 +2180,10 @@ async function loadExample(){ if(S.readOnly){toast('Acesso somente leitura.');re
 (async function boot(){
   renderLegend(); setLoading(true,'Abrindo o painel','Conectando aos dados…',0.02);
   await (window.NUVEM_PRONTA||Promise.resolve(null));
+  // obra Start: termina de preparar (modelo, mapa e concretagens) antes de abrir
+  if(window.Nuvem&&window.CargaStart&&Nuvem.obraId===CargaStart.id&&await CargaStart.precisa(Nuvem)){
+    try{ await CargaStart.rodar(Nuvem,(t,p)=>setLoading(true,'Preparando a obra Start',t,p)) }
+    catch(e){ console.error(e); toast('Não foi possível terminar de preparar a obra Start ('+(e&&e.message||'erro')+'). Recarregue a página para continuar.',9000) } }
   if(await Store.init()===false){
     setLoading(false);
     const naoTem=S.obra===null;

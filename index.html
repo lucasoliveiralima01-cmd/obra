@@ -145,6 +145,7 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="nuvem.js"></script>
+<script src="carga-start.js"></script>
 <script>
 (function () {
 'use strict';
@@ -425,58 +426,25 @@ function formExcluir(f, o) {
   };
 }
 
-/* ---------------- carga inicial: obra Start ---------------- */
-// Prepara a obra Start com o modelo IFC, o mapa de risco do térreo (start.js) e as
-// concretagens (start-concretagem.js), como dados normais da obra.
-// - Completa o que faltar (se uma carga anterior parou no meio, continua dali) e
-//   troca pela versão normal o que tinha entrado como "exemplo".
-// - A obra só é criada no fim, quando tudo já está gravado.
-// - Ao terminar, grava um marcador: se alguém excluir a obra depois, ela não volta.
-const CARGA = { id: 'start', nome: 'Start', arquivo: 'Start.ifc', marca: 'cargas/start-v2' };
-function carregarScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('não foi possível carregar ' + src)); document.head.appendChild(s); }); }
-const semExemplo = o => JSON.parse(JSON.stringify(o, (k, v) => k === 'exemplo' ? undefined : v));
-let cargaRodando = false;
+/* ---------------- carga inicial: obra Start (carga-start.js) ---------------- */
+// Enquanto prepara, mostra uma janela de progresso: assim ninguém abre a obra
+// pela metade. A mesma carga também roda ao abrir a obra Start numa ferramenta.
 async function cargaStart(f) {
-  if (!podeEditar() || !lista || cargaRodando) return;
-  const marca = NV.db.doc(CARGA.marca, 'sistema:cargas');
-  try { if ((await marca.get()).exists) return; } catch (e) { return; }
-  cargaRodando = true;
-  toast('Preparando a obra Start (modelo IFC, mapa de risco e concretagens)… Não feche a página.', 60000);
+  if (!window.CargaStart || !lista) return;
+  if (!(await CargaStart.precisa(NV))) return;
+  openSheet('Preparando a obra Start', `<p style="margin:0">Gravando o modelo IFC, o mapa de risco do térreo e as concretagens da obra Start. Leva menos de um minuto. <b>Não feche a página.</b></p>${barraProg}`, '<span class="msg" id="csMsg"></span>');
+  ocupado(true);
   try {
-    await carregarScript('start.js'); await carregarScript('start-concretagem.js');
-    const agora = new Date().toISOString(), por = NV.usuario.email;
-    let obra = await NV.obras.obter(CARGA.id);
-    let modelo = obra && obra.modelo && obra.modelo.asset ? obra.modelo : null;
-    if (!modelo) {
-      const gz = Uint8Array.from(atob(window.DEMO_IFC_GZ), c => c.charCodeAt(0));
-      const bytes = (await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()).byteLength;
-      const r = await NV.obras.enviarModelo(CARGA.id, new Blob([gz], { type: 'application/gzip' }));
-      modelo = { asset: r.id, nome: CARGA.arquivo, bytes, gz: true, em: agora };
-    }
-    const itens = [
-      ['risco', 'areas', window.EXAMPLE_AREAS],
-      ['risco', 'simbolos', window.EXAMPLE_SYMS],
-      ['risco', 'revisoes', window.EXAMPLE_REV ? [window.EXAMPLE_REV] : []],
-      // a concretagem fictícia "TESTE" do exemplo fica de fora
-      ['concretagem', 'concretagens', (window.EXAMPLE_DATA || []).filter(c => !c.teste)]
-    ];
-    for (const [fe, col, arr] of itens) for (const it of arr || []) {
-      if (!it || !it.id) continue;
-      const doc = NV.db.doc(col + '/' + it.id, fe + ':' + CARGA.id);
-      const at = await doc.get();
-      if (at.exists && !(at.data() || {}).exemplo) continue; // já está lá (e pode ter sido editado)
-      const o = semExemplo(it); o.atualizado = agora; o.por = por;
-      await doc.set(o);
-    }
-    if (!obra) obra = await NV.obras.criar(CARGA.nome, { id: CARGA.id, modelo });
-    else if (!(obra.modelo && obra.modelo.asset)) obra = await NV.obras.alterar(obra.id, { modelo });
-    await marca.set({ em: agora, por });
-    toast('Obra Start pronta: modelo IFC, mapa de risco do térreo e ' + (window.EXAMPLE_DATA || []).filter(c => !c.teste).length + ' concretagens.', 7000);
-  } catch (e) { console.error(e); toast('Não foi possível preparar a obra Start: ' + msgErro(e) + '. Abra esta página de novo para continuar.', 9000); }
-  cargaRodando = false;
+    const r = await CargaStart.rodar(NV, prog);
+    ocupado(false); closeSheet();
+    toast('Obra Start pronta: modelo IFC, mapa de risco do térreo e ' + r.concretagens + ' concretagens.', 7000);
+  } catch (e) {
+    console.error(e); ocupado(false);
+    $('csMsg').className = 'msg err'; $('csMsg').textContent = 'Não foi possível terminar: ' + msgErro(e) + '. Recarregue a página para continuar de onde parou.';
+    $('ovlF').insertAdjacentHTML('beforeend', '<button class="btn" onclick="location.reload()">Recarregar</button>');
+  }
   await carregar(); desenharLista(f);
 }
-
 /* ---------------- início ---------------- */
 (async function () {
   NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
