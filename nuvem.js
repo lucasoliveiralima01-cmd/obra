@@ -3,6 +3,9 @@
    ---------------------------------------------------------------------
    - Com o config.js preenchido: pede login, lê e grava tudo no Supabase
      e atualiza a tela quando outra pessoa salva alguma coisa.
+   - Obras: cadastro comum (nome + modelo IFC) usado por todas as ferramentas.
+     Cada ferramenta guarda os dados dela em painel = "ferramenta:obra".
+   - Conflitos: ao salvar, confere se outra pessoa salvou o mesmo item antes.
    - Sem o config.js preenchido: o painel funciona só neste navegador
      (modo local), como o arquivo HTML original.
    Não é preciso mexer neste arquivo; as configurações ficam no config.js.
@@ -39,9 +42,21 @@
   });
   const T = 'registros';
   const BUCKET = C.bucket || 'arquivos';
-  const painel = ((new URLSearchParams(location.search).get('painel') || C.painel || 'principal') + '')
-    .trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'principal';
+  const slug = s => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  // Cada página de ferramenta define window.NUVEM_FERRAMENTA (ex.: 'risco') antes
+  // de carregar este arquivo; a página inicial não define.
+  const ferramenta = slug(window.NUVEM_FERRAMENTA || '');
+  const qs = new URLSearchParams(location.search);
+  const obraId = slug(qs.get('obra') || qs.get('painel') || '');
+  if (ferramenta && !obraId) {
+    // ferramenta aberta sem dizer a obra: volta para a escolha de obra
+    location.replace('index.html?ferramenta=' + encodeURIComponent(ferramenta));
+    return;
+  }
+  // chave dos dados no banco e pasta dos arquivos desta ferramenta nesta obra
+  const painel = ferramenta ? ferramenta + ':' + obraId : '';
+  const pasta = ferramenta ? ferramenta + '/' + obraId : '';
   let usuario = null, papel = null, iniciou = false;
 
   /* ---------------- erros no formato que o painel entende ---------------- */
@@ -54,6 +69,14 @@
     else x.code = 'erro';
     return x;
   }
+  // Outra pessoa salvou o mesmo item depois que você o abriu.
+  // "atual" traz a versão que está no banco (null se foi apagado).
+  function conflito(atual, por, em) {
+    const x = new Error('conflito');
+    x.code = 'conflito'; x.atual = atual; x.por = por || null; x.em = em || null;
+    return x;
+  }
+  const email = () => (usuario && usuario.email) || null;
 
   /* ---------------- banco: mesma interface que o painel já usa ---------------- */
   const dividir = p => { const i = p.indexOf('/'); return [p.slice(0, i), p.slice(i + 1)]; };
@@ -96,17 +119,42 @@
       const [col, id] = dividir(path);
       return {
         async get() {
-          const { data, error } = await sb.from(T).select('dados')
+          const { data, error } = await sb.from(T).select('dados,atualizado_por,atualizado_em')
             .eq('painel', painel).eq('colecao', col).eq('id', id).maybeSingle();
           if (error) throw erro(error);
-          return { id, exists: !!data, data: () => (data ? data.dados : undefined) };
+          return { id, exists: !!data, data: () => (data ? data.dados : undefined),
+            por: data && data.atualizado_por, em: data && data.atualizado_em };
         },
-        async set(o) {
-          const { error } = await sb.from(T).upsert({
-            painel, colecao: col, id, dados: o,
-            atualizado_em: new Date().toISOString(), atualizado_por: usuario && usuario.email
-          });
-          if (error) throw erro(error);
+        // opt.base: o campo "atualizado" da versão que a pessoa abriu.
+        //   string -> só grava se o banco ainda estiver nessa versão;
+        //   null   -> item novo, só grava se ainda não existir;
+        //   omitido ou opt.forcar -> grava sem conferir.
+        async set(o, opt) {
+          opt = opt || {};
+          const linha = { painel, colecao: col, id, dados: o,
+            atualizado_em: new Date().toISOString(), atualizado_por: email() };
+          if (opt.forcar || opt.base === undefined) {
+            const { error } = await sb.from(T).upsert(linha);
+            if (error) throw erro(error);
+            return;
+          }
+          if (opt.base) {
+            const { data, error } = await sb.from(T).update(linha)
+              .eq('painel', painel).eq('colecao', col).eq('id', id)
+              .eq('dados->>atualizado', opt.base).select('id');
+            if (error) throw erro(error);
+            if (data && data.length) return;
+          } else {
+            const { error } = await sb.from(T).insert(linha);
+            if (!error) return;
+            if (String(error.code) !== '23505') throw erro(error);
+          }
+          const atual = await this.get();
+          // mesma versão no banco e nada gravado: falta de permissão, não conflito
+          if (atual.exists && opt.base && (atual.data() || {}).atualizado === opt.base) {
+            const x = new Error('sem permissão'); x.code = 'permission_denied'; throw x;
+          }
+          throw conflito(atual.exists ? atual.data() : null, atual.por, atual.em);
         },
         async delete() {
           const { error } = await sb.from(T).delete()
@@ -129,24 +177,96 @@
 
   /* ---------------- arquivos (IFC, imagens de fundo, logo) ---------------- */
   const urls = new Map();
+  const novoNome = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  async function enviar(caminho, blob) {
+    const { error } = await sb.storage.from(BUCKET).upload(caminho, blob, {
+      contentType: blob.type || 'application/octet-stream', upsert: false
+    });
+    if (error) throw erro(error);
+    return { id: caminho };
+  }
+  async function listarPasta(p) {
+    const { data, error } = await sb.storage.from(BUCKET).list(p, { limit: 1000 });
+    if (error) throw erro(error);
+    return (data || []).filter(f => f.name && f.id !== null).map(f => p + '/' + f.name);
+  }
+  // arquivos desta ferramenta nesta obra (imagens de fundo, logo)
   const assets = {
-    async upload(blob) {
-      const id = painel + '/' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-      const { error } = await sb.storage.from(BUCKET).upload(id, blob, {
-        contentType: blob.type || 'application/octet-stream', upsert: false
-      });
-      if (error) throw erro(error);
-      return { id };
-    },
+    upload(blob) { return enviar(pasta + '/' + novoNome(), blob); },
     async delete(id) {
       const { error } = await sb.storage.from(BUCKET).remove([id]);
       if (error) throw erro(error);
       urls.delete(id);
     },
-    async list() {
-      const { data, error } = await sb.storage.from(BUCKET).list(painel, { limit: 1000 });
+    async list() { return { assets: (await listarPasta(pasta)).map(id => ({ id })) }; }
+  };
+
+  /* ---------------- cadastro de obras ---------------- */
+  const OBRA_COLS = 'id,nome,modelo,criado_em,criado_por,atualizado_em,atualizado_por';
+  const obras = {
+    async listar() {
+      const { data, error } = await sb.from('obras').select(OBRA_COLS).order('nome');
       if (error) throw erro(error);
-      return { assets: (data || []).filter(f => f.name && f.id !== null).map(f => ({ id: painel + '/' + f.name })) };
+      return data || [];
+    },
+    async obter(id) {
+      const { data, error } = await sb.from('obras').select(OBRA_COLS).eq('id', id).maybeSingle();
+      if (error) throw erro(error);
+      return data || null;
+    },
+    // cria a obra com um endereço (id) tirado do nome; se já existir, acrescenta -2, -3...
+    async criar(nome) {
+      const base = slug(nome) || 'obra';
+      for (let n = 1; n < 50; n++) {
+        const id = n === 1 ? base : (base.slice(0, 55) + '-' + n);
+        const { data, error } = await sb.from('obras')
+          .insert({ id, nome, criado_por: email(), atualizado_por: email() }).select(OBRA_COLS).single();
+        if (!error) return data;
+        if (String(error.code) !== '23505') throw erro(error);
+      }
+      throw erro({ message: 'Não foi possível criar um endereço para esta obra.' });
+    },
+    // base: atualizado_em da versão que a pessoa abriu (omitido = grava sem conferir)
+    async alterar(id, campos, base) {
+      const linha = Object.assign({}, campos, { atualizado_em: new Date().toISOString(), atualizado_por: email() });
+      let q = sb.from('obras').update(linha).eq('id', id);
+      if (base) q = q.eq('atualizado_em', base);
+      const { data, error } = await q.select(OBRA_COLS);
+      if (error) throw erro(error);
+      if (data && data.length) return data[0];
+      const atual = await obras.obter(id);
+      if (atual && base && atual.atualizado_em === base) {
+        const x = new Error('sem permissão'); x.code = 'permission_denied'; throw x;
+      }
+      throw conflito(atual, atual && atual.atualizado_por, atual && atual.atualizado_em);
+    },
+    enviarModelo(id, blob) { return enviar('obras/' + id + '/' + novoNome(), blob); },
+    async apagarArquivo(caminho) {
+      if (!caminho) return;
+      const { error } = await sb.storage.from(BUCKET).remove([caminho]);
+      if (error) throw erro(error);
+      urls.delete(caminho);
+    },
+    // apaga a obra, os dados dela em todas as ferramentas e os arquivos
+    async apagar(id, ferramentas) {
+      const { error: e1 } = await sb.from(T).delete().like('painel', '%:' + id);
+      if (e1) throw erro(e1);
+      const pastas = ['obras/' + id].concat((ferramentas || []).map(f => f + '/' + id));
+      for (const p of pastas) {
+        try { const l = await listarPasta(p); if (l.length) await sb.storage.from(BUCKET).remove(l); }
+        catch (e) { console.warn('Arquivos de', p, e); }
+      }
+      const { error: e2 } = await sb.from('obras').delete().eq('id', id);
+      if (e2) throw erro(e2);
+    },
+    // chama cb() quando alguém cria, altera ou apaga uma obra
+    aoMudar(cb) {
+      let t;
+      const avisar = () => { clearTimeout(t); t = setTimeout(cb, 300); };
+      try {
+        sb.channel('obras').on('postgres_changes', { event: '*', schema: 'public', table: 'obras' }, avisar).subscribe();
+      } catch (e) { console.warn('Tempo real indisponível', e); }
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) avisar(); });
     }
   };
   async function blobUrl(id) {
@@ -158,6 +278,7 @@
 
   /* ---------------- atualização ao vivo ---------------- */
   function ligarAoVivo() {
+    if (!painel) return;
     try {
       sb.channel('registros-' + painel)
         .on('postgres_changes', { event: '*', schema: 'public', table: T, filter: 'painel=eq.' + painel }, p => {
@@ -209,7 +330,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const topo = (titulo) => `<div class="ak">Segurança do trabalho · NR-5 <span>${['#5cb531', '#e3141b', '#6c4a33', '#f3d500', '#1736e0'].map(c => `<i style="background:${c}"></i>`).join('')}</span></div><h1>${titulo}</h1>`;
   const nomeSistema = C.titulo || 'Mapa de Risco';
-  const rodapePainel = painel !== 'principal' ? `<span class="ap">painel: ${esc(painel)}</span>` : '';
+  const rodapePainel = obraId ? `<span class="ap">obra: ${esc(obraId)}</span>` : '';
 
   function tLogin(msg, ok) {
     tela.hidden = false;
@@ -339,7 +460,7 @@
     papel = data && data[0] && data[0].papel;
     if (!papel) { tSemAcesso(); return; }
     iniciou = true; tela.hidden = true; tela.innerHTML = '';
-    window.Nuvem = { db, assets, blobUrl, painel, papel, usuario, sair, cliente: sb };
+    window.Nuvem = { db, assets, obras, blobUrl, ferramenta, obraId, painel, papel, usuario, sair, cliente: sb };
     mostrarQuem(); ligarAoVivo();
     pronto(window.Nuvem);
   }

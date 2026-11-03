@@ -11,10 +11,22 @@ create table if not exists public.membros (
   criado_em  timestamptz not null default now()
 );
 
--- Tudo o que o painel guarda: áreas, símbolos, revisões, configuração e fundos.
--- "painel" separa obras diferentes (link com ?painel=nome-da-obra).
+-- Cadastro de obras. O modelo IFC fica na obra e é usado por todas as
+-- ferramentas (Mapa de Risco, Mapa de Concretagem...).
+create table if not exists public.obras (
+  id             text primary key,
+  nome           text not null,
+  modelo         jsonb,
+  criado_em      timestamptz not null default now(),
+  criado_por     text,
+  atualizado_em  timestamptz not null default now(),
+  atualizado_por text
+);
+
+-- Tudo o que cada ferramenta guarda: áreas, símbolos, revisões, configuração e fundos.
+-- "painel" = ferramenta:obra (ex.: risco:residencial-x).
 create table if not exists public.registros (
-  painel         text not null default 'principal',
+  painel         text not null,
   colecao        text not null,
   id             text not null,
   dados          jsonb not null,
@@ -30,7 +42,17 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 alter table public.membros   enable row level security;
+alter table public.obras     enable row level security;
 alter table public.registros enable row level security;
+
+drop policy if exists "membros leem obras"     on public.obras;
+drop policy if exists "editores criam obras"   on public.obras;
+drop policy if exists "editores alteram obras" on public.obras;
+drop policy if exists "editores apagam obras"  on public.obras;
+create policy "membros leem obras"     on public.obras for select to authenticated using (public.papel_atual() is not null);
+create policy "editores criam obras"   on public.obras for insert to authenticated with check (public.papel_atual() = 'editor');
+create policy "editores alteram obras" on public.obras for update to authenticated using (public.papel_atual() = 'editor') with check (public.papel_atual() = 'editor');
+create policy "editores apagam obras"  on public.obras for delete to authenticated using (public.papel_atual() = 'editor');
 
 drop policy if exists "ve o proprio cadastro" on public.membros;
 create policy "ve o proprio cadastro" on public.membros
@@ -47,8 +69,12 @@ create policy "editores apagam"  on public.registros for delete to authenticated
 
 -- Atualização ao vivo (quando alguém salva, a tela dos outros atualiza)
 alter table public.registros replica identity full;
+alter table public.obras     replica identity full;
 do $$ begin
   alter publication supabase_realtime add table public.registros;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.obras;
 exception when duplicate_object then null; end $$;
 
 -- Arquivos (modelo IFC, imagens de fundo, logo): bucket privado

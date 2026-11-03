@@ -18,10 +18,6 @@ window.MAPA_CONFIG = {
   // Nome que aparece na tela de login.
   titulo: 'Mapa de Risco',
 
-  // Painel aberto quando o link não diz qual. Para ter um painel por obra,
-  // use o link com ?painel=nome-da-obra (ex.: .../?painel=residencial-x).
-  painel: 'principal',
-
   // true mostra "Criar conta" na tela de login. Mesmo assim a pessoa só
   // vê os dados depois que o e-mail dela for incluído na tabela "membros".
   permitirCadastro: false,

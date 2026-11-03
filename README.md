@@ -1,61 +1,82 @@
-# Mapa de Risco
+# Ferramentas da Obra
 
-Painel web para desenhar mapas de risco (NR-5) sobre o modelo IFC da obra: áreas com riscos por grupo e intensidade, símbolos de sinalização, hachuras, revisões e exportação das pranchas em PDF/PNG.
+Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC da obra:
 
-Funciona de dois jeitos:
+- **Mapa de Risco** (NR-5): áreas com riscos por grupo e intensidade, símbolos de sinalização, hachuras, revisões e exportação das pranchas em PDF/PNG.
+- **Mapa de Concretagem**: em breve.
 
-- **Online, com login** (recomendado): os dados ficam num banco no Supabase. Todo mundo que entra pelo link vê a mesma versão, e o que um salva aparece para os outros.
-- **Local**: se o `config.js` ficar vazio, o painel abre sem login e guarda tudo só no navegador de quem abriu.
+Como funciona:
+
+1. A pessoa entra com login e escolhe a **ferramenta**.
+2. Escolhe a **obra** ou cadastra uma nova, com nome e modelo IFC.
+3. O modelo fica guardado **na obra** e serve para todas as ferramentas. Ele só precisa ser enviado uma vez.
+4. Cada ferramenta guarda os próprios dados de cada obra. Todos da equipe veem a mesma versão.
+5. Se duas pessoas alteram o mesmo item ao mesmo tempo, o painel avisa e deixa escolher qual versão fica.
+
+Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse caso tudo fica só no navegador de quem abriu e não há cadastro de obras.
 
 ## Arquivos
 
 | Arquivo | Para que serve |
 |---|---|
-| `index.html` | O painel |
+| `index.html` | Página inicial: escolha da ferramenta e da obra, cadastro de obras |
+| `risco.html` | Mapa de Risco |
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
-| `nuvem.js` | Login e conexão com o banco (não precisa mexer) |
-| `supabase.sql` | Cria as tabelas, as regras de acesso e a pasta de arquivos no Supabase |
+| `nuvem.js` | Login, cadastro de obras e conexão com o banco (não precisa mexer) |
+| `supabase.sql` | Cria as tabelas, as regras de acesso e a pasta de arquivos no Supabase (instalação nova) |
+| `atualizacao-obras.sql` | Atualiza um banco criado antes do cadastro de obras (rodar uma vez) |
 
-## Passo a passo
+## Já usava a versão anterior?
+
+Rode o `atualizacao-obras.sql` **uma vez**, antes de enviar os arquivos novos ao GitHub:
+
+1. No Supabase, abra **SQL Editor → New query**.
+2. Cole o conteúdo do `atualizacao-obras.sql` e clique em **Run**.
+
+Ele cria o cadastro de obras e transforma cada painel antigo em uma obra. Por exemplo, o painel `principal` vira a obra "Principal", com o mesmo modelo IFC, as mesmas áreas, símbolos e revisões. Depois, dá para renomear a obra na lista.
+
+## Passo a passo (instalação nova)
 
 ### 1. Criar o banco no Supabase
 
-1. Crie uma conta em [supabase.com](https://supabase.com) e um projeto novo (o plano gratuito serve para começar). Anote a senha do banco que ele pedir.
+1. Crie uma conta em [supabase.com](https://supabase.com) e um projeto novo (o plano gratuito serve para começar).
 2. No projeto, abra **SQL Editor → New query**.
 3. Abra o `supabase.sql`, troque `SEU_EMAIL@exemplo.com` (perto do fim) pelo seu e-mail, cole tudo no editor e clique em **Run**.
 4. Vá em **Project Settings → API** (ou **Data API / API Keys**) e copie:
-   - **Project URL**
+   - **Project URL**, só o endereço, sem `/rest/v1/` no fim;
    - a chave **anon / publishable** (nunca a `service_role` / `secret`).
 
 ### 2. Configurar o login
 
 1. Em **Authentication → URL Configuration**:
-   - **Site URL**: o endereço do GitHub Pages, por exemplo `https://seu-usuario.github.io/mapa-de-risco/`
+   - **Site URL**: o endereço do GitHub Pages, por exemplo `https://seu-usuario.github.io/obra/`
    - **Redirect URLs**: adicione o mesmo endereço.
-2. Em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up** (assim só entra quem você cadastrar).
+2. Em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up**. Assim só entra quem você cadastrar.
 3. Crie o seu usuário em **Authentication → Users → Add user → Create new user**, com o seu e-mail e uma senha.
 
 ### 3. Preencher o `config.js`
 
 ```js
 supabaseUrl: 'https://abcdxyz.supabase.co',
-supabaseAnonKey: 'eyJhbGciOi...',
+supabaseAnonKey: 'sb_publishable_...',
 ```
+
+Confira as aspas e as vírgulas. Se o arquivo tiver um erro de digitação, o site mostra um aviso na tela.
 
 ### 4. Publicar no GitHub Pages
 
-1. Envie `index.html`, `config.js`, `nuvem.js`, `supabase.sql` e este `README.md` para o repositório (**Add file → Upload files**).
+1. Envie os arquivos para o repositório (pelo GitHub Desktop: **Commit** e depois **Push origin**).
 2. Em **Settings → Pages**, escolha **Deploy from a branch**, branch `main`, pasta `/ (root)`, e salve.
-3. Em um ou dois minutos o link aparece no topo da página de Pages. Abra, entre com o seu e-mail e senha.
+3. Em um ou dois minutos o link aparece no topo da página de Pages. Abra e entre com o seu e-mail e a sua senha.
 
-> No plano gratuito do GitHub, o Pages exige repositório público. Isso expõe só o código: os dados da obra ficam no Supabase, protegidos pelo login.
+> No plano gratuito do GitHub, o Pages exige repositório público. Isso expõe só o código. Os dados das obras ficam no Supabase, protegidos pelo login.
 
 ## Dar acesso a outras pessoas
 
 São duas coisas, nesta ordem:
 
 1. **Criar o usuário**: em **Authentication → Users**:
-   - **Create new user**: você define e-mail e senha e passa a senha para a pessoa; ou
+   - **Create new user**: você define o e-mail e a senha e passa a senha para a pessoa; ou
    - **Send invitation**: a pessoa recebe um e-mail, clica no link e cria a própria senha no painel.
 2. **Liberar no painel**: no **SQL Editor**, rode:
    ```sql
@@ -67,19 +88,29 @@ Para tirar o acesso: `delete from public.membros where email = 'colega@empresa.c
 
 Quem tem login mas não está em `membros` vê a mensagem "Acesso pendente" e não enxerga nenhum dado.
 
-## Um painel por obra
+O que cada papel pode fazer:
 
-O mesmo site guarda obras separadas. Basta mudar o fim do link:
+- **Editor**: cria, renomeia e exclui obras, envia e troca o modelo IFC e edita os dados das ferramentas.
+- **Leitor**: só vê.
 
-- `https://seu-usuario.github.io/mapa-de-risco/` → painel `principal`
-- `https://seu-usuario.github.io/mapa-de-risco/?painel=residencial-x` → painel `residencial-x`
+## Links
 
-Cada painel tem o próprio modelo IFC, áreas, símbolos, revisões e carimbo.
+- `.../obra/`: página inicial (escolher a ferramenta)
+- `.../obra/?ferramenta=risco`: lista de obras do Mapa de Risco
+- `.../obra/risco.html?obra=residencial-x`: Mapa de Risco da obra `residencial-x`
+
+O endereço da obra (`residencial-x`) é criado a partir do nome e não muda quando a obra é renomeada.
+
+## Incluir uma ferramenta nova
+
+1. Crie a página, por exemplo `concretagem.html`. Antes do `nuvem.js`, coloque `<script>window.NUVEM_FERRAMENTA='concretagem'</script>`.
+2. Em `index.html`, na lista `FERRAMENTAS`, preencha `pagina: 'concretagem.html'`.
+3. Na página, `Nuvem.obras.obter(Nuvem.obraId)` traz o nome e o modelo IFC da obra, e `Nuvem.db` guarda os dados da ferramenta separados por obra.
 
 ## Bom saber
 
-- **Modelo IFC**: é compactado antes de subir (um IFC de 1,3 MB vira cerca de 0,3 MB). O limite é 50 MB já compactado.
+- **Modelo IFC**: é compactado antes de subir. Um IFC de 1,3 MB vira cerca de 0,3 MB. O limite é 50 MB já compactado.
+- **Alteração ao mesmo tempo**: se outra pessoa salvou o mesmo item depois que você o abriu, o painel mostra a versão dela e pergunta se você quer manter a dela ou gravar a sua por cima.
 - **E-mails do Supabase** (convite, "esqueci minha senha"): o envio gratuito tem limite baixo por hora. Se a equipe for grande, prefira **Create new user**.
-- **Projetos gratuitos do Supabase** ficam pausados depois de um tempo sem uso. Se o painel parar de conectar, entre no Supabase e reative o projeto.
+- **Projetos gratuitos do Supabase** ficam pausados depois de um tempo sem uso. Se o site parar de conectar, entre no Supabase e reative o projeto.
 - **Logo no carimbo**: na janela **Exportar PDF**, use o campo **Logo da empresa ou da obra no carimbo**.
-- **Atualizar o painel**: troque só o `index.html` no repositório; os dados ficam no banco e não se perdem.
