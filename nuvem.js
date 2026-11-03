@@ -350,7 +350,7 @@
     border-radius:12px;padding:26px 24px 22px;box-shadow:0 24px 60px rgba(0,0,0,.35);display:grid;gap:14px}
   #authTela .ak{font:600 .7rem var(--f-disp,sans-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#5a6b78);
     display:flex;align-items:center;gap:8px}
-  #authTela .ak i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  #authTela .ak svg{width:26px;height:26px;flex:none}
   #authTela h1{margin:-6px 0 0;font:700 1.7rem/1.1 var(--f-disp,sans-serif)}
   #authTela p{margin:0;color:var(--muted,#5a6b78);font-size:.92rem;line-height:1.45}
   #authTela form{display:grid;gap:12px}
@@ -376,8 +376,18 @@
   tela.setAttribute('aria-modal', 'true'); tela.setAttribute('aria-label', 'Entrar');
   document.body.appendChild(tela);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const topo = (titulo) => `<div class="ak">Segurança do trabalho · NR-5 <span>${['#5cb531', '#e3141b', '#6c4a33', '#f3d500', '#1736e0'].map(c => `<i style="background:${c}"></i>`).join('')}</span></div><h1>${titulo}</h1>`;
-  const nomeSistema = C.titulo || 'Mapa de Risco';
+  // título, subtítulo e ícone da tela de login/carregamento, conforme a página aberta
+  const MARCAS = {
+    risco: { kick: 'Segurança do trabalho · NR-5', titulo: 'Mapa de Risco',
+      icone: '<svg viewBox="0 0 40 40"><circle cx="13" cy="14" r="5" fill="#5cb531"/><circle cx="27" cy="14" r="5" fill="#e3141b"/><circle cx="20" cy="27" r="6.5" fill="#1736e0"/></svg>' },
+    concretagem: { kick: 'Rastreabilidade do concreto', titulo: 'Mapa de Concretagem',
+      icone: '<svg viewBox="0 0 40 40"><rect x="8" y="23" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="11" y="15" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="14" y="8" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
+    '': { kick: 'Engenharia e segurança', titulo: C.titulo || 'Ferramentas da Obra',
+      icone: '<svg viewBox="0 0 40 40"><rect x="7" y="25.5" width="17" height="6.5" rx="1" fill="#4d7f9c"/><rect x="7" y="18.5" width="17" height="5.5" rx="1" fill="#4d7f9c" fill-opacity=".7"/><rect x="7" y="11.5" width="17" height="5.5" rx="1" fill="none" stroke="#4d7f9c" stroke-width="1.3" stroke-dasharray="2.2 1.6"/><path d="M29 33V7.5M18.5 7.5H35M29 7.5l-4.5 4" stroke="#e39b1c" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M33 7.5v5" stroke="#e39b1c" stroke-width="1.3"/><rect x="31.6" y="12.4" width="2.8" height="2.6" rx=".5" fill="#e39b1c"/></svg>' }
+  };
+  const MARCA = MARCAS[ferramenta] || MARCAS[''];
+  const topo = (titulo) => `<div class="ak">${MARCA.icone}<span>${esc(MARCA.kick)}</span></div><h1>${titulo}</h1>`;
+  const nomeSistema = MARCA.titulo;
   const rodapePainel = obraId ? `<span class="ap">obra: ${esc(obraId)}</span>` : '';
 
   function tLogin(msg, ok) {

@@ -79,8 +79,16 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .obra .ft{display:block;margin:0 -16px 4px;aspect-ratio:16/7;background:linear-gradient(135deg,var(--navy),var(--petrol));position:relative;overflow:hidden;text-decoration:none}
 .obra .ft img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .obra .ft span{position:absolute;left:16px;bottom:10px;font:700 1.9rem/1 var(--f-disp);color:rgba(255,255,255,.85);letter-spacing:.04em}
-.foto-prev{display:flex;gap:10px;align-items:center}
-.foto-prev img{width:120px;aspect-ratio:16/7;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.ft-prev{position:relative;aspect-ratio:16/7;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,var(--navy),var(--petrol))}
+.ft-prev img{position:absolute;inset:0;width:100%;height:100%}
+.ft-prev span{position:absolute;left:16px;bottom:10px;font:700 1.9rem/1 var(--f-disp);color:rgba(255,255,255,.85)}
+.seg2{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:7px;overflow:hidden;width:max-content;max-width:100%}
+.seg2 button{background:var(--bg);border:0;padding:7px 12px;font:600 .86rem var(--f-body);color:var(--muted)}
+.seg2 button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.aj{display:grid;gap:6px}
+.aj label{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;font-size:.86rem;color:var(--muted)}
+.aj input{accent-color:var(--accent);width:100%}
+@media (max-width:640px){.aj label{grid-template-columns:1fr}}
 .eq{display:grid;gap:8px}
 .eq-l{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px}
 .eq-l input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
@@ -218,7 +226,7 @@ function desenharLista(f) {
   const vis = lista.filter(o => !q || (o.nome + ' ' + o.id).toLowerCase().includes(q));
   if (!vis.length) { box.innerHTML = '<p class="muted">Nenhuma obra encontrada com essa busca.</p>'; return; }
   box.innerHTML = '<div class="obras">' + vis.map(o => `<article class="obra">
-      <a class="ft" href="${f.pagina}?obra=${encodeURIComponent(o.id)}" tabindex="-1" aria-hidden="true"><span>${esc(iniciais(o.nome))}</span>${o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" hidden>` : ''}</a>
+      <a class="ft" href="${f.pagina}?obra=${encodeURIComponent(o.id)}" tabindex="-1" aria-hidden="true">${o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" style="${fotoEstilo(o.foto)}" hidden>` : `<span>${esc(iniciais(o.nome))}</span>`}</a>
       <a class="nm" href="${f.pagina}?obra=${encodeURIComponent(o.id)}">${esc(o.nome)}</a>
       <dl><dt>Modelo IFC</dt><dd>${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.bytes ? ' <span class="muted">(' + fmtMB(o.modelo.bytes) + ')</span>' : '') : '<span class="pill warn">sem modelo</span>'}</dd>
       <dt>Alterada</dt><dd>${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' · ' + esc(quem(o.atualizado_por)) : ''}</dd></dl>
@@ -259,12 +267,14 @@ async function prepararFoto(arq) {
   const sc = Math.min(1, 1000 / Math.max(img.naturalWidth, img.naturalHeight));
   const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.naturalWidth * sc)); cv.height = Math.max(1, Math.round(img.naturalHeight * sc));
   cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-  return await new Promise(r => cv.toBlob(r, 'image/jpeg', .85));
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .85));
+  return { blob, proporcao: img.naturalWidth / img.naturalHeight };
 }
+// imagem quadrada ou em pé entra mostrando inteira; imagem larga preenche o cartão
 async function enviarFoto(obraId, arq) {
-  const b = await prepararFoto(arq);
-  const r = await NV.obras.enviarModelo(obraId, b);
-  return { asset: r.id, em: new Date().toISOString() };
+  const { blob, proporcao } = await prepararFoto(arq);
+  const r = await NV.obras.enviarModelo(obraId, blob);
+  return { asset: r.id, em: new Date().toISOString(), modo: proporcao < 1.6 ? 'inteira' : 'cobrir', x: 50, y: 50, zoom: 100 };
 }
 const campoFoto = `<div class="fld"><label for="nFoto">Foto da obra (opcional)</label><input type="file" id="nFoto" accept="image/*"></div>`;
 
@@ -354,31 +364,71 @@ function formModelo(f, o) {
   };
 }
 
+// como a foto aparece no cartão: modo 'inteira' (mostra tudo) ou 'cobrir' (preenche e corta),
+// com a posição (x, y em %) e o zoom (100–300%) quando preenche
+const fotoEstilo = ft => {
+  const inteira = ft && ft.modo === 'inteira';
+  const x = ft && ft.x != null ? ft.x : 50, y = ft && ft.y != null ? ft.y : 50, z = ft && ft.zoom ? ft.zoom : 100;
+  return inteira ? 'object-fit:contain' : `object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z / 100});transform-origin:${x}% ${y}%`;
+};
 function formFoto(f, o) {
   if (!o) return;
   const tem = o.foto && o.foto.asset;
+  const aj = Object.assign({ modo: 'cobrir', x: 50, y: 50, zoom: 100 }, tem ? o.foto : {});
+  let novoArq = null, novoUrl = null;
   openSheet('Foto da obra', `<p style="margin:0"><b>${esc(o.nome)}</b></p>
-    ${tem ? '<div class="foto-prev"><img id="fAtual" alt="Foto atual"><span class="muted">Foto atual</span></div>' : ''}
-    ${campoFoto.replace('Foto da obra (opcional)', tem ? 'Nova foto' : 'Foto')}
-    <p class="muted" style="margin:0">Aparece no cartão da obra. A imagem é reduzida antes do envio.</p>`,
+    <div class="ft-prev"><span id="fIni">${esc(iniciais(o.nome))}</span><img id="fPrev" alt="Prévia do cartão" hidden></div>
+    <div class="fld"><label for="fArq">${tem ? 'Trocar a imagem' : 'Imagem'}</label><input type="file" id="fArq" accept="image/*"></div>
+    <div class="fld"><label>Como aparece no cartão</label><div class="seg2" role="group" aria-label="Enquadramento">
+      <button type="button" data-modo="inteira">Mostrar a imagem inteira</button><button type="button" data-modo="cobrir">Preencher o cartão</button></div></div>
+    <div id="fAj" class="aj">
+      <label>Zoom <input type="range" id="fZ" min="100" max="300" step="5"></label>
+      <label>Posição horizontal <input type="range" id="fX" min="0" max="100"></label>
+      <label>Posição vertical <input type="range" id="fY" min="0" max="100"></label>
+    </div>
+    <p class="muted" style="margin:0">A prévia mostra o cartão como fica na lista. A imagem é reduzida antes do envio.</p>`,
     `<span class="msg" id="fMsg"></span>${tem ? '<button class="btn danger" id="fRem" style="margin-right:auto">Remover foto</button>' : ''}<button class="btn ghost" id="fC">Cancelar</button><button class="btn" id="fOk">Salvar</button>`);
-  if (tem) NV.blobUrl(o.foto.asset).then(u => { if ($('fAtual')) $('fAtual').src = u; }).catch(() => {});
-  $('fC').onclick = closeSheet;
-  const gravar = async foto => {
-    await NV.obras.alterar(o.id, { foto }, o.atualizado_em);
-    if (tem) NV.obras.apagarArquivo(o.foto.asset).catch(() => {});
-    closeSheet(); toast(foto ? 'Foto salva.' : 'Foto removida.'); await carregar(); desenharLista(f);
+  const prev = $('fPrev');
+  const desenhar = () => {
+    $('ovlB').querySelectorAll('[data-modo]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modo === aj.modo)));
+    $('fAj').hidden = aj.modo === 'inteira';
+    $('fZ').value = aj.zoom; $('fX').value = aj.x; $('fY').value = aj.y;
+    prev.style.cssText = fotoEstilo(aj);
+    $('fIni').hidden = !prev.hidden;
   };
-  if ($('fRem')) $('fRem').onclick = async () => { $('fRem').disabled = true; try { await gravar(null); } catch (e) { if (!avisoConflito(e, f)) { $('fRem').disabled = false; $('fMsg').className = 'msg err'; $('fMsg').textContent = msgErro(e); } } };
+  $('ovlB').querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { aj.modo = b.dataset.modo; desenhar(); });
+  $('fZ').oninput = ev => { aj.zoom = +ev.target.value; desenhar(); };
+  $('fX').oninput = ev => { aj.x = +ev.target.value; desenhar(); };
+  $('fY').oninput = ev => { aj.y = +ev.target.value; desenhar(); };
+  if (tem) NV.blobUrl(o.foto.asset).then(u => { prev.src = u; prev.hidden = false; desenhar(); }).catch(() => {});
+  $('fArq').onchange = ev => {
+    const a = ev.target.files[0]; if (!a) return;
+    if (novoUrl) URL.revokeObjectURL(novoUrl);
+    novoArq = a; novoUrl = URL.createObjectURL(a);
+    prev.onload = () => { // imagem quadrada ou em pé: começa mostrando inteira
+      aj.modo = prev.naturalWidth / prev.naturalHeight < 1.6 ? 'inteira' : 'cobrir'; aj.x = 50; aj.y = 50; aj.zoom = 100; desenhar(); prev.onload = null; };
+    prev.src = novoUrl; prev.hidden = false;
+  };
+  desenhar();
+  const fechar = () => { if (novoUrl) URL.revokeObjectURL(novoUrl); closeSheet(); };
+  $('fC').onclick = fechar;
+  const gravar = async (foto, apagarAntiga) => {
+    await NV.obras.alterar(o.id, { foto }, o.atualizado_em);
+    if (apagarAntiga && tem) NV.obras.apagarArquivo(o.foto.asset).catch(() => {});
+    fechar(); toast(foto ? 'Foto salva.' : 'Foto removida.'); await carregar(); desenharLista(f);
+  };
+  if ($('fRem')) $('fRem').onclick = async () => { $('fRem').disabled = true; try { await gravar(null, true); } catch (e) { if (!avisoConflito(e, f)) { $('fRem').disabled = false; $('fMsg').className = 'msg err'; $('fMsg').textContent = msgErro(e); } } };
   $('fOk').onclick = async () => {
-    const arq = $('nFoto').files[0]; if (!arq) { $('fMsg').className = 'msg err'; $('fMsg').textContent = 'Escolha uma imagem.'; return; }
-    $('fOk').disabled = true; $('fMsg').className = 'msg'; $('fMsg').textContent = 'Enviando…';
-    let foto = null;
-    try { foto = await enviarFoto(o.id, arq); await gravar(foto); }
-    catch (e) { if (foto) NV.obras.apagarArquivo(foto.asset).catch(() => {}); if (!avisoConflito(e, f)) { $('fOk').disabled = false; $('fMsg').className = 'msg err'; $('fMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); } }
+    if (!novoArq && !tem) { $('fMsg').className = 'msg err'; $('fMsg').textContent = 'Escolha uma imagem.'; return; }
+    $('fOk').disabled = true; $('fMsg').className = 'msg'; $('fMsg').textContent = novoArq ? 'Enviando…' : 'Salvando…';
+    const ajuste = { modo: aj.modo, x: aj.x, y: aj.y, zoom: aj.zoom };
+    let enviada = null;
+    try {
+      if (novoArq) { enviada = await enviarFoto(o.id, novoArq); await gravar(Object.assign(enviada, ajuste), true); }
+      else await gravar(Object.assign({}, o.foto, ajuste), false);
+    } catch (e) { if (enviada) NV.obras.apagarArquivo(enviada.asset).catch(() => {}); if (!avisoConflito(e, f)) { $('fOk').disabled = false; $('fMsg').className = 'msg err'; $('fMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); } }
   };
 }
-
 /* ---------------- equipe: nomes das pessoas ---------------- */
 async function formEquipe() {
   if (!NV.pessoas.disponivel()) {

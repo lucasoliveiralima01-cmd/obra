@@ -15,8 +15,9 @@ window.MAPA_CONFIG = {
   supabaseUrl: 'https://bqqcllclzlyauprgpjjo.supabase.co',
   supabaseAnonKey: 'sb_publishable_w4e3eZ2J2YxzJh0kN2SxuA_QdomuryJ',
 
-  // Nome que aparece na tela de login.
-  titulo: 'Mapa de Risco',
+  // Nome que aparece na tela de login da página inicial
+  // (nas ferramentas aparece o nome de cada uma).
+  titulo: 'Ferramentas da Obra',
 
   // true mostra "Criar conta" na tela de login. Mesmo assim a pessoa só
   // vê os dados depois que o e-mail dela for incluído na tabela "membros".
