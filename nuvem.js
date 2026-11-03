@@ -204,7 +204,7 @@
   };
 
   /* ---------------- cadastro de obras ---------------- */
-  const OBRA_COLS = 'id,nome,modelo,criado_em,criado_por,atualizado_em,atualizado_por';
+  const OBRA_COLS = 'id,nome,modelo,foto,criado_em,criado_por,atualizado_em,atualizado_por';
   const obras = {
     async listar() {
       const { data, error } = await sb.from('obras').select(OBRA_COLS).order('nome');
@@ -217,7 +217,18 @@
       return data || null;
     },
     // cria a obra com um endereço (id) tirado do nome; se já existir, acrescenta -2, -3...
-    async criar(nome) {
+    // extra.id fixa o endereço (se já existir, devolve a obra que está lá);
+    // os outros campos de extra (modelo, foto) entram junto.
+    async criar(nome, extra) {
+      extra = Object.assign({}, extra);
+      const fixo = extra.id; delete extra.id;
+      if (fixo) {
+        const { data, error } = await sb.from('obras')
+          .insert(Object.assign({ id: fixo, nome, criado_por: email(), atualizado_por: email() }, extra)).select(OBRA_COLS).single();
+        if (!error) return data;
+        if (String(error.code) !== '23505') throw erro(error);
+        return obras.obter(fixo);
+      }
       const base = slug(nome) || 'obra';
       for (let n = 1; n < 50; n++) {
         const id = n === 1 ? base : (base.slice(0, 55) + '-' + n);
@@ -271,6 +282,39 @@
       document.addEventListener('visibilitychange', () => { if (!document.hidden) avisar(); });
     }
   };
+  /* ---------------- nomes das pessoas ---------------- */
+  // tabela perfis (email -> nome). Se ainda não existir no banco, tudo continua
+  // funcionando e as telas mostram a parte do e-mail antes do @.
+  const nomes = new Map();
+  let temPerfis = false;
+  const pessoas = {
+    async carregar() {
+      const { data, error } = await sb.from('perfis').select('email,nome');
+      if (error) { temPerfis = false; return; }
+      temPerfis = true; nomes.clear();
+      for (const p of data || []) if (p.nome) nomes.set(String(p.email).toLowerCase(), p.nome);
+    },
+    disponivel() { return temPerfis; },
+    // nome para mostrar: o cadastrado, ou o começo do e-mail
+    nome(e) {
+      if (!e) return 'alguém';
+      return nomes.get(String(e).toLowerCase()) || String(e).split('@')[0];
+    },
+    temNome(e) { return !!(e && nomes.has(String(e).toLowerCase())); },
+    async salvarNome(e, nome) {
+      nome = String(nome || '').trim().slice(0, 80);
+      const { error } = await sb.from('perfis').upsert({ email: String(e).toLowerCase(), nome, atualizado_em: new Date().toISOString() });
+      if (error) throw erro(error);
+      if (nome) nomes.set(String(e).toLowerCase(), nome); else nomes.delete(String(e).toLowerCase());
+    },
+    // membros liberados no painel, com o nome de cada um
+    async equipe() {
+      const { data, error } = await sb.from('membros').select('email,papel').order('email');
+      if (error) throw erro(error);
+      return (data || []).map(m => ({ email: m.email, papel: m.papel, nome: nomes.get(String(m.email).toLowerCase()) || '' }));
+    }
+  };
+
   async function blobUrl(id) {
     if (urls.has(id)) return urls.get(id);
     const { data, error } = await sb.storage.from(BUCKET).download(id);
@@ -323,7 +367,9 @@
   #authTela .am.ok{background:var(--ok-soft,#dcf0e3);color:var(--ok,#23804a)}
   #authTela .ar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
   #authTela .ap{font:500 .72rem var(--f-mono,monospace);color:var(--muted,#5a6b78)}
-  .hctl .quem{font:500 .74rem var(--f-mono,monospace);color:#d4e4ee;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hctl .quem{font:600 .8rem var(--f-body,sans-serif);color:#d4e4ee;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.35);padding:0;cursor:pointer}
+  .hctl .quem:hover{color:#fff}
   `;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   const tela = document.createElement('div'); tela.id = 'authTela'; tela.setAttribute('role', 'dialog');
@@ -442,10 +488,38 @@
 
   async function sair() { try { await sb.auth.signOut(); } catch (e) {} location.reload(); }
 
+  // pergunta o nome da pessoa (primeiro acesso ou clique no nome no cabeçalho)
+  function tNome(primeira, msg) {
+    tela.hidden = false;
+    const atual = pessoas.temNome(usuario.email) ? pessoas.nome(usuario.email) : '';
+    tela.innerHTML = `<div class="ac">${topo(primeira ? 'Bem-vindo' : 'Seu nome')}
+      <p>${primeira ? 'Como você quer ser chamado? ' : ''}Este nome aparece para a equipe no lugar do e-mail (<b>${esc(usuario.email)}</b>), por exemplo em “editada por”.</p>
+      ${msg ? `<div class="am" role="alert">${esc(msg)}</div>` : ''}
+      <form id="fNome" novalidate><label>Nome<input id="pNome" maxlength="80" autocomplete="name" value="${esc(atual)}" placeholder="Ex.: Lucas Lima"></label>
+      <button class="ab" id="pOk">Salvar</button></form>
+      <div class="ar"><button class="al" id="pPula" type="button">${primeira ? 'Agora não' : 'Cancelar'}</button></div></div>`;
+    tela.querySelector('#pNome').focus();
+    const seguir = () => { if (iniciou) { tela.hidden = true; tela.innerHTML = ''; atualizarQuem(); } else liberar(); };
+    tela.querySelector('#pPula').onclick = () => { try { sessionStorage.setItem('mr_pulou_nome', '1'); } catch (e) {} seguir(); };
+    tela.querySelector('#fNome').onsubmit = async ev => {
+      ev.preventDefault(); const n = tela.querySelector('#pNome').value.trim();
+      if (!n) { tNome(primeira, 'Escreva o seu nome.'); return; }
+      const b = tela.querySelector('#pOk'); b.disabled = true; b.textContent = 'Salvando…';
+      try { await pessoas.salvarNome(usuario.email, n); seguir(); }
+      catch (e) { tNome(primeira, 'Não foi possível salvar: ' + e.message); }
+    };
+  }
+  function atualizarQuem() {
+    const q = document.getElementById('bQuem'); if (!q) return;
+    q.textContent = pessoas.nome(usuario.email) + (papel === 'leitor' ? ' · leitura' : '');
+  }
+
   function mostrarQuem() {
     const h = document.querySelector('.hctl'); if (!h || document.getElementById('bSair')) return;
-    const q = document.createElement('span'); q.className = 'quem'; q.textContent = usuario.email + (papel === 'leitor' ? ' · leitura' : '');
-    q.title = 'Conectado como ' + usuario.email + (papel === 'leitor' ? ' (somente leitura)' : '');
+    const q = document.createElement('button'); q.type = 'button'; q.id = 'bQuem'; q.className = 'quem';
+    q.textContent = pessoas.nome(usuario.email) + (papel === 'leitor' ? ' · leitura' : '');
+    q.title = 'Conectado como ' + usuario.email + (papel === 'leitor' ? ' (somente leitura)' : '') + (pessoas.disponivel() ? '. Clique para mudar o seu nome.' : '');
+    if (pessoas.disponivel()) q.onclick = () => tNome(false);
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bSair'; b.textContent = 'Sair'; b.onclick = sair;
     h.appendChild(q); h.appendChild(b);
     if (papel === 'leitor') { const r = document.getElementById('bReset'); if (r) r.hidden = true; }
@@ -457,12 +531,20 @@
     if (precisaSenha) { tNovaSenha(); return; }
     if (iniciou) { tela.hidden = true; return; }
     tCarregando('Verificando acesso…');
-    const { data, error } = await sb.from('membros').select('papel').limit(1);
+    // papel_atual() devolve o papel de quem está conectado (null = sem acesso)
+    const { data, error } = await sb.rpc('papel_atual');
     if (error) { tLogin('Não foi possível verificar o acesso: ' + error.message); return; }
-    papel = data && data[0] && data[0].papel;
+    papel = typeof data === 'string' ? data : null;
     if (!papel) { tSemAcesso(); return; }
+    try { await pessoas.carregar(); } catch (e) {}
+    let pulou = false; try { pulou = !!sessionStorage.getItem('mr_pulou_nome'); } catch (e) {}
+    if (pessoas.disponivel() && !pessoas.temNome(usuario.email) && !pulou) { tNome(true); return; }
+    liberar();
+  }
+  function liberar() {
+    if (iniciou) return;
     iniciou = true; tela.hidden = true; tela.innerHTML = '';
-    window.Nuvem = { db, assets, obras, blobUrl, ferramenta, obraId, painel, papel, usuario, sair, cliente: sb };
+    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, papel, usuario, sair, cliente: sb };
     mostrarQuem(); ligarAoVivo();
     pronto(window.Nuvem);
   }

@@ -17,6 +17,7 @@ create table if not exists public.obras (
   id             text primary key,
   nome           text not null,
   modelo         jsonb,
+  foto           jsonb,
   criado_em      timestamptz not null default now(),
   criado_por     text,
   atualizado_em  timestamptz not null default now(),
@@ -57,6 +58,27 @@ create policy "editores apagam obras"  on public.obras for delete to authenticat
 drop policy if exists "ve o proprio cadastro" on public.membros;
 create policy "ve o proprio cadastro" on public.membros
   for select to authenticated using (lower(email) = lower(auth.jwt() ->> 'email'));
+drop policy if exists "membros veem a equipe" on public.membros;
+create policy "membros veem a equipe" on public.membros
+  for select to authenticated using (public.papel_atual() is not null);
+
+-- Nome de cada pessoa (aparece no lugar do e-mail)
+create table if not exists public.perfis (
+  email          text primary key,
+  nome           text,
+  atualizado_em  timestamptz not null default now()
+);
+alter table public.perfis enable row level security;
+drop policy if exists "membros veem os nomes"   on public.perfis;
+drop policy if exists "cada um cria o seu nome" on public.perfis;
+drop policy if exists "cada um muda o seu nome" on public.perfis;
+create policy "membros veem os nomes" on public.perfis for select to authenticated
+  using (public.papel_atual() is not null);
+create policy "cada um cria o seu nome" on public.perfis for insert to authenticated
+  with check (lower(email) = lower(auth.jwt() ->> 'email') or public.papel_atual() = 'editor');
+create policy "cada um muda o seu nome" on public.perfis for update to authenticated
+  using (lower(email) = lower(auth.jwt() ->> 'email') or public.papel_atual() = 'editor')
+  with check (lower(email) = lower(auth.jwt() ->> 'email') or public.papel_atual() = 'editor');
 
 drop policy if exists "membros leem"     on public.registros;
 drop policy if exists "editores inserem" on public.registros;

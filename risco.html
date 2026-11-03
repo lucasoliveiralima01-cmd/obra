@@ -1077,7 +1077,7 @@ const Store={
     const arr=S[key]; const j=arr.findIndex(x=>x.id===minha.id);
     if(e.atual){ if(j>=0) arr[j]=clone(e.atual); else arr.push(clone(e.atual)) } else if(j>=0) arr.splice(j,1);
     afterDataChange();
-    const quem=e.por?String(e.por).split('@')[0]:'outra pessoa';
+    const quem=e.por?Nuvem.pessoas.nome(e.por):'outra pessoa';
     const hora=e.em?new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
     openSheet('Alteração ao mesmo tempo',`<p style="margin-top:0">${nome} ${e.atual?'foi alterad'+(col==='areas'?'a':'o'):'foi excluíd'+(col==='areas'?'a':'o')} por <b>${esc(quem)}</b>${hora?' às '+hora:''}, enquanto você editava.</p>
       <p class="muted">A tela já mostra a versão de ${esc(quem)}. Você pode manter essa versão ou gravar a sua por cima dela.</p>`,
@@ -1590,7 +1590,7 @@ function renderDetail(){
       <div class="fhead"><div><h3>${esc(a.titulo||'Área sem título')}</h3><small>${esc(a.pav)} · ${f1(areaOf(a))} m²${inModel?'':' · pavimento fora do modelo'}</small></div></div>
       <div class="rtab">${rs.length?rs.map(r=>`<div class="rrow"><span class="sym"><i style="width:${(9*INT[r.i].m).toFixed(1)}px;height:${(9*INT[r.i].m).toFixed(1)}px;background:${GBY[r.g].c}"></i></span><div><b>${esc(r.ag||'Agente não informado')}</b><br><span>${GBY[r.g].n} · ${INT[r.i].n}</span></div></div>`).join(''):'<p class="muted" style="margin:.5em 0">Nenhum risco cadastrado nesta área.</p>'}</div>
       <dl class="kv">${a.trab?`<dt>Trabalhadores expostos</dt><dd>${esc(a.trab)}</dd>`:''}${a.hach&&a.hach.p?`<dt>Hachura</dt><dd>${esc((HATCH.find(x=>x.k===a.hach.p)||{}).n||'')} · ${esc(String(a.hach.e).replace('.',','))} m</dd>`:''}${a.obs?`<dt>Medidas e observações</dt><dd>${esc(a.obs)}</dd>`:''}</dl>
-      ${a.por&&a.atualizado?`<p class="muted" style="margin:.6em 0 0;font-size:.78rem">Editada por ${esc(String(a.por).split('@')[0])} em ${new Date(a.atualizado).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</p>`:''}
+      ${a.por&&a.atualizado?`<p class="muted" style="margin:.6em 0 0;font-size:.78rem">Editada por ${esc((window.Nuvem&&Nuvem.pessoas?Nuvem.pessoas.nome(a.por):String(a.por).split('@')[0]))} em ${new Date(a.atualizado).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</p>`:''}
       ${a.sug?'<p class="muted" style="margin:.6em 0 0;font-size:.8rem;color:var(--warn)">Área sugerida pelo modelo: confira na obra se o risco existe nesta fase.</p>':''}
       ${S.rev?'<p class="muted" style="margin:.6em 0 0">Revisão emitida: somente leitura.</p>':`<p class="muted" style="margin:.6em 0 0;font-size:.8rem">Arraste o título na planta para reposicionar o rótulo.</p>
       <div class="acts"><button class="btn sm" id="dEd">Editar riscos</button><button class="btn sm ghost" id="dDraw">Redesenhar contorno</button>${a.lx!=null?'<button class="btn sm ghost" id="dLbl">Centralizar rótulo</button>':''}<button class="btn sm ghost" id="dCopy">Copiar para…</button><button class="btn sm danger" id="dDel">Excluir</button></div>`}`;
@@ -1616,7 +1616,7 @@ function renderDetail(){
 function renderList(){
   const L=$('alist'); const pav=S.pav; $('areaTtl').textContent='Áreas'+(pav?' · '+pav:'');
   const as=pav?areasOfPav(pav):[];
-  if(!as.length){ const canEx=(!S.res||S.isDemo)&&!S.areas.length;
+  if(!as.length){ const canEx=(!S.res||S.isDemo)&&!S.areas.length&&Store.kind!=='db';
     L.innerHTML=`<div class="empty-s"><span class="muted">${S.res?'Nenhuma área marcada neste pavimento. Toque em “+ Nova área” e clique nos cantos da área na planta; depois escolha o título e os riscos.':'Carregue o modelo IFC da obra para marcar as áreas.'}${canEx?' Também dá para carregar o exemplo do térreo (mapa feito à mão, redesenhado sobre o modelo de exemplo).':''}</span>${canEx?'<div class="acts"><button class="btn sm ghost" id="eEx">Carregar exemplo</button></div>':''}</div>`;
     if($('eEx')) $('eEx').onclick=loadExample; return }
   const selId=S.sel&&S.sel.k==='a'?S.sel.id:null;
@@ -2211,7 +2211,7 @@ $('bIfc').onclick=()=>{
   openSheet('Modelo IFC da obra',`${info}${S.isDemo?'<p class="muted"><b>Este é um modelo de exemplo</b> (estrutura simplificada de um edifício). Troque pelo IFC da sua obra.</p>':''}<p class="muted">Importe o IFC de arquitetura ou de estrutura exportado do projeto (Revit, ArchiCAD, TQS, Eberick…). As áreas ficam guardadas em coordenadas do projeto e por nome de pavimento, então continuam no lugar quando o modelo é atualizado.</p>
     ${Store.kind==='db'?'<p class="muted">O arquivo fica salvo na obra, para toda a equipe e para todas as ferramentas (é compactado antes do envio; limite de 50 MB compactado).</p>':'<p class="muted">O arquivo fica guardado neste navegador.</p>'}
     <div class="fg"><div class="fld full"><label for="ifcF">Arquivo .ifc</label><input type="file" id="ifcF" accept=".ifc"></div></div>`,
-    `${!S.isDemo||!S.res?'<button class="btn ghost" id="ifcDemo" style="margin-right:auto">Abrir modelo de exemplo</button>':''}${S.isDemo&&S.res&&!S.readOnly?'<button class="btn ghost" id="ifcReEx" style="margin-right:auto">Recarregar o exemplo</button>':''}<button class="btn ghost" id="ifcC">Fechar</button>`);
+    `${(!S.isDemo||!S.res)&&Store.kind!=='db'?'<button class="btn ghost" id="ifcDemo" style="margin-right:auto">Abrir modelo de exemplo</button>':''}${S.isDemo&&S.res&&!S.readOnly&&Store.kind!=='db'?'<button class="btn ghost" id="ifcReEx" style="margin-right:auto">Recarregar o exemplo</button>':''}<button class="btn ghost" id="ifcC">Fechar</button>`);
   $('ifcC').onclick=closeSheet;
   if($('ifcReEx')) $('ifcReEx').onclick=()=>{ const n=S.areas.filter(a=>a.exemplo).length+S.syms.filter(y=>y.exemplo).length;
     confirmSheet('Recarregar o exemplo?','As áreas, símbolos e revisões do exemplo ('+n+' peças, inclusive as que foram editadas) voltam à versão original do exemplo. O que foi desenhado fora do exemplo continua.','Recarregar',async()=>{ if(await replaceExample()!==false){ afterDataChange(); if(S.view==='plan') fitPlan(); toast('Exemplo recarregado.') } }) };
@@ -2234,7 +2234,7 @@ async function importIfcFile(f){ const buf=await f.arrayBuffer(); if(!await open
       try{ await gravar(false) }
       catch(e){ if(e&&e.code!=='conflito') throw e;
         // outra pessoa mexeu na obra (nome ou modelo) depois que a página abriu
-        const quem=e.por?String(e.por).split('@')[0]:'outra pessoa'; if(e.atual) S.obra=e.atual;
+        const quem=e.por?Nuvem.pessoas.nome(e.por):'outra pessoa'; if(e.atual) S.obra=e.atual;
         const outro=e.atual&&e.atual.modelo&&old&&e.atual.modelo.asset!==old.asset;
         openSheet('Alteração ao mesmo tempo',`<p style="margin-top:0">${outro?'<b>'+esc(quem)+'</b> trocou o modelo IFC desta obra':'A obra foi alterada por <b>'+esc(quem)+'</b>'} enquanto você estava com a página aberta.</p><p class="muted">Você pode gravar o seu modelo (${esc(f.name)}) como o modelo da obra, ou descartar o seu e recarregar a página com a versão atual.</p>`,
           `<button class="btn ghost" id="cfRec">Descartar o meu e recarregar</button><button class="btn" id="cfGr">Gravar o meu</button>`);
@@ -2261,7 +2261,7 @@ $('obraNome').onclick=()=>{ if(S.readOnly){toast('Acesso somente leitura.');retu
   $('oC').onclick=closeSheet; $('oOk').onclick=async()=>{ const nome=$('oNome').value.trim();
     if(Store.kind==='db'){ if(!nome) return; $('oOk').disabled=true;
       try{ S.obra=await Nuvem.obras.alterar(S.obra.id,{nome},S.obra.atualizado_em); S.cfg.obra=S.obra.nome; closeSheet(); renderObra(); document.title=S.obra.nome+' · Mapa de Risco'; toast('Obra renomeada para todas as ferramentas.') }
-      catch(e){ closeSheet(); if(e&&e.code==='conflito'){ if(e.atual){ S.obra=e.atual; S.cfg.obra=S.obra.nome; renderObra() } toast('A obra foi alterada por '+(e.por?String(e.por).split('@')[0]:'outra pessoa')+' agora há pouco. Confira o nome e tente de novo.',7000) } else Store.writeErr(e) }
+      catch(e){ closeSheet(); if(e&&e.code==='conflito'){ if(e.atual){ S.obra=e.atual; S.cfg.obra=S.obra.nome; renderObra() } toast('A obra foi alterada por '+(e.por?Nuvem.pessoas.nome(e.por):'outra pessoa')+' agora há pouco. Confira o nome e tente de novo.',7000) } else Store.writeErr(e) }
       return }
     S.cfg.obra=nome; closeSheet(); renderObra(); await Store.saveCfg() } };
 function clearModel(){

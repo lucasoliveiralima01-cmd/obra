@@ -3,7 +3,9 @@
 Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC da obra:
 
 - **Mapa de Risco** (NR-5): áreas com riscos por grupo e intensidade, símbolos de sinalização, hachuras, revisões e exportação das pranchas em PDF/PNG.
-- **Mapa de Concretagem**: em breve.
+- **Mapa de Concretagem**: concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, importação e exportação em Excel.
+
+A obra **Start** é criada sozinha, com o modelo IFC, o mapa de risco do térreo e as concretagens já registradas, na primeira vez que um editor abre a lista de obras.
 
 Como funciona:
 
@@ -21,19 +23,24 @@ Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse ca
 |---|---|
 | `index.html` | Página inicial: escolha da ferramenta e da obra, cadastro de obras |
 | `risco.html` | Mapa de Risco |
+| `concretagem.html` | Mapa de Concretagem |
+| `start.js`, `start-concretagem.js` | Dados da obra Start (modelo IFC, mapa de risco e concretagens) |
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
 | `nuvem.js` | Login, cadastro de obras e conexão com o banco (não precisa mexer) |
 | `supabase.sql` | Cria as tabelas, as regras de acesso e a pasta de arquivos no Supabase (instalação nova) |
 | `atualizacao-obras.sql` | Atualiza um banco criado antes do cadastro de obras (rodar uma vez) |
+| `atualizacao-perfis.sql` | Atualiza um banco criado antes dos nomes das pessoas e da foto das obras (rodar uma vez) |
 
-## Já usava a versão anterior?
+## Já usava uma versão anterior?
 
-Rode o `atualizacao-obras.sql` **uma vez**, antes de enviar os arquivos novos ao GitHub:
+Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta ordem, antes de enviar os arquivos novos ao GitHub:
 
-1. No Supabase, abra **SQL Editor → New query**.
-2. Cole o conteúdo do `atualizacao-obras.sql` e clique em **Run**.
+1. `atualizacao-obras.sql`
+2. `atualizacao-perfis.sql`
 
-Ele cria o cadastro de obras e transforma cada painel antigo em uma obra. Por exemplo, o painel `principal` vira a obra "Principal", com o mesmo modelo IFC, as mesmas áreas, símbolos e revisões. Depois, dá para renomear a obra na lista.
+Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
+
+O `atualizacao-obras.sql` cria o cadastro de obras e transforma cada painel antigo em uma obra. Por exemplo, o painel `principal` vira a obra "Principal", com o mesmo modelo IFC, as mesmas áreas, símbolos e revisões. Depois, dá para renomear a obra na lista.
 
 ## Passo a passo (instalação nova)
 
@@ -87,6 +94,8 @@ São duas coisas, nesta ordem:
 Para tirar o acesso: `delete from public.membros where email = 'colega@empresa.com';`
 
 Quem tem login mas não está em `membros` vê a mensagem "Acesso pendente" e não enxerga nenhum dado.
+
+**Nomes:** no primeiro acesso, cada pessoa informa como quer ser chamada. Depois dá para mudar clicando no próprio nome no topo da página. Na página inicial, o botão **Equipe** lista os membros: cada um muda o próprio nome, e editores podem dar nome a qualquer pessoa.
 
 O que cada papel pode fazer:
 
