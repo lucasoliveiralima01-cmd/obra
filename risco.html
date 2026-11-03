@@ -1946,7 +1946,7 @@ function revForm(){ if(!canEdit()) return; const pav=S.pav; if(!pav) return; con
     `<span class="msg" id="rMsg"></span><button class="btn ghost" id="rC">Cancelar</button><button class="btn" id="rOk">Emitir</button>`);
   $('rC').onclick=closeSheet;
   $('rOk').onclick=async()=>{ const n=$('rNum').value.trim(); const msg=$('rMsg'); if(!n){ msg.textContent='Informe o número da revisão.'; msg.className='msg err'; return } if(revsOf(pav).some(r=>r.rev===n)){ msg.textContent='Já existe a R'+n+' neste pavimento.'; msg.className='msg err'; return }
-    closeSheet(); if(await emitRev(pav,n,$('rDat').value||today(),$('rDesc').value.trim())) toast('Revisão R'+n+' emitida.') } }
+    const dt=$('rDat').value||today(), desc=$('rDesc').value.trim(); closeSheet(); if(await emitRev(pav,n,dt,desc)) toast('Revisão R'+n+' emitida.') } }
 function restoreRev(id){ const r=S.revs.find(x=>x.id===id); if(!r||S.readOnly) return;
   confirmSheet('Restaurar a R'+r.rev+'?','O mapa atual do '+r.pav+' é substituído pelo da R'+r.rev+' ('+(r.areas||[]).length+' áreas e '+(r.syms||[]).length+' símbolos). As revisões emitidas continuam guardadas; se quiser manter o estado atual, emita uma revisão dele antes.','Restaurar',async()=>{
     const l=liveOf(r.pav); for(const a of l.areas) await Store.del('areas',a.id); for(const s of l.syms) await Store.del('simbolos',s.id);

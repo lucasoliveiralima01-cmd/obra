@@ -129,6 +129,16 @@ a.hbtn{text-decoration:none}
 .pill.pend{background:var(--warn-soft);color:var(--warn)} .pill.wait{background:var(--wait-soft);color:var(--wait)}
 .pill.none{border-color:var(--line);color:var(--muted)}
 .pill.nodraw{border:1px dashed var(--warn);color:var(--warn)}
+.rvlist{display:grid;gap:4px}
+.rv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:7px 9px;border:1px solid var(--line-2);border-radius:6px;background:none;text-align:left;width:100%;color:var(--ink)}
+.rv:hover{border-color:var(--accent)} .rv[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.rv b{font:700 .9rem var(--f-disp)} .rv .mono{justify-self:end;color:var(--muted)} .rv small{grid-column:1/-1;color:var(--muted);font-size:.74rem}
+.rv .pill{grid-column:2;justify-self:end}
+.revbar{left:50%;top:10px;transform:translateX(-50%);z-index:3;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:center;padding:7px 10px;border:2px solid var(--warn);background:var(--warn-soft);max-width:calc(100% - 20px);font-size:.84rem;text-align:center}
+.prevbox{grid-column:1/-1;background:var(--canvas-bg);border:1px solid var(--line);border-radius:6px;padding:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;align-items:center;justify-items:center}
+.prevbox canvas{max-width:100%;max-height:230px;width:auto;height:auto;box-shadow:0 2px 10px rgba(0,0,0,.18);background:#fff}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:.88rem;line-height:1.3}
+.chk input{width:18px;height:18px;accent-color:var(--accent);flex:none;margin:0}
 .cfoot{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-top:1px solid var(--line-2)}
 .tower{display:grid;gap:2px;max-height:260px;overflow:auto}
 .tr{display:grid;grid-template-columns:minmax(0,1fr) 90px 34px;gap:8px;align-items:center;font-size:.82rem;padding:3px 6px;border-radius:4px;background:none;border:0;text-align:left;width:100%}
@@ -236,9 +246,9 @@ table.prev th{color:var(--muted);font-weight:600}
     <span class="modechip" id="modeChip">Carregando…</span>
     <a class="hbtn" id="bObras" href="index.html?ferramenta=concretagem" title="Voltar para a lista de obras">← Obras</a>
     <button class="hbtn" id="bIfc">Modelo IFC</button><input type="file" id="fIfc" accept=".ifc" hidden>
-    <button class="hbtn" id="bImp">Importar Excel</button><input type="file" id="fImp" accept=".xlsx,.xls" hidden>
-    <button class="hbtn solid" id="bExp">Exportar Excel</button>
-    <button class="hbtn" id="bHtml" title="Baixa este painel como um arquivo HTML com tudo dentro: concretagens, resultados, áreas, modelo IFC e mapas em papel">Baixar HTML</button>
+    <button class="hbtn solid" id="bPdf" title="Prancha do pavimento com a planta, a legenda dos caminhões e o carimbo">Exportar PDF</button>
+    <button class="hbtn" id="bImg">Exportar imagem</button>
+    <button class="hbtn" id="bExp">Exportar Excel</button>
     <button class="hbtn" id="bReset" title="Apaga modelo, concretagens e imagens do painel">Resetar painel</button>
   </div>
 </div></header>
@@ -255,7 +265,8 @@ table.prev th{color:var(--muted);font-weight:600}
       <canvas id="c3d" aria-label="Estrutura em 3D"></canvas>
       <canvas id="cplan" aria-label="Planta do pavimento" hidden></canvas>
       <div class="ov vbtns" id="vb3d"><button class="ibtn" id="bFit">Enquadrar</button><button class="ibtn" id="bCut" aria-pressed="true" title="Esconde os pavimentos acima do selecionado">Cortar acima</button></div>
-      <div class="ov vbtns" id="vbPlan" hidden><button class="ibtn" id="bPFit">Enquadrar</button><button class="ibtn" id="bBg" title="Coloque a foto do mapeamento em papel por baixo da planta">Mapa em papel</button><button class="ibtn" id="bPng">Baixar imagem</button></div>
+      <div class="ov vbtns" id="vbPlan" hidden><button class="ibtn" id="bPFit">Enquadrar</button><button class="ibtn" id="bBg" title="Coloque a foto do mapeamento em papel por baixo da planta">Mapa em papel</button></div>
+      <div class="ov card-ov revbar" id="revbar" hidden></div>
       <div class="ov legend card-ov" id="legend"></div>
       <button class="ov ibtn demochip" id="demoChip" hidden title="Modelo simplificado: vigas com 50 cm e sem escadas">Modelo de exemplo</button>
       <div class="ov card-ov center" id="loading" hidden><b id="ldName">Carregando modelo</b><span class="muted" id="ldStage"></span><div class="bar"><i id="ldBar"></i></div></div>
@@ -268,6 +279,7 @@ table.prev th{color:var(--muted);font-weight:600}
     <div class="card pend" id="pendCard" hidden><h2><span>Rompimentos pendentes</span><span class="mono" id="pendN"></span></h2><div id="pendList"></div></div>
     <div class="card" id="detail" hidden></div>
     <div class="card" id="concCard"><h2><span>Concretagens</span><button class="btn sm" id="bNewC">+ Nova concretagem</button></h2><div class="clist" id="clist"></div></div>
+    <div class="card" id="revCard"><h2><span id="revTtl">Revisões</span><button class="btn sm ghost" id="bRev">Emitir revisão</button></h2><div class="rvlist" id="revList"></div></div>
     <div class="card" id="towerCard"><h2><span>Pavimentos</span><span class="muted" style="font:500 .7rem var(--f-mono)">área desenhada</span></h2><div class="tower" id="tower"></div></div>
   </aside>
 </div>
@@ -277,6 +289,7 @@ table.prev th{color:var(--muted);font-weight:600}
 
 <script data-pv src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script data-pv src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script data-pv src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script data-pv src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
 <script data-pv>/* Leitor IFC (STEP) em JavaScript puro — sem WebAssembly.
@@ -995,7 +1008,8 @@ const tname=t=>TNAME[t]||String(t||'').replace(/^IFC/,'').toLowerCase();
 /* ======================= estado ======================= */
 const S={
   res:null, modelName:'', isDemo:false, storeys:[], stById:new Map(), stByName:new Map(), els:[],
-  conc:[], cfg:{fornecedor:'', obra:''}, bgs:{},
+  conc:[], cfg:{fornecedor:'', obra:'', carimbo:{}, pranchas:{}, exp:{}}, bgs:{},
+  revs:[], rev:null, concLive:null, roBase:false,
   view:'3d', pav:null, color:'truck', until:null, cut:true,
   sel:null, mode:null, readOnly:false, open:new Set()
 };
@@ -1020,14 +1034,24 @@ const Store={
       try{ const q=await db.collection('fundos').get(); q.docs.forEach(d=>S.bgs[d.id]=d.data()) }catch(e){}
       await new Promise(res=>{let first=true;
         this.unsub=db.collection('concretagens').onSnapshot(snap=>{
-          S.conc=snap.docs.map(d=>clone(d.data()));
-          if(first){first=false; res()} else { afterDataChange(false) }
+          const novo=snap.docs.map(d=>clone(d.data()));
+          // vendo uma revisão: guarda a versão atual e continua mostrando a revisão
+          if(S.rev){ S.concLive=novo; aplicarRev() } else S.conc=novo;
+          if(first){first=false; res()} else { invalidateData(); invalidateVol(); afterDataChange(false) }
         },err=>{ toast('A conexão com os dados compartilhados caiu. Recarregue a página.'); if(first){first=false; res()} });
+        setTimeout(()=>{ if(first){first=false; res()} },8000);
+      });
+      await new Promise(res=>{let first=true;
+        db.collection('revisoes').onSnapshot(snap=>{
+          S.revs=snap.docs.map(d=>clone(d.data()));
+          if(S.rev&&!curRev()){ S.rev=null; aplicarRev(); invalidateData(); invalidateVol() }
+          if(first){first=false; res()} else afterDataChange(false)
+        },()=>{ if(first){first=false; res()} });
         setTimeout(()=>{ if(first){first=false; res()} },8000);
       });
     } else {
       this.kind='local';
-      try{ const j=JSON.parse(localStorage.getItem(LSK)||'null'); if(j){ S.conc=j.conc||[]; Object.assign(S.cfg,j.cfg||{}); S.bgs=j.bgs||{} } }catch(e){}
+      try{ const j=JSON.parse(localStorage.getItem(LSK)||'null'); if(j){ S.conc=j.conc||[]; S.revs=j.revs||[]; Object.assign(S.cfg,j.cfg||{}); S.bgs=j.bgs||{} } }catch(e){}
       // arquivo HTML baixado com os dados embutidos: na primeira abertura carrega a cópia; depois valem as alterações feitas neste navegador
       const SN=window.SNAPSHOT; if(SN&&S.cfg.snapFrom!==SN.salvo){
         S.conc=clone(SN.conc||[]); S.cfg=Object.assign({obra:'',fornecedor:''},SN.cfg||{},{snapFrom:SN.salvo}); S.bgs=clone(SN.bgs||{}); this.fromSnap=true;
@@ -1039,7 +1063,7 @@ const Store={
     return true;
   },
   modelo(){ return this.kind==='db'?(S.obra&&S.obra.modelo):S.cfg.modelo },
-  persistLocal(){ try{ localStorage.setItem(LSK,JSON.stringify({conc:S.conc,cfg:S.cfg,bgs:S.bgs})) }catch(e){ toast('Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado). Exporte o Excel.') } },
+  persistLocal(){ try{ localStorage.setItem(LSK,JSON.stringify({conc:S.concLive||S.conc,revs:S.revs,cfg:S.cfg,bgs:S.bgs})) }catch(e){ toast('Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado). Exporte o Excel.') } },
   // Salva uma concretagem. No modo online confere se outra pessoa salvou a mesma
   // concretagem depois que esta versão foi aberta; se sim, pergunta o que fazer.
   // Gravações da mesma concretagem entram em fila para não se atropelarem.
@@ -1077,6 +1101,15 @@ const Store={
     $('cfDele').onclick=()=>{ closeSheet(); toast('Mantida a versão de '+quem+'.') };
     $('cfMinha').onclick=async()=>{ closeSheet(); if(await Store.saveConc(clone(minha),true)){ afterDataChange(false); toast('Sua versão foi gravada.') } };
   },
+  // revisões: cópias guardadas do mapa de um pavimento (não se editam, só se criam e apagam)
+  async saveRev(r){ const i=S.revs.findIndex(x=>x.id===r.id); if(i>=0) S.revs[i]=r; else S.revs.push(r);
+    if(this.kind==='db'){ try{ await this.db.doc('revisoes/'+r.id).set(clone(r)) }catch(e){ S.revs=S.revs.filter(x=>x.id!==r.id); this.writeErr(e); return false } }
+    else this.persistLocal();
+    return true },
+  async removeRev(id){ const antes=S.revs; S.revs=S.revs.filter(x=>x.id!==id);
+    if(this.kind==='db'){ try{ await this.db.doc('revisoes/'+id).delete() }catch(e){ S.revs=antes; this.writeErr(e); return false } }
+    else this.persistLocal();
+    return true },
   async removeConc(id){
     S.conc=S.conc.filter(x=>x.id!==id); delete this.minhas[id];
     if(this.kind==='db'){ try{ await this.db.doc('concretagens/'+id).delete() }catch(e){ this.writeErr(e); return false } }
@@ -1087,7 +1120,7 @@ const Store={
   async saveBg(key){ const v=S.bgs[key]; if(this.kind==='db'){ try{ if(v) await this.db.doc('fundos/'+key).set(clone(v)); else await this.db.doc('fundos/'+key).delete() }catch(e){ this.writeErr(e) } } else this.persistLocal() },
   writeErr(e){
     const c=e&&e.code;
-    if(c==='invalid_argument'||c==='permission_denied'){ S.readOnly=true; toast('Você só tem acesso de leitura a este painel. Peça acesso de edição ao responsável.') }
+    if(c==='invalid_argument'||c==='permission_denied'){ S.readOnly=S.roBase=true; toast('Você só tem acesso de leitura a este painel. Peça acesso de edição ao responsável.') }
     else if(c==='quota_exceeded') toast('O espaço de dados do painel acabou. Exporte o Excel e remova concretagens antigas.');
     else toast('Não foi possível salvar agora. Tente de novo em instantes.');
   },
@@ -1366,6 +1399,8 @@ function fitPlan(){ const st=S.stByName.get(S.pav); if(!st||!P.W) return; const 
 const toM=(px,py)=>[(px-P.tx)/P.s,-(py-P.ty)/P.s];
 const toS=(x,y)=>[x*P.s+P.tx,-y*P.s+P.ty];
 const paintCv=document.createElement('canvas'), maskCv=document.createElement('canvas'), baseCv=document.createElement('canvas');
+// PAPEL: desenho para a prancha (null = tela). {bg:true} inclui o mapa em papel.
+let PAPEL=null;
 let baseKey='', baseView=null, settleT=null;
 function stPaths(st){ if(st.pp) return st.pp; const slab=new Path2D(),beam=new Path2D(),mask=new Path2D(),edge=new Path2D();
   const voids=new Path2D(); let hasV=false;
@@ -1395,7 +1430,7 @@ function renderBase(st){
   if(!st) return;
   const D=P.dpr, M=[D*P.s,0,0,-D*P.s,D*P.tx,D*P.ty]; const pp=stPaths(st);
   // mapa em papel
-  const bg=S.bgs[bgKey(st)]; const bimg=bg&&bgImgs.get(bgKey(st));
+  const bg=(PAPEL&&!PAPEL.bg)?null:S.bgs[bgKey(st)]; const bimg=bg&&bgImgs.get(bgKey(st));
   const hasBg=!!(bg&&bimg&&bimg.complete&&bimg.naturalWidth);
   if(hasBg){ ctx.save(); ctx.setTransform(...M); ctx.translate(bg.cx-S.res.origin[0],bg.cy-S.res.origin[1]); ctx.rotate(-(bg.rot||0)*Math.PI/180); const w=bg.w, h=w*bimg.naturalHeight/bimg.naturalWidth; ctx.scale(1,-1); ctx.globalAlpha=bg.op??.5; ctx.drawImage(bimg,-w/2,-h/2,w,h); ctx.restore() }
   // estrutura
@@ -1442,7 +1477,7 @@ function renderBase(st){
     if(many){ ctx.font='600 10px "IBM Plex Mono",monospace'; ctx.fillStyle=css('--ink'); ctx.fillText(fmtDs(it.c.data),sx,sy+sz*.6+9) } }
   // escala
   const len=niceLen(80/P.s); const lw=len*P.s; ctx.fillStyle=css('--muted'); ctx.strokeStyle=css('--muted'); ctx.lineWidth=1.5; const bx=P.W-lw-16, by=P.H-14;
-  if(!(window.innerWidth<640)){ ctx.beginPath(); ctx.moveTo(bx,by-4); ctx.lineTo(bx,by); ctx.lineTo(bx+lw,by); ctx.lineTo(bx+lw,by-4); ctx.stroke(); ctx.font='500 11px "IBM Plex Mono",monospace'; ctx.fillText(len+' m',bx+lw/2,by-10) }
+  if(!PAPEL&&!(window.innerWidth<640)){ ctx.beginPath(); ctx.moveTo(bx,by-4); ctx.lineTo(bx,by); ctx.lineTo(bx+lw,by); ctx.lineTo(bx+lw,by-4); ctx.stroke(); ctx.font='500 11px "IBM Plex Mono",monospace'; ctx.fillText(len+' m',bx+lw/2,by-10) }
 }
 function drawOverlay(ctx){
   const D=P.dpr; ctx.setTransform(D,0,0,D,0,0);
@@ -1690,6 +1725,7 @@ $('hPend').onclick=()=>{ $('pendCard').scrollIntoView({behavior:'smooth',block:'
 function fillPavSelect(){ $('selPav').innerHTML=S.storeys.slice().reverse().map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('') }
 $('selPav').onchange=()=>{ if(S.mode&&S.mode.k==='draw'){ toast('Conclua o desenho antes de trocar de pavimento.'); $('selPav').value=S.pav; return } S.pav=$('selPav').value; applyCut(); renderTower(); if(S.view==='plan'){fitPlan(); P.fitted=S.pav} reqPlan() };
 function renderTower(){
+  renderRevs();
   const T=$('tower'); if(!S.storeys.length){ T.innerHTML='<span class="muted">Carregue um modelo IFC.</span>'; return }
   T.innerHTML=S.storeys.slice().reverse().map(st=>{ const items=areaItems(st.name); const cols=st.cols.filter(e=>colOwner(e)).length;
     const tot=st.drawn.filter(e=>e.type==='IFCSLAB').reduce((s,e)=>s+Math.abs((e.bb[3]-e.bb[0])*(e.bb[4]-e.bb[1])),0)||1;
@@ -1815,14 +1851,258 @@ $('bBg').onclick=()=>{
     $('bgMove').onclick=()=>{ closeSheet(); S.mode={k:'bg'}; const b=$('drawbar'); b.innerHTML='<div class="who">Arraste a imagem até casar com a estrutura · Shift + roda do mouse muda o tamanho</div><button class="btn sm" id="dEnd">Pronto</button>'; b.hidden=false; $('legend').hidden=true; $('dEnd').onclick=endMode };
     $('bgDel').onclick=async()=>{ const a=bg.asset; delete S.bgs[key]; bgImgs.delete(key); await Store.saveBg(key); idbDel('bg:'+key).catch(()=>{}); if(a&&Store.assets) Store.assets.delete(a).catch(()=>{}); closeSheet(); reqPlan() } }
 };
-$('bPng').onclick=()=>{
-  const st=S.stByName.get(S.pav); if(!st) return; const wasSel=S.sel; S.sel=null; drawPlan(); S.sel=wasSel;
-  const out=document.createElement('canvas'); out.width=cplan.width; out.height=cplan.height+Math.round(60*P.dpr); const x=out.getContext('2d');
-  x.fillStyle='#ffffff'; x.fillRect(0,0,out.width,out.height); x.drawImage(cplan,0,Math.round(60*P.dpr));
-  x.fillStyle='#22425c'; x.fillRect(0,0,out.width,Math.round(52*P.dpr)); x.fillStyle='#fff'; x.font=`700 ${Math.round(20*P.dpr)}px "Titillium Web",sans-serif`; x.textBaseline='middle';
-  const cs=visibleConc().filter(c=>c.pav===st.name).map(c=>fmtD(c.data)); x.fillText('Mapa de concretagem · '+st.name+(cs.length?' · '+cs.join(', '):''),16*P.dpr,26*P.dpr);
-  drawPlan(); out.toBlob(b=>{ if(b) Store.saveFile('Mapa_concretagem_'+st.name.replace(/\W+/g,'_')+'.png',b,'image/png') },'image/png');
-};
+/* ======================= revisões ======================= */
+// Uma revisão guarda uma cópia das concretagens que tocam o pavimento (áreas, pilares,
+// caminhões e resultados) como estavam no momento. Pode ser reaberta, exportada ou restaurada.
+const tocaPav=(c,pav)=>c.pav===pav||(c.caminhoes||[]).some(t=>(t.areas||[]).some(a=>a.pav===pav)||(t.pilares||[]).some(p=>p.pav===pav));
+const revsOf=pav=>S.revs.filter(r=>r.pav===pav).sort((a,b)=>(parseInt(a.rev,10)||0)-(parseInt(b.rev,10)||0)||String(a.criado).localeCompare(String(b.criado)));
+const lastRev=pav=>{ const l=revsOf(pav); return l[l.length-1]||null };
+const nextRevNum=pav=>{ const l=revsOf(pav); return pad(l.length?Math.max(...l.map(r=>parseInt(r.rev,10)||0))+1:1) };
+const STRIPK=new Set(['atualizado','criado','por']);
+function stable(o){ if(Array.isArray(o)) return '['+o.map(stable).join(',')+']'; if(o&&typeof o==='object') return '{'+Object.keys(o).filter(k=>!STRIPK.has(k)&&k[0]!=='_').sort().map(k=>JSON.stringify(k)+':'+stable(o[k])).join(',')+'}'; return JSON.stringify(o) }
+const liveConc=()=>S.concLive||S.conc;
+const concOfPav=pav=>liveConc().filter(c=>tocaPav(c,pav));
+const sigConc=l=>stable(l.slice().sort((a,b)=>a.id<b.id?-1:1));
+function changedSince(pav){ const r=lastRev(pav); if(!r) return true; return sigConc(concOfPav(pav))!==sigConc(r.conc||[]) }
+const curRev=()=>S.rev?S.revs.find(r=>r.id===S.rev)||null:null;
+// vendo uma revisão: a tela mostra as concretagens dela no pavimento (somente leitura)
+function aplicarRev(){ const r=curRev();
+  if(!r){ if(S.concLive){ S.conc=S.concLive; S.concLive=null } S.readOnly=S.roBase; return }
+  if(!S.concLive) S.concLive=S.conc;
+  S.conc=S.concLive.filter(c=>!tocaPav(c,r.pav)).concat(clone(r.conc||[])); S.readOnly=true }
+function renderRevs(){ const C=$('revList'); if(!C) return; const pav=S.pav; $('revTtl').textContent='Revisões'+(pav?' · '+pav:'');
+  if(!pav||!S.res){ C.innerHTML='<span class="muted">Carregue um modelo IFC.</span>'; $('bRev').disabled=true; renderRevBar(); return }
+  const l=revsOf(pav).slice().reverse(); const lr=lastRev(pav); const ch=changedSince(pav);
+  C.innerHTML=`<button class="rv" data-r="" aria-current="${!S.rev}"><b>Atual</b><span class="pill ${lr&&!ch?'ok':'pend'}">${lr?(ch?'alterada desde a R'+esc(lr.rev):'igual à R'+esc(lr.rev)):'nenhuma revisão emitida'}</span></button>`+
+    l.map(r=>{ const nc=(r.conc||[]).length, nt=(r.conc||[]).reduce((s,c)=>s+(c.caminhoes||[]).length,0);
+      return `<button class="rv" data-r="${esc(r.id)}" aria-current="${S.rev===r.id}"><b>R${esc(r.rev)}</b><span class="mono">${fmtD(r.data)}</span><small>${esc(r.desc||'Sem descrição')} · ${nc} concretage${nc===1?'m':'ns'} · ${nt} caminh${nt===1?'ão':'ões'}</small></button>` }).join('');
+  C.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>viewRev(b.dataset.r||null));
+  $('bRev').disabled=!!S.rev||S.roBase; renderRevBar() }
+function renderRevBar(){ const b=$('revbar'); const r=curRev(); if(!r){ b.hidden=true; b.innerHTML=''; return } b.hidden=false;
+  b.innerHTML=`<span>Vendo a <b>R${esc(r.rev)}</b> de ${fmtD(r.data)} · ${esc(r.pav)} · somente leitura</span><button class="btn sm" id="rvBack">Voltar à atual</button>${S.roBase?'':'<button class="btn sm ghost" id="rvRest">Restaurar esta revisão</button><button class="btn sm danger" id="rvDel">Excluir</button>'}`;
+  $('rvBack').onclick=()=>viewRev(null); if($('rvRest')) $('rvRest').onclick=()=>restoreRev(r.id); if($('rvDel')) $('rvDel').onclick=()=>deleteRev(r.id) }
+function viewRev(id){ if(S.mode) endMode(); S.rev=id||null; aplicarRev(); const r=curRev();
+  if(r&&S.pav!==r.pav&&S.stByName.get(r.pav)){ S.pav=r.pav; $('selPav').value=r.pav; applyCut() }
+  S.sel=null; invalidateData(); invalidateVol(); afterDataChange(true); if(S.view==='plan') fitPlan() }
+async function emitRev(pav,n,data,desc){ const strip=o=>{ const c=clone(o); delete c.atualizado; delete c.por; return c };
+  const r={id:uid('r-'),pav,rev:n,data,desc:desc||'',conc:concOfPav(pav).map(strip),criado:new Date().toISOString()};
+  const ok=await Store.saveRev(r);
+  if(ok){ const pk=bgKey(S.stByName.get(pav)||{name:pav}); S.cfg.pranchas=S.cfg.pranchas||{}; S.cfg.pranchas[pk]=Object.assign({},S.cfg.pranchas[pk]||{},{revisao:n,data}); Store.saveCfg() }
+  afterDataChange(false); return ok?r:null }
+function revForm(){
+  if(S.readOnly){ toast(S.rev?'Você está vendo uma revisão. Volte à versão atual para emitir outra.':'Acesso somente leitura.'); return }
+  const pav=S.pav; if(!pav) return; const lr=lastRev(pav); const l=concOfPav(pav); const nt=l.reduce((s,c)=>s+(c.caminhoes||[]).length,0); const same=lr&&!changedSince(pav);
+  openSheet('Emitir revisão · '+pav,`<p class="muted" style="margin-top:0">Guarda uma cópia do mapa deste pavimento como está agora (${l.length} concretage${l.length===1?'m':'ns'} e ${nt} caminh${nt===1?'ão':'ões'}, com áreas, pilares e resultados). A revisão pode ser reaberta, exportada ou restaurada depois, e aparece no quadro de revisões da prancha.</p>
+    ${same?`<p class="muted" style="color:var(--warn)">Nada mudou desde a R${esc(lr.rev)}.</p>`:''}
+    <form class="fg" id="fR" autocomplete="off"><div class="fld"><label for="rNum">Revisão</label><input id="rNum" value="${nextRevNum(pav)}"></div><div class="fld"><label for="rDat">Data</label><input type="date" id="rDat" value="${today()}"></div>
+    <div class="fld full"><label for="rDesc">O que mudou</label><input id="rDesc" placeholder="Ex.: concretagem da laje (fundos)" value="${lr?'':'Emissão inicial'}"></div></form>`,
+    `<span class="msg" id="rMsg"></span><button class="btn ghost" id="rC">Cancelar</button><button class="btn" id="rOk">Emitir</button>`);
+  $('rC').onclick=closeSheet;
+  $('rOk').onclick=async()=>{ const n=$('rNum').value.trim(); const msg=$('rMsg'); if(!n){ msg.textContent='Informe o número da revisão.'; msg.className='msg err'; return } if(revsOf(pav).some(r=>r.rev===n)){ msg.textContent='Já existe a R'+n+' neste pavimento.'; msg.className='msg err'; return }
+    const dt=$('rDat').value||today(), desc=$('rDesc').value.trim(); closeSheet(); if(await emitRev(pav,n,dt,desc)) toast('Revisão R'+n+' emitida.') } }
+function restoreRev(id){ const r=S.revs.find(x=>x.id===id); if(!r||S.roBase) return; const nc=(r.conc||[]).length;
+  confirmSheet('Restaurar a R'+r.rev+'?','As concretagens do '+r.pav+' voltam a ser as da R'+r.rev+' ('+nc+' concretage'+(nc===1?'m':'ns')+'), inclusive as áreas que elas tenham em outros pavimentos. As revisões emitidas continuam guardadas; se quiser manter o estado atual, emita uma revisão dele antes.','Restaurar',async()=>{
+    S.rev=null; aplicarRev(); const ids=new Set((r.conc||[]).map(c=>c.id));
+    for(const c of concOfPav(r.pav)) if(!ids.has(c.id)) await Store.removeConc(c.id);
+    for(const c of r.conc||[]) await Store.saveConc(clone(c),true);
+    S.sel=null; invalidateData(); invalidateVol(); afterDataChange(true); toast('R'+r.rev+' restaurada como versão atual.') }) }
+function deleteRev(id){ const r=S.revs.find(x=>x.id===id); if(!r||S.roBase) return;
+  confirmSheet('Excluir a R'+r.rev+'?','A cópia guardada desta revisão do '+r.pav+' é apagada. O mapa atual não muda.','Excluir',async()=>{ if(S.rev===id){ S.rev=null; aplicarRev(); invalidateData(); invalidateVol() } await Store.removeRev(id); afterDataChange(true) }) }
+$('bRev').onclick=revForm;
+
+/* ======================= prancha (PDF e imagem) ======================= */
+const FMT={A4:[297,210],A3:[420,297],A2:[594,420],A1:[841,594]};
+const ESCALAS=[50,75,100,125,150,200,250,500];
+const PAPER_TK={'--plan-bg':'#ffffff','--slab':'#eceff1','--beam':'#d3d9de','--edge':'#7d8790','--col':'#59646e','--ink':'#1b2733','--muted':'#4a5966','--accent':'#074669'};
+let logoImg=null;
+async function loadLogo(){ const l=S.cfg.logo; logoImg=null; if(!l) return; let src=null;
+  if(l.asset){ if(window.Nuvem) src=await Nuvem.blobUrl(l.asset).catch(()=>null) } else { const b=await idbGet('logo').catch(()=>null); if(b) src=URL.createObjectURL(b) }
+  if(!src) return; await new Promise(r=>{ const im=new Image(); im.onload=()=>{logoImg=im; r()}; im.onerror=r; im.src=src }) }
+// caminhões desenhados no pavimento (áreas ou pilares), na ordem da concretagem
+function trucksOfPav(pav){ const out=[]; for(const c of visibleConc()) for(const t of c.caminhoes||[]) if((t.areas||[]).some(a=>a.pav===pav)||(t.pilares||[]).some(p=>p.pav===pav)) out.push({c,t});
+  return out.sort((a,b)=>a.c.data<b.c.data?-1:a.c.data>b.c.data?1:(a.t.ordem||0)-(b.t.ordem||0)) }
+function legendItems(pav){ return trucksOfPav(pav).map(({c,t})=>({cor:truckColor(c,t),t1:'C'+(t.ordem||'?'),
+  t2:[fmtDs(c.data),t.nf?'NF '+t.nf:'',t.vol!=null?f1(t.vol)+' m³':'',S.color==='res'?truckStatus(c,t).label:''].filter(Boolean).join(' · ')})) }
+function sheetDefaults(st){ const pk=bgKey(st); S.cfg.pranchas=S.cfg.pranchas||{}; const pr=S.cfg.pranchas[pk]||{}; const c=S.cfg.carimbo||{}; const e=S.cfg.exp||{};
+  return {endereco:c.endereco||S.cfg.obra||'',proprietario:c.proprietario||'',execucao:c.execucao||'',projetista:c.projetista||'',
+    desenho:pr.desenho||('MAPA DE CONCRETAGEM – '+st.name.toUpperCase()),numero:pr.numero||'01',revisao:pr.revisao||'01',data:pr.data||today(),
+    fmt:e.fmt||'A3',esc:e.esc||'fit',quadro:e.quadro!==false,bg:!!e.bg,dpi:e.dpi||200} }
+// folha base: moldura, legenda dos caminhões, carimbo e quadro de revisões; ppm = pixels por mm
+function sheetBase(o,ppm,desenho,numero){
+  const [Wmm,Hmm]=FMT[o.fmt]||FMT.A3; const k=Hmm/297; const cv=document.createElement('canvas'); cv.width=Math.round(Wmm*ppm); cv.height=Math.round(Hmm*ppm);
+  const ctx=cv.getContext('2d'); const X=v=>v*ppm;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  const mL=25, mO=o.fmt==='A4'?7:10; const F=[mL,mO,Wmm-mO,Hmm-mO];
+  const DISP='"Titillium Web","Segoe UI",Arial,sans-serif';
+  const font=(w,sz,fam)=>w+' '+X(sz)+'px '+(fam||'"Source Sans 3","Segoe UI",Arial,sans-serif');
+  const line=(x0,y0,x1,y1,c,w)=>{ ctx.beginPath(); ctx.moveTo(X(x0),X(y0)); ctx.lineTo(X(x1),X(y1)); ctx.strokeStyle=c||'#1b2733'; ctx.lineWidth=X(w||.25); ctx.stroke() };
+  const rect=(x,y,w,h,c,lw)=>{ ctx.strokeStyle=c||'#1b2733'; ctx.lineWidth=X(lw||.25); ctx.strokeRect(X(x),X(y),X(w),X(h)) };
+  const text=(t,x,y,sz,o2)=>{ o2=o2||{}; ctx.font=font(o2.w||400,sz,o2.fam); ctx.fillStyle=o2.c||'#1b2733'; ctx.textAlign=o2.al||'left'; ctx.textBaseline=o2.bl||'alphabetic'; let s=String(t||''); if(o2.max){ while(s.length>1&&ctx.measureText(s).width>X(o2.max)) s=s.slice(0,-2)+'…' } ctx.fillText(s,X(x),X(y)) };
+  const cW=125*k, cH=62*k, gap=4*k; const cX=F[2]-cW, cY=F[3]-cH;
+  const lg=o.legend||[]; const lgRh=4.6*k; const lgRows=Math.max(1,Math.floor((cH-9.5*k)/lgRh)); const lgCW=64*k;
+  const maxCols=Math.max(1,Math.floor((cX-gap-F[0]-60*k)/lgCW)); const lgCols=Math.min(maxCols,Math.max(1,Math.ceil(lg.length/lgRows)));
+  const lgW=lgCols*lgCW; const lgX=cX-gap-lgW, lgY=cY; const cap=lgCols*lgRows; const shown=lg.length>cap?cap-1:lg.length;
+  const rR=(o.revRows||[]).slice(-4); const rh=4.2*k; const tabH=rR.length?rh*(rR.length+1):0; const tY=cY-tabH;
+  const blocks=()=>{ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#fff'; ctx.fillRect(X(lgX),X(lgY),X(F[2]-lgX),X(cH)); if(tabH) ctx.fillRect(X(cX),X(tY),X(cW),X(tabH));
+    rect(F[0],F[1],F[2]-F[0],F[3]-F[1],'#1b2733',.5);
+    // legenda: caminhões do pavimento
+    const LC='#1aa3dc'; rect(lgX,lgY,lgW,cH,LC,.3); text(o.legTitle||'Caminhões:',lgX+lgW/2,lgY+7*k,4.6*k,{al:'center',c:LC,fam:DISP,max:lgW-4*k}); line(lgX,lgY+9.5*k,lgX+lgW,lgY+9.5*k,LC,.3);
+    for(let c=1;c<lgCols;c++) line(lgX+c*lgCW,lgY+9.5*k,lgX+c*lgCW,lgY+cH,LC,.3);
+    if(!lg.length) text('Nenhum caminhão desenhado neste pavimento.',lgX+2*k,lgY+15*k,2.2*k,{c:'#6b7a86',max:lgW-4*k});
+    const sq=lgRh*.62;
+    lg.slice(0,shown).forEach((it,i)=>{ const c=Math.floor(i/lgRows), r=i%lgRows; const x=lgX+c*lgCW+1.6*k, y=lgY+9.5*k+r*lgRh;
+      ctx.fillStyle=it.cor; ctx.fillRect(X(x),X(y+(lgRh-sq)/2),X(sq),X(sq)); ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=X(.12); ctx.strokeRect(X(x),X(y+(lgRh-sq)/2),X(sq),X(sq));
+      text(it.t1,x+sq+1.2*k,y+lgRh*.7,2.3*k,{w:700,max:8*k}); text(it.t2,x+sq+8.6*k,y+lgRh*.7,2.05*k,{c:'#33424f',max:lgCW-sq-11*k}) });
+    if(shown<lg.length){ const i=shown, c=Math.floor(i/lgRows), r=i%lgRows; text('+ '+(lg.length-shown)+' caminhões (veja o quadro)',lgX+c*lgCW+1.6*k,lgY+9.5*k+r*lgRh+lgRh*.7,2.05*k,{c:'#6b7a86',max:lgCW-3*k}) }
+    // carimbo
+    rect(cX,cY,cW,cH,'#1b2733',.35); const rc=cW-31*k; const rows=[8,9,9,8,14,14].map(v=>v*k); let yy=cY; const Y=[]; rows.forEach(h=>{Y.push(yy); yy+=h});
+    line(cX,Y[1],F[2],Y[1]); text(o.endereco,cX+rc/2,Y[0]+5.3*k,2.6*k,{al:'center',max:cW-4*k});
+    for(let i=2;i<6;i++) line(cX,Y[i],cX+rc,Y[i]); line(cX+rc,Y[1],cX+rc,F[3]); [Y[2],Y[3],Y[4],Y[5]].forEach(v=>line(cX+rc,v,F[2],v));
+    const lab=(t,x,y0)=>text(t,x+1*k,y0+2.6*k,1.7*k,{c:'#4a5966'});
+    lab('PROPRIETÁRIO:',cX,Y[1]); text(o.proprietario,cX+22*k,Y[1]+6*k,2.6*k,{max:rc-24*k});
+    lab('PROJETO:',cX,Y[2]); text('MAPA DE CONCRETAGEM',cX+rc/2,Y[2]+7*k,3.4*k,{al:'center',w:600,max:rc-4*k});
+    lab('EXECUÇÃO:',cX,Y[3]); text(o.execucao,cX+20*k,Y[3]+6*k,2.6*k,{max:rc-22*k});
+    text(desenho,cX+rc/2,Y[4]+9*k,3.6*k,{al:'center',w:600,max:rc-4*k});
+    if(logoImg){ const h=rows[5]-3*k, w=Math.min(rc-6*k,h*logoImg.naturalWidth/logoImg.naturalHeight); ctx.drawImage(logoImg,X(cX+rc/2-w/2),X(Y[5]+1.5*k),X(w),X(h)) }
+    const rx=cX+rc; lab('DATA:',rx,Y[1]); text(fmtD(o.data),rx+2*k,Y[1]+7*k,2.6*k);
+    lab('PROJETISTA:',rx,Y[2]); text(o.projetista,rx+2*k,Y[2]+7*k,2.4*k,{max:27*k});
+    lab('ESCALA:',rx,Y[3]); text(o.esc==='fit'?'Sem escala':'1:'+o.esc,rx+2*k,Y[3]+6.4*k,2.6*k);
+    lab('NÚMERO DO DESENHO:',rx,Y[4]); text(numero,rx+3*k,Y[4]+10.5*k,3.6*k);
+    text('REVISÃO '+o.revisao,rx+15.5*k,Y[5]+9*k,3.2*k,{al:'center'});
+    // quadro de revisões
+    if(tabH){ rect(cX,tY,cW,tabH,'#1b2733',.3); const c1=13*k, c2=c1+20*k; line(cX+c1,tY,cX+c1,tY+tabH); line(cX+c2,tY,cX+c2,tY+tabH);
+      [['REV.',0],['DATA',c1],['DESCRIÇÃO',c2]].forEach(([t,x])=>text(t,cX+x+1.2*k,tY+rh*.68,1.7*k,{c:'#4a5966'}));
+      rR.slice().reverse().forEach((r,i)=>{ const y=tY+rh*(i+1); line(cX,y,F[2],y,'#1b2733',.2); text(r.rev,cX+1.5*k,y+rh*.72,2.2*k); text(fmtD(r.data),cX+c1+1.5*k,y+rh*.72,2.2*k); text(r.desc||'—',cX+c2+1.5*k,y+rh*.72,2.2*k,{max:cW-c2-3*k}) }) } };
+  return {cv,ctx,X,k,F,cX,cY,cW,cH,lgX,gap,text,line,blocks,tabH,DISP};
+}
+// desenha a planta do pavimento com as cores de papel, usando o mesmo desenho da tela
+// Wc, Hc em px de tela; D = px do canvas por px de tela; s = px de tela por metro
+function renderPlanPapel(st,Wc,Hc,D,s,tx,ty,opt){
+  const sv={dpr:P.dpr,W:P.W,H:P.H,s:P.s,tx:P.tx,ty:P.ty}, cw=cplan.width, ch=cplan.height, tk=TK, sel=S.sel;
+  try{ PAPEL=opt||{}; P.dpr=D; P.W=Wc; P.H=Hc; P.s=s; P.tx=tx; P.ty=ty; S.sel=null; TK=Object.assign({},PAPER_TK);
+    cplan.width=Math.max(1,Math.round(Wc*D)); cplan.height=Math.max(1,Math.round(Hc*D));
+    renderBase(st);
+    const out=document.createElement('canvas'); out.width=baseCv.width; out.height=baseCv.height; out.getContext('2d').drawImage(baseCv,0,0); return out;
+  } finally { PAPEL=null; Object.assign(P,sv); cplan.width=cw; cplan.height=ch; TK=tk; S.sel=sel; baseKey=''; baseView=null; reqPlan() }
+}
+function buildSheet(st,o,ppm){
+  const B=sheetBase(o,ppm,o.desenho,o.numero); const {ctx,X,k,F,cY}=B;
+  const pd=5*k; const [x0,y0,x1,y1]=st.bb; const mg=1.5; const bw=x1-x0+2*mg, bh=y1-y0+2*mg;
+  const A=[F[0]+pd,F[1]+pd,F[2]-pd,cY-B.tabH-pd], Bq=[F[0]+pd,F[1]+pd,B.lgX-pd,F[3]-pd];
+  const fitIn=R=>Math.min((R[2]-R[0])/bw,(R[3]-R[1])/bh);
+  let R=fitIn(A)>=fitIn(Bq)?A:Bq; let smm;
+  if(o.esc==='fit') smm=fitIn(R);
+  else { smm=1000/+o.esc; const fits=Rr=>bw*smm<=Rr[2]-Rr[0]+.5&&bh*smm<=Rr[3]-Rr[1]+.5; if(fits(A)) R=A; else if(fits(Bq)) R=Bq; else return {err:'Na escala 1:'+o.esc+' a planta não cabe na folha '+o.fmt+'. Escolha uma escala menor (número maior) ou uma folha maior.'} }
+  const PXMM=96/25.4; const Wc=(R[2]-R[0])*PXMM, Hc=(R[3]-R[1])*PXMM, D=ppm/PXMM, s=smm*PXMM;
+  const img=renderPlanPapel(st,Wc,Hc,D,s,Wc/2-(x0+x1)/2*s,Hc/2+(y0+y1)/2*s,{bg:o.bg});
+  ctx.drawImage(img,X(R[0]),X(R[1]),X(R[2]-R[0]),X(R[3]-R[1]));
+  B.blocks();
+  return {cv:B.cv,scale:smm};
+}
+// segunda folha: quadro das concretagens do pavimento (caminhões, notas e corpos de prova)
+function buildQuadro(st,o,ppm){
+  const B=sheetBase(o,ppm,'QUADRO DE CONCRETAGENS – '+st.name.toUpperCase(),o.numero+'.2'); const {ctx,X,k,F,cY,text,line}=B;
+  const cs=visibleConc().filter(c=>tocaPav(c,st.name)).sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0);
+  const pd=6*k; const qx=F[0]+pd, qy=F[1]+pd, qw=F[2]-F[0]-2*pd, qh=cY-B.tabH-F[1]-2*pd;
+  text('QUADRO DE CONCRETAGENS · '+st.name.toUpperCase(),qx,qy+5*k,4.2*k,{w:700,fam:B.DISP});
+  text('Resultados dos corpos de prova em MPa. Situação: “Aprovado” quando o maior resultado do par atinge o fck; “Falta resultado” quando a idade já passou e o resultado não foi lançado.',qx,qy+10*k,2.1*k,{c:'#4a5966',max:qw});
+  const top=qy+14*k, avail=qh-14*k;
+  const COLS=[['Cam.',.07],['Nota fiscal',.13],['Volume',.08],['fck',.07],['Slump',.07],['Chegada',.08],['7 dias',.12],['28 dias',.12],['63 dias',.12],['Situação',.14]];
+  const xs=[]; let acc=0; for(const [,f] of COLS){ xs.push(qx+acc*qw); acc+=f }
+  const rowsQ=[]; for(const c of cs){ rowsQ.push({h:c}); const ts=(c.caminhoes||[]).slice().sort((a,b)=>(a.ordem||0)-(b.ordem||0)); if(!ts.length) rowsQ.push({none:true}); for(const t of ts) rowsQ.push({c,t}) }
+  let fs=2.6*k; for(let f=2.6*k; f>=1.4*k; f-=.1*k){ fs=f; const lh=f*1.6, hh=f*2.3; const tot=f*2.2+rowsQ.reduce((s,r)=>s+(r.h?hh:lh),0); if(tot<=avail) break }
+  const lh=fs*1.6, hh=fs*2.3; let y=top;
+  COLS.forEach(([t],i)=>text(t,xs[i]+.8*k,y+fs*1.3,fs*.85,{c:'#4a5966',w:600})); y+=fs*2.2; line(qx,y,qx+qw,y,'#1b2733',.25);
+  const ageTxt=(c,t,a)=>{ const s=ageState(c,t,a); if(!s) return '—'; if(s.r.length) return s.r.map(v=>f1(v)).join(' / '); return (s.st==='pend'?'falta · ':'rompe ')+fmtDs(s.due) };
+  let cut=0;
+  for(let i=0;i<rowsQ.length;i++){ const r=rowsQ[i]; const h=r.h?hh:lh; if(y+h>top+avail){ cut=rowsQ.length-i; break }
+    if(r.h){ const c=r.h; const vol=(c.caminhoes||[]).reduce((s,t)=>s+(+t.vol||0),0);
+      text(fmtD(c.data)+' · '+(c.descricao||'Concretagem')+(c.fornecedor?' · '+c.fornecedor:'')+' · '+(c.caminhoes||[]).length+' caminh'+((c.caminhoes||[]).length===1?'ão':'ões')+(vol?' · '+f1(vol)+' m³':''),qx,y+fs*1.7,fs*1.02,{w:700,max:qw});
+      line(qx,y+hh-fs*.25,qx+qw,y+hh-fs*.25,'#c9d1d7',.15) }
+    else if(r.none) text('sem caminhões cadastrados',xs[1]+.8*k,y+fs*1.15,fs*.9,{c:'#6b7a86'});
+    else { const {c,t}=r; const st2=truckStatus(c,t); const sq=fs*.95;
+      ctx.fillStyle=truckColor(c,t); ctx.fillRect(X(xs[0]+.8*k),X(y+(lh-sq)/2),X(sq),X(sq));
+      const cells=['C'+(t.ordem||'?'),t.nf||'—',t.vol!=null?f1(t.vol)+' m³':'—',t.fck!=null&&t.fck!==''?t.fck+' MPa':'—',t.slump!=null&&t.slump!==''?String(t.slump).replace('.',',')+' cm':'—',t.hChegada||'—',ageTxt(c,t,'7'),ageTxt(c,t,'28'),ageTxt(c,t,'63'),st2.label];
+      cells.forEach((v,j)=>{ const x=xs[j]+.8*k+(j===0?sq+.8*k:0); const w=(COLS[j][1]*qw)-1.6*k-(j===0?sq+.8*k:0);
+        text(v,x,y+fs*1.15,fs*.9,{max:w,c:j===9?({ok:'#23804a',bad:'#c23b2f',pend:'#b86e00'}[st2.st]||'#4a5966'):'#1b2733',w:j===0||j===9?600:400}) }) }
+    y+=h }
+  if(!rowsQ.length) text('Nenhuma concretagem neste pavimento.',qx,top+fs*4,2.4*k,{c:'#6b7a86'});
+  if(cut) text('+ '+cut+' linha(s) não couberam nesta folha; use uma folha maior.',qx,top+avail+3*k,2*k,{c:'#c23b2f'});
+  B.blocks();
+  return {cv:B.cv};
+}
+function exportSheet(kind){
+  const st=S.stByName.get(S.pav); if(!st){ toast('Carregue um modelo e escolha um pavimento.'); return }
+  const o=sheetDefaults(st); const n=trucksOfPav(st.name).length; const nq=visibleConc().filter(c=>tocaPav(c,st.name)).length;
+  const r0=curRev(); const lr=lastRev(st.name); const ch=!r0&&changedSince(st.name);
+  o.revisao=r0?r0.rev:(lr&&!ch?lr.rev:nextRevNum(st.name)); o.data=r0?r0.data:(lr&&!ch?lr.data:today());
+  const legend=legendItems(st.name);
+  const legTitle=({truck:'Caminhões',date:'Caminhões · cor pela data',res:'Caminhões · cor pelo resultado'}[S.color]||'Caminhões')+(S.until?' até '+fmtDs(S.until):'')+':';
+  let registered=false;
+  openSheet('Exportar prancha · '+st.name,`<form class="fg" id="fE" autocomplete="off">
+    <div class="prevbox"><canvas id="ePrev" width="10" height="10" aria-label="Prévia da prancha"></canvas><canvas id="ePrev2" width="10" height="10" aria-label="Prévia do quadro de concretagens" hidden></canvas></div>
+    ${n?'':'<p class="muted full" style="margin:0">Este pavimento ainda não tem áreas nem pilares desenhados; a prancha sai só com a planta.</p>'}
+    <p class="muted full" style="margin:0">As cores seguem a opção escolhida em “Cores” (${esc(({truck:'caminhão',date:'data',res:'resultado'})[S.color]||'caminhão')})${S.until?' e só entram as concretagens até '+fmtD(S.until):''}.</p>
+    ${r0?`<p class="muted full" style="margin:0">Exportando a <b>R${esc(r0.rev)}</b> emitida em ${fmtD(r0.data)}: a prancha sai com o mapa como estava nessa revisão.</p>`:''}
+    ${ch&&!S.readOnly?`<div class="full" id="eRegBox" style="display:grid;gap:8px"><label class="chk"><input type="checkbox" id="eReg" checked><span>Registrar como revisão <b id="eRegN">R${esc(o.revisao)}</b> ao exportar (guarda uma cópia deste mapa e entra no quadro de revisões da prancha)</span></label>
+      <div class="fld" id="eRegD"><label for="eRegT">O que mudou nesta revisão</label><input id="eRegT" value="${lr?'':'Emissão inicial'}" placeholder="Ex.: concretagem da laje (fundos)"></div></div>`:''}
+    <div class="fsec">Folha</div>
+    <div class="fld"><label for="eFmt">Formato</label><select id="eFmt">${Object.keys(FMT).map(f=>`<option ${f===o.fmt?'selected':''}>${f}</option>`).join('')}</select></div>
+    <div class="fld"><label for="eEsc">Escala</label><select id="eEsc"><option value="fit" ${o.esc==='fit'?'selected':''}>Ajustar à folha (sem escala)</option>${ESCALAS.map(e=>`<option value="${e}" ${String(o.esc)===String(e)?'selected':''}>1:${e}</option>`).join('')}</select></div>
+    <label class="chk full"><input type="checkbox" id="eQd" ${o.quadro?'checked':''}><span>Incluir uma segunda folha com o quadro de concretagens (caminhões, notas, volumes e resultados dos corpos de prova)</span></label>
+    ${S.bgs[bgKey(st)]?`<label class="chk full"><input type="checkbox" id="eBg" ${o.bg?'checked':''}><span>Incluir o mapa em papel por baixo da planta</span></label>`:''}
+    <div class="fsec">Carimbo</div>
+    <div class="fld full"><label for="eEnd">Endereço da obra</label><input id="eEnd" value="${esc(o.endereco)}" placeholder="Ex.: Av. Exemplo, 100 – Porto Alegre/RS"></div>
+    <div class="fld"><label for="eProp">Proprietário</label><input id="eProp" value="${esc(o.proprietario)}"></div>
+    <div class="fld"><label for="eExe">Execução</label><input id="eExe" value="${esc(o.execucao)}"></div>
+    <div class="fld"><label for="ePrj">Projetista</label><input id="ePrj" value="${esc(o.projetista)}"></div>
+    <div class="fld"><label for="eDat">Data</label><input type="date" id="eDat" value="${esc(o.data)}"></div>
+    <div class="fld full"><label for="eDes">Desenho</label><input id="eDes" value="${esc(o.desenho)}"></div>
+    <div class="fld"><label for="eNum">Número do desenho</label><input id="eNum" value="${esc(o.numero)}"></div>
+    <div class="fld"><label for="eRev">Revisão</label><input id="eRev" value="${esc(o.revisao)}"></div>
+    <div class="fld full"><label for="eLogo">Logo da empresa ou da obra no carimbo (opcional)</label><input type="file" id="eLogo" accept="image/*">${S.cfg.logo?'<button type="button" class="btn sm ghost" id="eLogoX" style="justify-self:start">Remover logo</button>':''}</div>
+    <div class="fsec">Imagem</div>
+    <div class="fld"><label for="eDpi">Resolução da imagem</label><select id="eDpi">${[150,200,300].map(d=>`<option value="${d}" ${+o.dpi===d?'selected':''}>${d} dpi</option>`).join('')}</select></div>
+    </form>`,
+    `<span class="msg" id="eMsg"></span><button class="btn ghost" id="eC">Fechar</button><button class="btn ${kind==='pdf'?'ghost':''}" id="ePng">Baixar imagem (PNG)</button><button class="btn ${kind==='pdf'?'':'ghost'}" id="ePdf">Baixar PDF</button>`);
+  setTimeout(()=>{ $('ovlB').scrollTop=0 },60);
+  const regOn=()=>!registered&&$('eReg')&&$('eReg').checked;
+  function revRowsFor(rv,dt){ const rn=parseInt(rv,10); const rows=revsOf(st.name).filter(r=>isNaN(rn)||(parseInt(r.rev,10)||0)<=rn).map(r=>({rev:r.rev,data:r.data,desc:r.desc}));
+    if(regOn()&&rv&&!rows.some(r=>r.rev===rv)) rows.push({rev:rv,data:dt,desc:$('eRegT').value.trim()}); return rows }
+  const read=()=>({endereco:$('eEnd').value.trim(),proprietario:$('eProp').value.trim(),execucao:$('eExe').value.trim(),projetista:$('ePrj').value.trim(),desenho:$('eDes').value.trim(),numero:$('eNum').value.trim(),revisao:$('eRev').value.trim(),data:$('eDat').value||today(),
+    fmt:$('eFmt').value,esc:$('eEsc').value,quadro:$('eQd').checked,bg:$('eBg')?$('eBg').checked:false,dpi:+$('eDpi').value,legend,legTitle,revRows:revRowsFor($('eRev').value.trim(),$('eDat').value||today())});
+  if($('eReg')){ $('eReg').onchange=()=>{ $('eRegD').style.display=$('eReg').checked?'':'none' }; $('eRev').addEventListener('input',()=>{ $('eRegN').textContent='R'+$('eRev').value.trim() }) }
+  const prev=()=>{ if(!$('ePrev')) return; const v=read(); const r=buildSheet(st,v,1.6); const msg=$('eMsg'); if(r.err){ msg.textContent=r.err; msg.className='msg err'; return } msg.textContent=v.esc==='fit'?'Escala aproximada 1:'+Math.round(1000/r.scale):''; msg.className='msg';
+    const c=$('ePrev'); c.width=r.cv.width; c.height=r.cv.height; c.getContext('2d').drawImage(r.cv,0,0);
+    const c2=$('ePrev2'); const q=v.quadro&&nq; c2.hidden=!q; if(q){ const r2=buildQuadro(st,v,1.6); c2.width=r2.cv.width; c2.height=r2.cv.height; c2.getContext('2d').drawImage(r2.cv,0,0) } };
+  let pt=null; const sched=()=>{ clearTimeout(pt); pt=setTimeout(prev,180) };
+  $('fE').addEventListener('input',sched); $('fE').addEventListener('change',sched);
+  $('eLogo').onchange=async ev=>{ const f=ev.target.files[0]; if(!f) return; const old=S.cfg.logo;
+    if(Store.kind==='db'&&Store.assets){ try{ const r=await Store.assets.upload(f); S.cfg.logo={asset:r.id,nome:f.name}; if(old&&old.asset) Store.assets.delete(old.asset).catch(()=>{}) }catch(e){ toast('Não foi possível enviar o logo ('+(e&&e.code||'erro')+'). Ele ficará só neste navegador.'); await idbPut('logo',f).catch(()=>{}); S.cfg.logo={local:true,nome:f.name} } }
+    else { await idbPut('logo',f).catch(()=>{}); S.cfg.logo={local:true,nome:f.name} }
+    await Store.saveCfg(); await loadLogo(); prev() };
+  if($('eLogoX')) $('eLogoX').onclick=async()=>{ const old=S.cfg.logo; S.cfg.logo=null; logoImg=null; if(old&&old.asset&&Store.assets) Store.assets.delete(old.asset).catch(()=>{}); idbDel('logo').catch(()=>{}); await Store.saveCfg(); $('eLogoX').remove(); prev() };
+  $('eC').onclick=closeSheet;
+  const remember=v=>{ S.cfg.carimbo={endereco:v.endereco,proprietario:v.proprietario,execucao:v.execucao,projetista:v.projetista}; S.cfg.pranchas=S.cfg.pranchas||{}; S.cfg.pranchas[bgKey(st)]={desenho:v.desenho,numero:v.numero,revisao:v.revisao,data:v.data}; S.cfg.exp={fmt:v.fmt,esc:v.esc,quadro:v.quadro,bg:v.bg,dpi:v.dpi}; if(!S.readOnly) Store.saveCfg() };
+  const go=async kind=>{ let v=read(); const msg=$('eMsg');
+    if(regOn()){ if(!v.revisao){ msg.textContent='Informe o número da revisão.'; msg.className='msg err'; return } if(revsOf(st.name).some(r=>r.rev===v.revisao)){ msg.textContent='Já existe a R'+v.revisao+' neste pavimento; use outro número ou desmarque o registro.'; msg.className='msg err'; return }
+      msg.textContent='Registrando a R'+v.revisao+'…'; msg.className='msg'; const rr=await emitRev(st.name,v.revisao,v.data,$('eRegT').value.trim()); if(rr){ registered=true; $('eRegBox').hidden=true; v=read() } }
+    remember(v); msg.textContent='Gerando…'; msg.className='msg'; await fontsReady(); await sleep(20);
+    const [Wmm,Hmm]=FMT[v.fmt]; let dpi=kind==='pdf'?Math.max(200,v.dpi):v.dpi; while((Wmm/25.4*dpi)*(Hmm/25.4*dpi)>15e6&&dpi>90) dpi-=10;
+    const r=buildSheet(st,v,dpi/25.4); if(r.err){ msg.textContent=r.err; msg.className='msg err'; return }
+    const base='Mapa_de_concretagem_'+st.name.replace(/[^\wÀ-ú]+/g,'_')+'_R'+(v.revisao||'00').replace(/\W+/g,'');
+    const r2=v.quadro&&nq?buildQuadro(st,v,dpi/25.4):null;
+    if(kind==='png'){ const b=await new Promise(res=>r.cv.toBlob(res,'image/png')); if(!b){ msg.textContent='O navegador não conseguiu gerar a imagem.'; msg.className='msg err'; return } await Store.saveFile(base+'.png',b,'image/png');
+      if(r2){ const b2=await new Promise(res=>r2.cv.toBlob(res,'image/png')); if(b2) await Store.saveFile(base+'_quadro.png',b2,'image/png') } }
+    else { if(!window.jspdf){ msg.textContent='A biblioteca de PDF não carregou. Verifique a conexão e tente de novo.'; msg.className='msg err'; return }
+      const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:[Wmm,Hmm],compress:true}); pdf.setProperties({title:'Mapa de concretagem – '+st.name,subject:'Mapa de concretagem',creator:'Mapa de Concretagem'});
+      pdf.addImage(r.cv,'PNG',0,0,Wmm,Hmm,undefined,'FAST'); if(r2){ pdf.addPage([Wmm,Hmm],'landscape'); pdf.addImage(r2.cv,'PNG',0,0,Wmm,Hmm,undefined,'FAST') } await Store.saveFile(base+'.pdf',pdf.output('blob'),'application/pdf') }
+    msg.textContent=(kind==='pdf'?(r2?'PDF com 2 folhas gerado':'PDF gerado'):(r2?'Imagens da planta e do quadro geradas':'Imagem gerada'))+(dpi<v.dpi?' (resolução reduzida para '+dpi+' dpi pelo tamanho da folha)':'')+'.'; };
+  $('ePng').onclick=()=>go('png'); $('ePdf').onclick=()=>go('pdf');
+  fontsReady().then(prev);
+}
+async function fontsReady(){ try{ await Promise.all(['600 20px "Source Sans 3"','400 20px "Source Sans 3"','700 20px "Titillium Web"'].map(f=>document.fonts.load(f))) }catch(e){} }
+$('bPdf').onclick=()=>exportSheet('pdf'); $('bImg').onclick=()=>exportSheet('png');
 
 /* ======================= modelo IFC: carregar ======================= */
 function setLoading(on,name,stage,p){ const L=$('loading'); L.hidden=!on; if(!on) return; if(name) $('ldName').textContent=name; if(stage!=null) $('ldStage').textContent=stage; if(p!=null) $('ldBar').style.width=Math.round(p*100)+'%' }
@@ -1995,8 +2275,6 @@ async function exportExcel(){
   }catch(err){ console.error(err); toast('Falha ao montar o layout original ('+(err&&err.message||err)+'); exportando no formato simples.'); exportExcelBasic() }
 }
 $('bExp').onclick=exportExcel;
-$('bImp').onclick=()=>{ if(S.readOnly){toast('Acesso somente leitura.');return} $('fImp').click() };
-$('fImp').onchange=ev=>{ const f=ev.target.files[0]; ev.target.value=''; if(f) importExcel(f) };
 function guessPav(text){ const n=norm(text); let m=n.match(/(\d{1,2})\s*(?:o|º|°)?\s*pav/);
   const find=fn=>{ const s=S.storeys.find(fn); return s?s.name:null };
   if(/rooftop|12 o pav|12 pav|cobertura/.test(n)) return find(s=>/cobert|rooftop/.test(norm(s.name)))||'Cobertura';
@@ -2114,7 +2392,6 @@ async function exportHTML(){
     toast(`HTML gerado com ${S.conc.length} concretagem(ns)${snap.model&&snap.model.gz?', o modelo IFC':''}${Object.keys(snap.img).length?' e '+Object.keys(snap.img).length+' mapa(s) em papel':''}. Abra o arquivo no navegador: tudo já vem preenchido.`,7000);
   }catch(e){ console.error(e); toast('Não foi possível gerar o HTML.') }
   b.disabled=false; b.textContent=t0 }
-$('bHtml').onclick=exportHTML;
 
 /* ======================= nome da obra, painel vazio e reset ======================= */
 function renderObra(){ const b=$('obraNome'); b.textContent=S.cfg.obra||'Definir nome da obra'; b.style.opacity=S.cfg.obra?'':'.75' }
@@ -2140,7 +2417,7 @@ $('bReset').onclick=()=>{
   const nC=S.conc.length, nT=S.conc.reduce((s,c)=>s+(c.caminhoes||[]).length,0), nB=Object.keys(S.bgs).length;
   const db=Store.kind==='db';
   openSheet('Resetar o painel',`<p style="margin-top:0">Isto apaga <b>tudo</b> do Mapa de Concretagem${db?' desta obra para todas as pessoas que o usam':' neste navegador'}:</p>
-    <ul style="margin:.4em 0 1em;padding-left:1.2em;line-height:1.6">${db?'':`<li>o modelo IFC carregado${S.res?' ('+esc(S.modelName)+')':''};</li>`}<li>${nC} concretagem(ns) e ${nT} caminhão(ões), com áreas desenhadas, pilares marcados e resultados de rompimento;</li><li>${nB} imagem(ns) de mapa em papel${db?'':' e o nome da obra'}.</li></ul>
+    <ul style="margin:.4em 0 1em;padding-left:1.2em;line-height:1.6">${db?'':`<li>o modelo IFC carregado${S.res?' ('+esc(S.modelName)+')':''};</li>`}<li>${nC} concretagem(ns) e ${nT} caminhão(ões), com áreas desenhadas, pilares marcados e resultados de rompimento;</li><li>${S.revs.length} revisão(ões) emitida(s);</li><li>${nB} imagem(ns) de mapa em papel${db?'':' e o nome da obra'}.</li></ul>
     ${db?'<p class="muted">O cadastro da obra e o modelo IFC continuam, porque são usados pelas outras ferramentas. Para apagar a obra inteira, use “Excluir” na lista de obras.</p>':''}
     <p class="muted">Não dá para desfazer. Se quiser guardar uma cópia, exporte o Excel antes.</p>
     <div class="fg"><div class="fld full"><label for="rsTxt">Para confirmar, digite RESETAR</label><input id="rsTxt" autocomplete="off" autocapitalize="characters"></div></div>`,
@@ -2150,17 +2427,18 @@ $('bReset').onclick=()=>{
   $('rsOk').onclick=async()=>{ $('rsOk').disabled=true; $('rsOk').textContent='Apagando…'; await resetAll(); closeSheet(); toast(db?'Mapa de Concretagem desta obra resetado.':'Painel resetado. Importe o IFC de estrutura para começar.',5000) };
 };
 async function resetAll(){
-  if(S.mode) endMode(); S.sel=null; S.open.clear(); S.until=null;
-  const ids=S.conc.map(c=>c.id), bgKeys=Object.keys(S.bgs);
+  if(S.mode) endMode(); S.sel=null; S.open.clear(); S.until=null; if(S.rev){ S.rev=null; aplicarRev() }
+  const ids=S.conc.map(c=>c.id), bgKeys=Object.keys(S.bgs), revIds=S.revs.map(r=>r.id);
   if(Store.kind==='db'){
     for(const id of ids){ try{ await Store.db.doc('concretagens/'+id).delete() }catch(e){} }
+    for(const id of revIds){ try{ await Store.db.doc('revisoes/'+id).delete() }catch(e){} }
     for(const k of bgKeys){ try{ await Store.db.doc('fundos/'+k).delete() }catch(e){} }
     if(Store.assets){ try{ const l=await Store.assets.list(); for(const a of l.assets){ try{ await Store.assets.delete(a.id) }catch(e){} } }catch(e){} }
   } else {
     try{ localStorage.removeItem(LSK) }catch(e){}
     await idbDel('ifc').catch(()=>{}); for(const k of bgKeys) await idbDel('bg:'+k).catch(()=>{});
   }
-  S.conc=[]; S.bgs={}; bgImgs.clear(); S.cfg={obra:'',fornecedor:'',semExemplo:true};
+  S.conc=[]; S.revs=[]; S.bgs={}; bgImgs.clear(); logoImg=null; S.cfg={obra:'',fornecedor:'',semExemplo:true,carimbo:{},pranchas:{},exp:{}};
   if(Store.kind==='db'){ S.cfg.obra=S.obra.nome; await Store.saveCfg(); renderObra(); afterDataChange(true); return }
   await Store.saveCfg();
   clearModel(); renderObra(); afterDataChange(true); setView('3d'); showEmpty();
@@ -2194,6 +2472,8 @@ async function loadExample(){ if(S.readOnly){toast('Acesso somente leitura.');re
       '<button class="btn ghost" onclick="location.reload()">Recarregar</button><a class="btn" href="index.html?ferramenta=concretagem" style="text-decoration:none">Ver as obras</a>');
     return;
   }
+  S.roBase=S.readOnly; S.cfg.carimbo=S.cfg.carimbo||{}; S.cfg.pranchas=S.cfg.pranchas||{}; S.cfg.exp=S.cfg.exp||{};
+  loadLogo();
   if(Store.kind==='db'){ document.title=S.obra.nome+' · Mapa de Concretagem'; $('eDemoM').hidden=true }
   else { $('bObras').href='index.html'; $('bObras').textContent='← Início' }
   $('modeChip').textContent=Store.kind==='db'?('Online'+(S.readOnly?' · leitura':'')):'Dados neste navegador';

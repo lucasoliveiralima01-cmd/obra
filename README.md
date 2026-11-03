@@ -3,7 +3,7 @@
 Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC da obra:
 
 - **Mapa de Risco** (NR-5): áreas com riscos por grupo e intensidade, símbolos de sinalização, hachuras, revisões e exportação das pranchas em PDF/PNG.
-- **Mapa de Concretagem**: concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, importação e exportação em Excel.
+- **Mapa de Concretagem**: concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, revisões por pavimento e pranchas em PDF/PNG (com quadro de concretagens), além da exportação em Excel.
 
 A obra **Start** é criada sozinha, com o modelo IFC, o mapa de risco do térreo e as concretagens já registradas, na primeira vez que um editor abre a lista de obras.
 
