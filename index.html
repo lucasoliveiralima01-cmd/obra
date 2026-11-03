@@ -183,6 +183,7 @@ async function telaObras(f) {
   if ($('bNova')) $('bNova').onclick = () => formNova(f);
   await carregar();
   desenharLista(f);
+  cargaStart(f);
 }
 async function carregar() {
   try { lista = await NV.obras.listar(); }
@@ -326,6 +327,39 @@ function formExcluir(f, o) {
     try { await NV.obras.apagar(o.id, FERRAMENTAS.map(x => x.id)); ocupado(false); closeSheet(); toast('Obra excluída.'); await carregar(); desenharLista(f); }
     catch (e) { ocupado(false); $('xC').disabled = false; $('xOk').textContent = 'Excluir obra'; $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Não foi possível excluir: ' + msgErro(e); }
   };
+}
+
+/* ---------------- carga inicial: obra Start ---------------- */
+// Cria uma vez a obra Start com o modelo IFC e o mapa de risco inicial do térreo
+// (dados em start.js). Um marcador no banco impede que ela seja criada de novo
+// se alguém a excluir depois.
+const CARGA = { id: 'start', nome: 'Start', arquivo: 'Start.ifc' };
+function carregarScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('não foi possível carregar ' + src)); document.head.appendChild(s); }); }
+const semExemplo = o => JSON.parse(JSON.stringify(o, (k, v) => k === 'exemplo' ? undefined : v));
+async function cargaStart(f) {
+  if (!podeEditar() || !lista || lista.some(o => o.id === CARGA.id)) return;
+  const marca = NV.db.doc('cargas/' + CARGA.id, 'sistema:cargas');
+  try {
+    if ((await marca.get()).exists) return;
+    await marca.set({ em: new Date().toISOString(), por: NV.usuario.email }, { base: null });
+  } catch (e) { return; } // outra pessoa já está cadastrando, ou sem permissão
+  toast('Cadastrando a obra Start com o modelo e o mapa inicial…', 20000);
+  try {
+    await carregarScript('start.js');
+    const gz = Uint8Array.from(atob(window.DEMO_IFC_GZ), c => c.charCodeAt(0));
+    const bytes = (await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()).byteLength;
+    let obra = await NV.obras.criar(CARGA.nome);
+    const r = await NV.obras.enviarModelo(obra.id, new Blob([gz], { type: 'application/gzip' }));
+    obra = await NV.obras.alterar(obra.id, { modelo: { asset: r.id, nome: CARGA.arquivo, bytes, gz: true, em: new Date().toISOString() } });
+    const pn = 'risco:' + obra.id, agora = new Date().toISOString(), por = NV.usuario.email;
+    const itens = [['areas', window.EXAMPLE_AREAS || []], ['simbolos', window.EXAMPLE_SYMS || []], ['revisoes', window.EXAMPLE_REV ? [window.EXAMPLE_REV] : []]];
+    for (const [col, arr] of itens) for (const it of arr) {
+      const o = semExemplo(it); o.atualizado = agora; o.por = por;
+      await NV.db.doc(col + '/' + o.id, pn).set(o);
+    }
+    toast('Obra Start cadastrada com o modelo IFC e o mapa de risco do térreo.', 6000);
+  } catch (e) { console.error(e); toast('Não foi possível cadastrar a obra Start: ' + msgErro(e), 8000); }
+  await carregar(); desenharLista(f);
 }
 
 /* ---------------- início ---------------- */

@@ -115,12 +115,14 @@
   }
 
   const db = {
-    doc(path) {
+    // pn: outro painel (ex.: 'risco:start'); omitido = o painel desta página
+    doc(path, pn) {
       const [col, id] = dividir(path);
+      const painel_ = pn || painel;
       return {
         async get() {
           const { data, error } = await sb.from(T).select('dados,atualizado_por,atualizado_em')
-            .eq('painel', painel).eq('colecao', col).eq('id', id).maybeSingle();
+            .eq('painel', painel_).eq('colecao', col).eq('id', id).maybeSingle();
           if (error) throw erro(error);
           return { id, exists: !!data, data: () => (data ? data.dados : undefined),
             por: data && data.atualizado_por, em: data && data.atualizado_em };
@@ -131,7 +133,7 @@
         //   omitido ou opt.forcar -> grava sem conferir.
         async set(o, opt) {
           opt = opt || {};
-          const linha = { painel, colecao: col, id, dados: o,
+          const linha = { painel: painel_, colecao: col, id, dados: o,
             atualizado_em: new Date().toISOString(), atualizado_por: email() };
           if (opt.forcar || opt.base === undefined) {
             const { error } = await sb.from(T).upsert(linha);
@@ -140,7 +142,7 @@
           }
           if (opt.base) {
             const { data, error } = await sb.from(T).update(linha)
-              .eq('painel', painel).eq('colecao', col).eq('id', id)
+              .eq('painel', painel_).eq('colecao', col).eq('id', id)
               .eq('dados->>atualizado', opt.base).select('id');
             if (error) throw erro(error);
             if (data && data.length) return;
@@ -158,7 +160,7 @@
         },
         async delete() {
           const { error } = await sb.from(T).delete()
-            .eq('painel', painel).eq('colecao', col).eq('id', id);
+            .eq('painel', painel_).eq('colecao', col).eq('id', id);
           if (error) throw erro(error);
         }
       };
