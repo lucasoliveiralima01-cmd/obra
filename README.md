@@ -5,6 +5,15 @@ Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC
 - **Mapa de Risco** (NR-5): áreas com riscos por grupo e intensidade, símbolos de sinalização, hachuras, revisões e exportação das pranchas em PDF/PNG.
 - **Mapa de Concretagem**: concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, revisões por pavimento e pranchas em PDF/PNG (com quadro de concretagens), além da exportação em Excel.
 
+- **Pendências de obra**: registro de pendências e retrabalhos com fotos (antes e depois), responsável pela correção, prioridade e prazo, serviços travados, fluxo aberta → em correção → corrigida → fechada, histórico, resumo e relatórios em PDF. Funciona sem sinal: o que é registrado fica no aparelho e sobe sozinho quando a conexão volta.
+
+Cargos nas pendências (definidos em **Administração**):
+- **Engenharia**: abre, edita e vê todas; fecha as que não são de segurança.
+- **Segurança**: abre, vê e fecha só as de segurança.
+- **Encarregado**: vê só as das suas disciplinas (pode ter mais de uma, se forem complementares, como Drywall e Forro/Gesso), marca como corrigida com foto obrigatória, não abre pendências e não entra nos mapas.
+
+Essas regras ficam no banco (RLS), não só na tela.
+
 A obra **Start** é criada sozinha, com o modelo IFC, o mapa de risco do térreo e as concretagens já registradas, na primeira vez que um editor abre a lista de obras.
 
 Como funciona:
@@ -24,6 +33,8 @@ Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse ca
 | `index.html` | Página inicial: escolha da ferramenta e da obra, cadastro de obras |
 | `risco.html` | Mapa de Risco |
 | `concretagem.html` | Mapa de Concretagem |
+| `pendencias.html` | Pendências de obra |
+| `sw.js` | Guarda as páginas no aparelho para as pendências abrirem sem sinal |
 | `start.js`, `start-concretagem.js` | Dados da obra Start (modelo IFC, mapa de risco e concretagens) |
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
 | `nuvem.js` | Login, cadastro de obras e conexão com o banco (não precisa mexer) |
@@ -38,6 +49,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 1. `atualizacao-obras.sql`
 2. `atualizacao-perfis.sql`
 3. `atualizacao-admin.sql` (troque `SEU_EMAIL@exemplo.com`, no fim, pelo seu e-mail antes de rodar)
+4. `atualizacao-pendencias.sql` (módulo de pendências; instalações novas também rodam este, depois do `supabase.sql`)
 
 Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
 

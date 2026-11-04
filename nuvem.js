@@ -57,7 +57,7 @@
   // chave dos dados no banco e pasta dos arquivos desta ferramenta nesta obra
   const painel = ferramenta ? ferramenta + ':' + obraId : '';
   const pasta = ferramenta ? ferramenta + '/' + obraId : '';
-  let usuario = null, papel = null, admin = false, iniciou = false;
+  let usuario = null, papel = null, admin = false, cargo = null, disciplinas = [], offline = false, iniciou = false;
 
   /* ---------------- erros no formato que o painel entende ---------------- */
   function erro(e) {
@@ -327,6 +327,11 @@
     async definir(email, papel, ehAdmin) {
       const { error } = await sb.rpc('admin_definir_acesso', { alvo: email, novo_papel: papel, novo_admin: !!ehAdmin });
       if (error) throw erro(error);
+    },
+    // cargo nas pendências: 'engenharia' | 'seguranca' | 'encarregado' | null; disciplinas para encarregados
+    async definirCargo(email, cargo, disciplinas) {
+      const { error } = await sb.rpc('admin_definir_cargo', { alvo: email, novo_cargo: cargo || null, novas_disciplinas: disciplinas || [] });
+      if (error) throw erro(error);
     }
   };
 
@@ -397,6 +402,8 @@
       icone: '<svg viewBox="0 0 40 40"><circle cx="13" cy="14" r="5" fill="#5cb531"/><circle cx="27" cy="14" r="5" fill="#e3141b"/><circle cx="20" cy="27" r="6.5" fill="#1736e0"/></svg>' },
     concretagem: { kick: 'Rastreabilidade do concreto', titulo: 'Mapa de Concretagem',
       icone: '<svg viewBox="0 0 40 40"><rect x="8" y="23" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="11" y="15" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="14" y="8" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
+    pendencias: { kick: 'Acabamentos · retrabalhos', titulo: 'Pendências de obra',
+      icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' },
     '': { kick: 'Engenharia e segurança', titulo: C.titulo || 'Ferramentas da Obra',
       icone: '<svg viewBox="0 0 40 40"><rect x="7" y="25.5" width="17" height="6.5" rx="1" fill="#4d7f9c"/><rect x="7" y="18.5" width="17" height="5.5" rx="1" fill="#4d7f9c" fill-opacity=".7"/><rect x="7" y="11.5" width="17" height="5.5" rx="1" fill="none" stroke="#4d7f9c" stroke-width="1.3" stroke-dasharray="2.2 1.6"/><path d="M29 33V7.5M18.5 7.5H35M29 7.5l-4.5 4" stroke="#e39b1c" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M33 7.5v5" stroke="#e39b1c" stroke-width="1.3"/><rect x="31.6" y="12.4" width="2.8" height="2.6" rx=".5" fill="#e39b1c"/></svg>' }
   };
@@ -506,6 +513,15 @@
     tela.querySelector('#sSair').onclick = sair;
   }
 
+  function tSemFerramenta() {
+    tela.hidden = false;
+    tela.innerHTML = `<div class="ac">${topo('Sem acesso a esta ferramenta')}
+      <p>O seu cargo (encarregado) dá acesso só ao painel de <b>Pendências de obra</b>.</p>
+      <div class="ar"><a class="ab" href="index.html?ferramenta=pendencias" style="text-decoration:none">Ir para as pendências</a><button class="al" id="sSair" type="button">Sair</button></div></div>`;
+    tela.querySelector('#sSair').onclick = sair;
+  }
+  const semRede = e => !navigator.onLine || /fetch|network|Failed|conex/i.test(String((e && e.message) || e));
+
   function tCarregando(t) {
     tela.hidden = false;
     tela.innerHTML = `<div class="ac">${topo(esc(nomeSistema))}<p>${esc(t || 'Verificando acesso…')}</p></div>`;
@@ -536,13 +552,13 @@
   }
   function atualizarQuem() {
     const q = document.getElementById('bQuem'); if (!q) return;
-    q.textContent = pessoas.nome(usuario.email) + (papel === 'leitor' ? ' · leitura' : '');
+    q.textContent = pessoas.nome(usuario.email) + (cargo === 'encarregado' ? ' · encarregado' : papel === 'leitor' ? ' · leitura' : '');
   }
 
   function mostrarQuem() {
     const h = document.querySelector('.hctl'); if (!h || document.getElementById('bSair')) return;
     const q = document.createElement('button'); q.type = 'button'; q.id = 'bQuem'; q.className = 'quem';
-    q.textContent = pessoas.nome(usuario.email) + (papel === 'leitor' ? ' · leitura' : '');
+    q.textContent = pessoas.nome(usuario.email) + (cargo === 'encarregado' ? ' · encarregado' : papel === 'leitor' ? ' · leitura' : '');
     q.title = 'Conectado como ' + usuario.email + (papel === 'leitor' ? ' (somente leitura)' : '') + (pessoas.disponivel() ? '. Clique para mudar o seu nome.' : '');
     if (pessoas.disponivel()) q.onclick = () => tNome(false);
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bSair'; b.textContent = 'Sair'; b.onclick = sair;
@@ -556,13 +572,25 @@
     if (precisaSenha) { tNovaSenha(); return; }
     if (iniciou) { tela.hidden = true; return; }
     tCarregando('Verificando acesso…');
+    const chave = 'mr_acesso_' + String(usuario.email).toLowerCase();
     // papel_atual() devolve o papel de quem está conectado (null = sem acesso)
     const { data, error } = await sb.rpc('papel_atual');
-    if (error) { tLogin('Não foi possível verificar o acesso: ' + error.message); return; }
+    if (error) {
+      // sem sinal: usa o último acesso confirmado neste aparelho (para registrar pendências na obra)
+      let ult = null; try { ult = JSON.parse(localStorage.getItem(chave) || 'null'); } catch (e) {}
+      if (semRede(error) && ult && ult.papel) {
+        papel = ult.papel; admin = !!ult.admin; cargo = ult.cargo || null; disciplinas = ult.disciplinas || []; offline = true;
+        liberar(); return;
+      }
+      tLogin('Não foi possível verificar o acesso: ' + error.message); return;
+    }
     papel = typeof data === 'string' ? data : null;
-    if (!papel) { tSemAcesso(); return; }
+    if (!papel) { try { localStorage.removeItem(chave); } catch (e) {} tSemAcesso(); return; }
     // administrador? (se a função ainda não existe no banco, ninguém é)
     try { const r = await sb.rpc('eh_admin'); admin = !r.error && r.data === true; } catch (e) { admin = false; }
+    // cargo nas pendências (engenharia, segurança, encarregado) e disciplinas
+    try { const r = await sb.rpc('meu_cargo'); if (!r.error && r.data) { cargo = r.data.cargo || null; disciplinas = r.data.disciplinas || []; } } catch (e) {}
+    try { localStorage.setItem(chave, JSON.stringify({ papel, admin, cargo, disciplinas })); } catch (e) {}
     try { await pessoas.carregar(); } catch (e) {}
     let pulou = false; try { pulou = !!sessionStorage.getItem('mr_pulou_nome'); } catch (e) {}
     if (pessoas.disponivel() && !pessoas.temNome(usuario.email) && !pulou) { tNome(true); return; }
@@ -570,8 +598,11 @@
   }
   function liberar() {
     if (iniciou) return;
+    // encarregados só usam o painel de pendências
+    if (cargo === 'encarregado' && ferramenta && ferramenta !== 'pendencias') { tSemFerramenta(); return; }
     iniciou = true; tela.hidden = true; tela.innerHTML = '';
-    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, papel, admin, administracao, usuario, sair, cliente: sb };
+    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, papel, admin, cargo, disciplinas, offline,
+      administracao, usuario, sair, cliente: sb };
     mostrarQuem(); ligarAoVivo();
     pronto(window.Nuvem);
   }

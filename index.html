@@ -103,6 +103,13 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .adm-l small{grid-column:1/-1;color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
 .adm-add{display:grid;grid-template-columns:minmax(0,1fr) 190px auto;gap:8px;align-items:end}
 .adm-add input,.adm-add select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 9px;width:100%;min-width:0}
+.adm-l .cg{grid-column:1/-1;display:grid;gap:6px;border-top:1px dashed var(--line);padding-top:7px}
+.adm-l .cg label{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font:600 .74rem var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.adm-l .cg label select{width:auto;min-width:170px;text-transform:none;letter-spacing:0;font:500 .9rem var(--f-body);color:var(--ink)}
+.dsc{display:flex;flex-wrap:wrap;gap:5px}
+.dsc button{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font:600 .8rem var(--f-body);color:var(--muted)}
+.dsc button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.dsc button:disabled{opacity:.4;cursor:default}
 .hbtn .cnt{background:#f0a93a;color:#22425c;border-radius:9px;padding:0 6px;font-size:.72rem;font-weight:700}
 @media (max-width:640px){.adm-l,.adm-add{grid-template-columns:1fr}}
 .obra:hover{border-color:var(--accent)}
@@ -177,8 +184,13 @@ const FERRAMENTAS = [
     icone: '<svg viewBox="0 0 30 30"><circle cx="9" cy="10" r="5" fill="#5cb531"/><circle cx="21" cy="10" r="5" fill="#e3141b"/><circle cx="15" cy="21" r="6.5" fill="#1736e0"/></svg>' },
   { id: 'concretagem', nome: 'Mapa de Concretagem', pagina: 'concretagem.html',
     desc: 'Concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, sobre o mesmo modelo IFC da obra.',
-    icone: '<svg viewBox="0 0 30 30"><rect x="3" y="18" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="6" y="10" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="9" y="3" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' }
+    icone: '<svg viewBox="0 0 30 30"><rect x="3" y="18" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="6" y="10" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="9" y="3" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
+  { id: 'pendencias', nome: 'Pendências de obra', pagina: 'pendencias.html', soOnline: true,
+    desc: 'Registro de pendências e retrabalhos com fotos, responsável pela correção, prazos, bloqueios de frentes, histórico e relatórios em PDF. Funciona sem sinal.',
+    icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' }
 ];
+// encarregados usam só o painel de pendências
+const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(NV && NV.cargo === 'encarregado' && f.id !== 'pendencias') && !(f.soOnline && !NV));
 const MAX_UP = 50 * 1024 * 1024;
 
 const $ = id => document.getElementById(id);
@@ -197,7 +209,7 @@ $('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('ovl').hidden && !$('ovl').dataset.ocupado) closeSheet(); });
 
 let NV = null, lista = [], filtro = '';
-const ferr = () => FERRAMENTAS.find(f => f.id === new URLSearchParams(location.search).get('ferramenta')) || null;
+const ferr = () => ferramentasVisiveis().find(f => f.id === new URLSearchParams(location.search).get('ferramenta')) || null;
 const podeEditar = () => NV && NV.papel === 'editor';
 
 /* ---------------- tela 1: escolher a ferramenta ---------------- */
@@ -206,7 +218,7 @@ function telaFerramentas() {
   $('main').innerHTML = `<div class="head"><div><h2>Escolha a ferramenta</h2>
       <p>Cada ferramenta trabalha sobre o modelo IFC das obras cadastradas. O modelo é enviado uma vez e fica disponível em todas elas.</p></div></div>
     ${NV ? '' : '<div class="aviso">Modo local: sem conexão com o banco online, os dados ficam só neste navegador e não há cadastro de obras.</div>'}
-    <div class="tools">${FERRAMENTAS.map(f => f.pagina
+    <div class="tools">${ferramentasVisiveis().map(f => f.pagina
       ? `<a class="tool" href="${NV ? '?ferramenta=' + f.id : f.pagina}"><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p>${esc(f.desc)}</p></div><span class="go">${NV ? 'Escolher obra' : 'Abrir'} →</span></a>`
       : `<div class="tool off" aria-disabled="true"><span class="tag">Em breve</span><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p>${esc(f.desc)}</p></div><span class="go muted">Em desenvolvimento</span></div>`).join('')}</div>`;
 }
@@ -487,6 +499,8 @@ async function formAdmin() {
   $('ovl').querySelector('.sheet').classList.add('larga');
   $('adC').onclick = fecharAdmin;
   let lista;
+  let DISC = [];
+  try { const r = await NV.cliente.from('pend_listas').select('valor,extra,ordem').eq('tipo', 'disciplina').order('ordem'); if (!r.error) DISC = r.data || []; } catch (e) {}
   try { await NV.pessoas.carregar(); lista = await NV.administracao.listar(); }
   catch (e) {
     $('ovlB').innerHTML = `<p class="msg err" style="margin:0">Não foi possível carregar a lista: ${esc(msgErro(e))}</p><p class="muted" style="margin:0">Se esta é a primeira vez, rode o arquivo <b>atualizacao-admin.sql</b> no Supabase (SQL Editor) e recarregue a página.</p>`;
@@ -494,6 +508,10 @@ async function formAdmin() {
   }
   const eu = String(NV.usuario.email).toLowerCase();
   let filtroAd = '';
+  // cargos das pendências (só aparecem depois de rodar o atualizacao-pendencias.sql)
+  const temCargos = lista.length ? ('cargo' in lista[0]) : false;
+  const CARGOS = [['', 'Sem cargo'], ['engenharia', 'Engenharia'], ['seguranca', 'Segurança'], ['encarregado', 'Encarregado']];
+  const grupoDe = v => (((DISC.find(d => d.valor === v) || {}).extra) || {}).grupo || v;
   const desenhar = () => {
     const q = filtroAd.trim().toLowerCase();
     const vis = lista.filter(u => !q || (u.email + ' ' + (u.nome || '')).toLowerCase().includes(q))
@@ -503,8 +521,12 @@ async function formAdmin() {
       (vis.length ? vis.map(u => { const i = lista.indexOf(u); const pend = u.tem_conta && !u.papel; const sou = u.email === eu;
         return `<div class="adm-l${pend ? ' pend' : ''}">
           <div class="nm2"><input data-nome="${i}" maxlength="80" value="${esc(u.nome || '')}" placeholder="${esc(u.email.split('@')[0])}" aria-label="Nome de ${esc(u.email)}">${pend ? '<span class="pill warn">aguardando liberação</span>' : ''}${sou ? '<span class="pill ok">você</span>' : ''}</div>
-          <select data-acesso="${i}" aria-label="Acesso de ${esc(u.email)}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+          ${u.cargo === 'encarregado' ? `<select disabled aria-label="Acesso de ${esc(u.email)}" title="Encarregados usam só o painel de pendências. Para mudar, troque o cargo."><option>Só pendências</option></select>`
+            : `<select data-acesso="${i}" aria-label="Acesso de ${esc(u.email)}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`}
           <small>${esc(u.email)} · ${u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) + (u.ultimo_acesso ? ' · último acesso em ' + fmtDia(u.ultimo_acesso) : ' · ainda não entrou') : 'liberado, mas ainda não criou a conta'}</small>
+          ${temCargos && u.papel ? `<div class="cg"><label>Cargo nas pendências <select data-cargo="${i}">${CARGOS.map(([v, t]) => `<option value="${v}" ${(u.cargo || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+            ${u.cargo === 'encarregado' ? `<div class="dsc" role="group" aria-label="Disciplinas de ${esc(u.email)}">${DISC.map(d => { const on = (u.disciplinas || []).includes(d.valor); const g = grupoDe(d.valor); const ok = on || !(u.disciplinas || []).length || (u.disciplinas || []).every(x => grupoDe(x) === g);
+              return `<button type="button" data-disc="${i}" data-v="${esc(d.valor)}" aria-pressed="${on}" ${ok ? '' : 'disabled title="Não é complementar às disciplinas já escolhidas"'}>${esc(d.valor)}</button>` }).join('')}</div>` : ''}</div>` : ''}
         </div>`; }).join('') : '<p class="muted" style="margin:0">Ninguém encontrado com essa busca.</p>');
     $('adList').querySelectorAll('[data-acesso]').forEach(sel => sel.onchange = async () => {
       const u = lista[+sel.dataset.acesso]; const v = sel.value; const antes = acessoDe(u);
@@ -517,13 +539,39 @@ async function formAdmin() {
         desenhar();
       } catch (e) { sel.value = antes; sel.disabled = false; $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); }
     });
+    const salvarCargo = async (u, cargo, ds) => {
+      $('adMsg').className = 'msg'; $('adMsg').textContent = 'Salvando…';
+      try {
+        await NV.administracao.definirCargo(u.email, cargo, ds);
+        u.cargo = cargo; u.disciplinas = cargo === 'encarregado' ? ds : [];
+        if (cargo === 'encarregado') { u.papel = 'leitor'; u.admin = false; }
+        $('adMsg').className = 'msg ok'; $('adMsg').textContent = (u.nome || u.email) + ': ' + (CARGOS.find(c => c[0] === (cargo || ''))[1]).toLowerCase() + (ds.length ? ' · ' + ds.join(', ') : '') + '.';
+      } catch (e) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar o cargo: ' + msgErro(e); }
+      desenhar();
+    };
+    $('adList').querySelectorAll('[data-cargo]').forEach(sel => sel.onchange = () => {
+      const u = lista[+sel.dataset.cargo]; const v = sel.value || null;
+      if (v === 'encarregado') {
+        // encarregado precisa de ao menos uma disciplina: a escolha é feita logo abaixo
+        u.cargo = 'encarregado'; u.disciplinas = []; desenhar();
+        $('adMsg').className = 'msg'; $('adMsg').textContent = 'Escolha as disciplinas de ' + (u.nome || u.email) + ' (só as complementares).';
+        return;
+      }
+      salvarCargo(u, v, []);
+    });
+    $('adList').querySelectorAll('[data-disc]').forEach(b => b.onclick = () => {
+      const u = lista[+b.dataset.disc]; const v = b.dataset.v; const ds = (u.disciplinas || []).slice();
+      const i = ds.indexOf(v); if (i >= 0) ds.splice(i, 1); else ds.push(v);
+      if (!ds.length) { u.disciplinas = []; desenhar(); $('adMsg').className = 'msg err'; $('adMsg').textContent = 'O encarregado precisa de ao menos uma disciplina.'; return; }
+      salvarCargo(u, 'encarregado', ds);
+    });
     $('adList').querySelectorAll('[data-nome]').forEach(inp => inp.onchange = async () => {
       const u = lista[+inp.dataset.nome]; const n = inp.value.trim();
       try { await NV.pessoas.salvarNome(u.email, n); u.nome = n; $('adMsg').className = 'msg ok'; $('adMsg').textContent = 'Nome salvo.'; }
       catch (e) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar o nome: ' + msgErro(e); }
     });
   };
-  $('ovlB').innerHTML = `<p class="muted" style="margin:0"><b>Só visualizar</b>: vê as obras e os mapas. <b>Editar</b>: cria e altera obras, modelos e mapas. <b>Administrador</b>: edita e também libera e muda o acesso das pessoas. <b>Sem acesso</b>: a conta existe, mas não vê nenhum dado.</p>
+  $('ovlB').innerHTML = `${temCargos ? '<p class="muted" style="margin:0"><b>Cargo nas pendências</b>: <b>Engenharia</b> abre, vê e fecha todas (exceto as de segurança); <b>Segurança</b> abre, vê e fecha só as de segurança; <b>Encarregado</b> vê só as das suas disciplinas, marca como corrigida e não entra nos mapas.</p>' : ''}<p class="muted" style="margin:0"><b>Só visualizar</b>: vê as obras e os mapas. <b>Editar</b>: cria e altera obras, modelos e mapas. <b>Administrador</b>: edita e também libera e muda o acesso das pessoas. <b>Sem acesso</b>: a conta existe, mas não vê nenhum dado.</p>
     <input class="search" id="adBusca" type="search" placeholder="Buscar por nome ou e-mail…" aria-label="Buscar pessoa" style="max-width:none">
     <div class="adm" id="adList"></div>
     <div class="fld"><label for="adEmail">Liberar um e-mail antes de a pessoa criar a conta</label>
