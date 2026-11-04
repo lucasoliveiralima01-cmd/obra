@@ -37,6 +37,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 
 1. `atualizacao-obras.sql`
 2. `atualizacao-perfis.sql`
+3. `atualizacao-admin.sql` (troque `SEU_EMAIL@exemplo.com`, no fim, pelo seu e-mail antes de rodar)
 
 Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
 
@@ -80,7 +81,9 @@ Confira as aspas e as vírgulas. Se o arquivo tiver um erro de digitação, o si
 
 ## Dar acesso a outras pessoas
 
-São duas coisas, nesta ordem:
+**Pelo site (administradores):** na página inicial, o botão **Administração** lista todas as contas. Quem criou a conta e ainda não foi liberado aparece no topo, como "aguardando liberação". Para cada pessoa, escolha **Sem acesso**, **Só visualizar**, **Editar** ou **Administrador**. Também dá para liberar um e-mail antes de a pessoa criar a conta. O convite por e-mail continua sendo enviado pelo Supabase (**Authentication → Users → Invite user**).
+
+**Pelo Supabase**, sem o painel, são duas coisas, nesta ordem:
 
 1. **Criar o usuário**: em **Authentication → Users**:
    - **Create new user**: você define o e-mail e a senha e passa a senha para a pessoa; ou

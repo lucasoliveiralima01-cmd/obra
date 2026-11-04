@@ -93,6 +93,18 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .eq-l{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px}
 .eq-l input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
 .eq-l small{grid-column:1/-1;color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
+.sheet.larga{width:min(820px,100%)}
+.adm{display:grid;gap:8px}
+.adm-l{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:4px 12px;align-items:center;padding:9px 11px;border:1px solid var(--line-2);border-radius:8px}
+.adm-l.pend{border-color:var(--warn);background:var(--warn-soft)}
+.adm-l .nm2{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;min-width:0}
+.adm-l .nm2 input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;flex:1 1 160px;font-weight:600}
+.adm-l select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+.adm-l small{grid-column:1/-1;color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
+.adm-add{display:grid;grid-template-columns:minmax(0,1fr) 190px auto;gap:8px;align-items:end}
+.adm-add input,.adm-add select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 9px;width:100%;min-width:0}
+.hbtn .cnt{background:#f0a93a;color:#22425c;border-radius:9px;padding:0 6px;font-size:.72rem;font-weight:700}
+@media (max-width:640px){.adm-l,.adm-add{grid-template-columns:1fr}}
 .obra:hover{border-color:var(--accent)}
 .obra a.nm{font:700 1.15rem/1.2 var(--f-disp);color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
 .obra a.nm::after{content:" →";color:var(--accent)}
@@ -178,7 +190,7 @@ const fmtMB = b => b ? (b / 1048576).toLocaleString('pt-BR', { maximumFractionDi
 const quem = e => !e ? 'alguém' : (NV && NV.pessoas ? NV.pessoas.nome(e) : String(e).split('@')[0]);
 const iniciais = n => String(n || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('');
 
-function openSheet(t, body, foot) { $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot; $('ovl').hidden = false;
+function openSheet(t, body, foot) { $('ovl').querySelector('.sheet').classList.remove('larga'); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot; $('ovl').hidden = false;
   const f = $('ovlB').querySelector('input'); if (f) setTimeout(() => f.focus(), 30); }
 function closeSheet() { $('ovl').hidden = true; $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; }
 $('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl').dataset.ocupado) closeSheet(); });
@@ -461,6 +473,80 @@ async function formEquipe() {
   };
 }
 
+/* ---------------- administração: acesso de cada pessoa (só administradores) ---------------- */
+const ACESSOS = [['nenhum', 'Sem acesso'], ['leitor', 'Só visualizar'], ['editor', 'Editar'], ['admin', 'Administrador']];
+const acessoDe = u => !u.papel ? 'nenhum' : u.admin ? 'admin' : u.papel;
+const fmtDia = s => s ? new Date(s).toLocaleDateString('pt-BR') : '';
+async function contarPendentes() {
+  const b = $('bAdmin'); if (!b) return;
+  try { const l = await NV.administracao.listar(); const n = l.filter(u => u.tem_conta && !u.papel).length;
+    b.innerHTML = 'Administração' + (n ? ` <span class="cnt" title="${n} aguardando liberação">${n}</span>` : ''); } catch (e) {}
+}
+async function formAdmin() {
+  openSheet('Administração', '<p class="muted" style="margin:0">Carregando…</p>', '<button class="btn ghost" id="adC">Fechar</button>');
+  $('ovl').querySelector('.sheet').classList.add('larga');
+  $('adC').onclick = fecharAdmin;
+  let lista;
+  try { await NV.pessoas.carregar(); lista = await NV.administracao.listar(); }
+  catch (e) {
+    $('ovlB').innerHTML = `<p class="msg err" style="margin:0">Não foi possível carregar a lista: ${esc(msgErro(e))}</p><p class="muted" style="margin:0">Se esta é a primeira vez, rode o arquivo <b>atualizacao-admin.sql</b> no Supabase (SQL Editor) e recarregue a página.</p>`;
+    return;
+  }
+  const eu = String(NV.usuario.email).toLowerCase();
+  let filtroAd = '';
+  const desenhar = () => {
+    const q = filtroAd.trim().toLowerCase();
+    const vis = lista.filter(u => !q || (u.email + ' ' + (u.nome || '')).toLowerCase().includes(q))
+      .sort((a, b) => (+(b.tem_conta && !b.papel) - +(a.tem_conta && !a.papel)) || String(a.nome || a.email).localeCompare(String(b.nome || b.email), 'pt-BR'));
+    const nPend = lista.filter(u => u.tem_conta && !u.papel).length;
+    $('adList').innerHTML = (nPend ? `<p class="aviso" style="margin:0">${nPend} pessoa${nPend > 1 ? 's criaram' : ' criou'} a conta e ${nPend > 1 ? 'aguardam' : 'aguarda'} liberação. Escolha o acesso na lista.</p>` : '') +
+      (vis.length ? vis.map(u => { const i = lista.indexOf(u); const pend = u.tem_conta && !u.papel; const sou = u.email === eu;
+        return `<div class="adm-l${pend ? ' pend' : ''}">
+          <div class="nm2"><input data-nome="${i}" maxlength="80" value="${esc(u.nome || '')}" placeholder="${esc(u.email.split('@')[0])}" aria-label="Nome de ${esc(u.email)}">${pend ? '<span class="pill warn">aguardando liberação</span>' : ''}${sou ? '<span class="pill ok">você</span>' : ''}</div>
+          <select data-acesso="${i}" aria-label="Acesso de ${esc(u.email)}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+          <small>${esc(u.email)} · ${u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) + (u.ultimo_acesso ? ' · último acesso em ' + fmtDia(u.ultimo_acesso) : ' · ainda não entrou') : 'liberado, mas ainda não criou a conta'}</small>
+        </div>`; }).join('') : '<p class="muted" style="margin:0">Ninguém encontrado com essa busca.</p>');
+    $('adList').querySelectorAll('[data-acesso]').forEach(sel => sel.onchange = async () => {
+      const u = lista[+sel.dataset.acesso]; const v = sel.value; const antes = acessoDe(u);
+      sel.disabled = true; $('adMsg').className = 'msg'; $('adMsg').textContent = 'Salvando…';
+      try {
+        await NV.administracao.definir(u.email, v === 'admin' ? 'editor' : v, v === 'admin');
+        u.papel = v === 'nenhum' ? null : (v === 'admin' ? 'editor' : v); u.admin = v === 'admin';
+        $('adMsg').className = 'msg ok'; $('adMsg').textContent = (u.nome || u.email) + ': ' + ACESSOS.find(a => a[0] === v)[1].toLowerCase() + '.';
+        if (!u.tem_conta && v === 'nenhum') lista.splice(lista.indexOf(u), 1);
+        desenhar();
+      } catch (e) { sel.value = antes; sel.disabled = false; $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); }
+    });
+    $('adList').querySelectorAll('[data-nome]').forEach(inp => inp.onchange = async () => {
+      const u = lista[+inp.dataset.nome]; const n = inp.value.trim();
+      try { await NV.pessoas.salvarNome(u.email, n); u.nome = n; $('adMsg').className = 'msg ok'; $('adMsg').textContent = 'Nome salvo.'; }
+      catch (e) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar o nome: ' + msgErro(e); }
+    });
+  };
+  $('ovlB').innerHTML = `<p class="muted" style="margin:0"><b>Só visualizar</b>: vê as obras e os mapas. <b>Editar</b>: cria e altera obras, modelos e mapas. <b>Administrador</b>: edita e também libera e muda o acesso das pessoas. <b>Sem acesso</b>: a conta existe, mas não vê nenhum dado.</p>
+    <input class="search" id="adBusca" type="search" placeholder="Buscar por nome ou e-mail…" aria-label="Buscar pessoa" style="max-width:none">
+    <div class="adm" id="adList"></div>
+    <div class="fld"><label for="adEmail">Liberar um e-mail antes de a pessoa criar a conta</label>
+      <div class="adm-add"><input id="adEmail" type="email" placeholder="colega@empresa.com" autocomplete="off"><select id="adPapel">${ACESSOS.filter(a => a[0] !== 'nenhum').map(([v, t]) => `<option value="${v}" ${v === 'editor' ? 'selected' : ''}>${t}</option>`).join('')}</select><button class="btn" id="adAdd" type="button">Liberar</button></div></div>
+    <p class="muted" style="margin:0">Para convidar alguém novo, envie o convite pelo Supabase (<b>Authentication → Users → Invite user</b>). Quando a pessoa criar a conta, ela aparece aqui como “aguardando liberação”, a menos que o e-mail já tenha sido liberado acima.</p>`;
+  $('ovlF').innerHTML = '<span class="msg" id="adMsg"></span><button class="btn ghost" id="adC">Fechar</button>';
+  $('adC').onclick = fecharAdmin;
+  $('adBusca').oninput = ev => { filtroAd = ev.target.value; desenhar(); };
+  $('adAdd').onclick = async () => {
+    const e = $('adEmail').value.trim().toLowerCase(), v = $('adPapel').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Escreva um e-mail válido.'; return; }
+    $('adAdd').disabled = true;
+    try {
+      await NV.administracao.definir(e, v === 'admin' ? 'editor' : v, v === 'admin');
+      lista = await NV.administracao.listar(); $('adEmail').value = '';
+      $('adMsg').className = 'msg ok'; $('adMsg').textContent = e + ' liberado.'; desenhar();
+    } catch (err) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível liberar: ' + msgErro(err); }
+    $('adAdd').disabled = false;
+  };
+  desenhar();
+}
+function fecharAdmin() { $('ovl').querySelector('.sheet').classList.remove('larga'); closeSheet(); contarPendentes(); const f = ferr(); if (f && f.pagina && NV) desenharLista(f); }
+
 function formExcluir(f, o) {
   if (!o) return;
   openSheet('Excluir obra', `<p style="margin:0">Isto apaga <b>${esc(o.nome)}</b> para todas as pessoas, em <b>todas as ferramentas</b>: o modelo IFC, as áreas, os símbolos, as revisões e as imagens.</p>
@@ -502,6 +588,10 @@ async function cargaStart(f) {
   if (NV) {
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bEquipe'; b.textContent = 'Equipe'; b.title = 'Nomes das pessoas da equipe';
     b.onclick = formEquipe; $('modeChip').after(b);
+    if (NV.admin) {
+      const a = document.createElement('button'); a.className = 'hbtn'; a.id = 'bAdmin'; a.textContent = 'Administração'; a.title = 'Liberar pessoas e definir quem visualiza, edita ou administra';
+      a.onclick = formAdmin; b.after(a); contarPendentes();
+    }
   }
   const f = ferr();
   if (f && f.pagina && NV) {

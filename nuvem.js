@@ -57,7 +57,7 @@
   // chave dos dados no banco e pasta dos arquivos desta ferramenta nesta obra
   const painel = ferramenta ? ferramenta + ':' + obraId : '';
   const pasta = ferramenta ? ferramenta + '/' + obraId : '';
-  let usuario = null, papel = null, iniciou = false;
+  let usuario = null, papel = null, admin = false, iniciou = false;
 
   /* ---------------- erros no formato que o painel entende ---------------- */
   function erro(e) {
@@ -315,6 +315,21 @@
     }
   };
 
+  /* ---------------- administração (só administradores) ---------------- */
+  const administracao = {
+    // todas as contas criadas e os e-mails liberados, com papel e nome
+    async listar() {
+      const { data, error } = await sb.rpc('admin_usuarios');
+      if (error) throw erro(error);
+      return data || [];
+    },
+    // papel: 'leitor' | 'editor' | 'nenhum'; ehAdmin: true para administrador
+    async definir(email, papel, ehAdmin) {
+      const { error } = await sb.rpc('admin_definir_acesso', { alvo: email, novo_papel: papel, novo_admin: !!ehAdmin });
+      if (error) throw erro(error);
+    }
+  };
+
   async function blobUrl(id) {
     if (urls.has(id)) return urls.get(id);
     const { data, error } = await sb.storage.from(BUCKET).download(id);
@@ -546,6 +561,8 @@
     if (error) { tLogin('Não foi possível verificar o acesso: ' + error.message); return; }
     papel = typeof data === 'string' ? data : null;
     if (!papel) { tSemAcesso(); return; }
+    // administrador? (se a função ainda não existe no banco, ninguém é)
+    try { const r = await sb.rpc('eh_admin'); admin = !r.error && r.data === true; } catch (e) { admin = false; }
     try { await pessoas.carregar(); } catch (e) {}
     let pulou = false; try { pulou = !!sessionStorage.getItem('mr_pulou_nome'); } catch (e) {}
     if (pessoas.disponivel() && !pessoas.temNome(usuario.email) && !pulou) { tNome(true); return; }
@@ -554,7 +571,7 @@
   function liberar() {
     if (iniciou) return;
     iniciou = true; tela.hidden = true; tela.innerHTML = '';
-    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, papel, usuario, sair, cliente: sb };
+    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, papel, admin, administracao, usuario, sair, cliente: sb };
     mostrarQuem(); ligarAoVivo();
     pronto(window.Nuvem);
   }
