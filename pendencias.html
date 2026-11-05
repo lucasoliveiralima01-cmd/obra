@@ -175,7 +175,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
   <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="8" fill="none" stroke="currentColor" stroke-opacity=".35"/><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#ffffff"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg></a>
   <div class="ttl"><span class="kick">Acabamentos · retrabalhos</span><h1>Pendências de obra</h1><span class="obra" id="obraNome">Carregando…</span></div>
   <div class="hctl">
-    <span class="modechip" id="modeChip">Carregando…</span>
+    <span class="modechip" id="modeChip" hidden>Carregando…</span>
     <a class="hbtn" id="bObras" href="index.html?ferramenta=pendencias">← Obras</a>
     <button class="hbtn" id="bAvisos" type="button" title="Receber avisos neste aparelho">🔔 Avisos</button>
     <button class="hbtn" id="bPdf" type="button">Relatório PDF</button>
@@ -369,6 +369,8 @@ function reabrirDetalhe() { const o = $('ovl'); if (!o.hidden && o.dataset.det &
 function status() {
   const n = FILA.length, err = FILA.filter(o => o.erro).length, ch = $('modeChip');
   ch.classList.toggle('off', !navigator.onLine);
+  // só aparece quando importa: sem sinal, enviando, ou com algo na fila
+  ch.hidden = navigator.onLine && !n && !sincronizando;
   ch.textContent = (navigator.onLine ? (sincronizando ? 'Enviando…' : 'Online') : 'Sem sinal') + (n ? ' · ' + n + ' aguardando envio' : '') + (err ? ' · ' + err + ' com erro' : '');
 }
 window.addEventListener('online', () => { status(); sincronizar(); recarregar(); });
