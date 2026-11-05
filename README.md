@@ -56,6 +56,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 8. `atualizacao-tipologias.sql` (preenchimento condicionado: locais por pavimento e cômodos por tipo de apartamento)
 9. `atualizacao-listas.sql` (listas próprias de cada obra a partir do padrão da empresa, e renomear itens atualizando as pendências já registradas). Tudo isso é editado na página **Listas e regras** (Pendências → ⋯ → Listas e regras, só administradores).
 10. `atualizacao-locais.sql` (locais de cada pavimento da Start, com Elevador e Fachada pedindo o lado; responsáveis pela correção por cargo, como Pedreiro e Eletricista, com "Próprio ou Terceiro"; altura das plantas do IFC para ligar os pavimentos pela ordem)
+11. `atualizacao-funcionarios.sql` (funcionários de cada obra com um ou mais cargos, em Listas e regras → Funcionários; na pendência, escolher quem vai corrigir, e o aviso vai só para essa pessoa; um usuário pode ter cargos de grupos diferentes). Depois dele, republique a função `notificar` com o código novo.
 
 ### Backup e lixeira
 

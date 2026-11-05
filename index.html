@@ -282,8 +282,12 @@ async function carregarResumo() {
   PENDS = []; ROMP = [];
   try { const { data, error } = await sb.rpc('rompimentos_resumo'); if (!error) ROMP = data || []; } catch (e) {}
   try {
-    const { data, error } = await sb.from('pendencias').select('id,obra,numero,status,prazo,seguranca,disciplina,tipo,pavimento,unidade,local_tipo,comodo,prioridade,criado_por');
+    const { data, error } = await sb.from('pendencias').select('*');
     if (!error) PENDS = data || [];
+    // funcionário de campo: o que foi escolhido para ele, ou sem ninguém escolhido (não as dos colegas)
+    if (!error && NV.cargo === 'encarregado') { try { const eu = String(NV.usuario.email || '').toLowerCase();
+      const fs = await sb.from('pend_funcionarios').select('id,email'); const meus = new Set((fs.data || []).filter(f => String(f.email || '').toLowerCase() === eu).map(f => f.id));
+      PENDS = PENDS.filter(p => !p.responsavel || meus.has(p.responsavel)); } catch (e) {} }
     if (!error) for (const p of data || []) { const r = g(p.obra); r.pend = r.pend || { abertas: 0, corrigidas: 0, fechadas: 0, venc: 0 };
       if (p.status === 'aberta' || p.status === 'em_correcao') { r.pend.abertas++; if (p.prazo && p.prazo < hoje) r.pend.venc++; }
       else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }

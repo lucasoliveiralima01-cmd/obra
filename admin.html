@@ -134,7 +134,7 @@ const fmtDia = s => s ? new Date(s).toLocaleDateString('pt-BR') : '';
 const fmtDH = s => { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 const iniciais = n => String(n || '').trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('');
 const ACESSOS = [['nenhum', 'Sem acesso'], ['leitor', 'Só visualizar'], ['editor', 'Editar'], ['admin', 'Administrador']];
-const CARGOS = [['', 'Sem cargo'], ['engenharia', 'Engenharia'], ['seguranca', 'Segurança'], ['encarregado', 'Encarregado']];
+const CARGOS = [['', 'Sem cargo'], ['engenharia', 'Engenharia'], ['seguranca', 'Segurança'], ['encarregado', 'Campo (corrige pendências)']];
 const acessoDe = u => !u.papel ? 'nenhum' : u.admin ? 'admin' : u.papel;
 const rotAcesso = v => (ACESSOS.find(a => a[0] === v) || [, v])[1];
 const rotCargo = v => (CARGOS.find(a => a[0] === (v || '')) || [, v])[1];
@@ -188,7 +188,7 @@ const FILTROS = {
   todos: ['Todos', () => true], aguardando: ['Aguardando liberação', aguardando], convite: ['Convite não aceito', conviteAberto],
   semacesso: ['Sem acesso', u => !u.papel], leitor: ['Só visualizar', u => u.papel === 'leitor' && u.cargo !== 'encarregado'], editor: ['Editar', u => u.papel === 'editor' && !u.admin],
   admin: ['Administradores', u => u.admin], engenharia: ['Engenharia', u => u.cargo === 'engenharia'], seguranca: ['Segurança', u => u.cargo === 'seguranca'],
-  encarregado: ['Encarregados', u => u.cargo === 'encarregado'], semcargo: ['Sem cargo', u => u.papel && !u.cargo], avisos: ['Com avisos', u => u.avisos > 0]
+  encarregado: ['Campo', u => u.cargo === 'encarregado'], semcargo: ['Sem cargo', u => u.papel && !u.cargo], avisos: ['Com avisos', u => u.avisos > 0]
 };
 function telaPessoas() {
   const q = BUSCA.trim().toLowerCase();
@@ -210,8 +210,9 @@ function pessoaHtml(u) {
   const info = [u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) : '', u.ultimo_acesso ? 'último acesso em ' + fmtDH(u.ultimo_acesso) : (u.tem_conta ? 'ainda não entrou' : ''), u.pendencias ? u.pendencias + ' pendência(s) registrada(s)' : ''].filter(Boolean).join(' · ');
   const acesso = u.cargo === 'encarregado' ? `<select disabled title="Encarregados usam só o painel de pendências. Para mudar, troque o cargo."><option>Só pendências</option></select>`
     : `<select data-acesso="${i}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
-  const dsc = u.cargo === 'encarregado' ? `<div class="dsc" role="group" aria-label="Disciplinas">${DISC.map(d => { const on = (u.disciplinas || []).includes(d.valor); const g = grupoDe(d.valor); const ok = on || !(u.disciplinas || []).length || (u.disciplinas || []).every(x => grupoDe(x) === g);
-      return `<button type="button" data-disc="${i}" data-v="${esc(d.valor)}" aria-pressed="${on}" ${ok ? '' : 'disabled title="Não é complementar às disciplinas já escolhidas"'}>${esc(d.valor)}</button>`; }).join('')}</div>` : '';
+  // cargos de quem corrige: pode ter mais de um (ex.: Pedreiro e Impermeabilizador)
+  const dsc = u.cargo === 'encarregado' ? `<div class="dsc" role="group" aria-label="Cargos"><span class="muted" style="width:100%;font-size:.8rem">Cargos (toque para marcar um ou mais):</span>${DISC.concat((u.disciplinas || []).filter(x => !DISC.some(d => d.valor === x)).map(x => ({ valor: x }))).map(d => { const on = (u.disciplinas || []).includes(d.valor);
+      return `<button type="button" data-disc="${i}" data-v="${esc(d.valor)}" aria-pressed="${on}">${esc(d.valor)}</button>`; }).join('')}</div>` : '';
   const acoes = [u.tem_conta && !sou ? `<button class="btn sm ghost" data-senha="${i}" type="button">Enviar link de senha</button>` : '',
     (!u.tem_conta || conviteAberto(u)) ? `<button class="btn sm ghost" data-conv="${i}" type="button">${u.tem_conta ? 'Reenviar convite' : 'Enviar convite'}</button>` : '',
     !sou ? `<button class="btn sm danger" data-exc="${i}" type="button">${u.tem_conta ? 'Excluir conta' : 'Remover'}</button>` : ''].join('');
@@ -230,12 +231,12 @@ function ligarPessoas(C) {
     try { await NV.administracao.definir(u.email, v === 'admin' ? 'editor' : v, v === 'admin'); toast((u.nome || u.email) + ': ' + rotAcesso(v).toLowerCase() + '.'); LOG = null; await recarregar(); }
     catch (e) { s.value = antes; s.disabled = false; toast('Não foi possível: ' + e.message, 6000); } });
   C.querySelectorAll('[data-cargo]').forEach(s => s.onchange = async () => { const u = L(s.dataset.cargo), v = s.value || null;
-    if (v === 'encarregado') { u.cargo = 'encarregado'; u.disciplinas = []; telaPessoas(); toast('Escolha as disciplinas (só as complementares).'); return; }
+    if (v === 'encarregado') { u.cargo = 'encarregado'; u.disciplinas = []; telaPessoas(); toast('Marque os cargos dessa pessoa (um ou mais).'); return; }
     try { await NV.administracao.definirCargo(u.email, v, []); toast((u.nome || u.email) + ': ' + rotCargo(v).toLowerCase() + '.'); LOG = null; await recarregar(); }
     catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); } });
   C.querySelectorAll('[data-disc]').forEach(b => b.onclick = async () => { const u = L(b.dataset.disc), v = b.dataset.v, ds = (u.disciplinas || []).slice(); const k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v);
-    if (!ds.length) { u.disciplinas = []; telaPessoas(); toast('O encarregado precisa de ao menos uma disciplina.'); return; }
-    try { await NV.administracao.definirCargo(u.email, 'encarregado', ds); LOG = null; await recarregar(); toast((u.nome || u.email) + ': encarregado · ' + ds.join(', ') + '.'); }
+    if (!ds.length) { u.disciplinas = []; telaPessoas(); toast('Precisa de ao menos um cargo.'); return; }
+    try { await NV.administracao.definirCargo(u.email, 'encarregado', ds); LOG = null; await recarregar(); toast((u.nome || u.email) + ': ' + ds.join(', ') + '.'); }
     catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); } });
   C.querySelectorAll('[data-nome]').forEach(inp => inp.onchange = async () => { const u = L(inp.dataset.nome), n = inp.value.trim();
     try { await NV.pessoas.salvarNome(u.email, n); u.nome = n; toast('Nome salvo.'); } catch (e) { toast('Não foi possível salvar o nome: ' + e.message, 6000); } });

@@ -244,9 +244,14 @@ let CFG = { pavimentos: [] };                                                   
 let PEND = [];        // pendências do servidor (com fotos e eventos)
 let PLANTAS = {};     // pavimento -> planta (imagem gerada pelo Mapa de Risco a partir do IFC)
 let FILA = [];        // operações aguardando envio (deste aparelho)
+let FUNC = [];        // funcionários da obra (Listas e regras → Funcionários)
 let TAB = 'lista';
-const F = { st: new Set(['aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, q: '' };
-const minha = p => String(p.criado_por || '').toLowerCase() === String((NV && NV.usuario && NV.usuario.email) || '').toLowerCase();
+const F = { st: new Set(['aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, q: '' };
+const euEmail = () => String((NV && NV.usuario && NV.usuario.email) || '').toLowerCase();
+const minha = p => String(p.criado_por || '').toLowerCase() === euEmail();
+// funcionários que podem corrigir num cargo; e se a pendência foi escolhida para mim
+const funcsDe = cargo => FUNC.filter(f => f.ativo !== false && (f.cargos || []).includes(cargo));
+const paraMim = p => !!p.responsavel && FUNC.some(f => f.id === p.responsavel && String(f.email || '').toLowerCase() === euEmail());
 
 /* ======================= quem pode o quê (o banco confere de novo) ======================= */
 const cargo = () => NV && NV.cargo;
@@ -322,7 +327,7 @@ const plantaDe = pav => MAPA_PL[pav] || (PLANTAS[pav] ? pav : null);
 // o que perguntar depois do local: apartamentos, opções do local (Elevador: Esquerda/Direita) ou nada
 const opcoesDo = local => ((L.local.find(x => x.valor === local) || {}).extra || {}).opcoes || [];
 const EQUIPE = { proprio: 'Próprio', terceiro: 'Terceiro' };
-const rotResp = p => p.disciplina + (p.equipe ? ' → ' + EQUIPE[p.equipe] : '');
+const rotResp = p => p.disciplina + (p.responsavel_nome ? ' → ' + p.responsavel_nome + (p.equipe ? ' (' + EQUIPE[p.equipe] + ')' : '') : p.equipe ? ' → ' + EQUIPE[p.equipe] : '');
 const rotLocal = p => [p.pavimento, p.local_tipo === 'Apartamento' ? (p.unidade ? 'Apto ' + p.unidade : 'Apartamento') : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo].filter(Boolean).join(' · ');
 const incompleta = p => !String(p.descricao || '').trim() || !String(p.causador || '').trim();
 const vencida = p => !!p.prazo && (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo < hoje();
@@ -347,13 +352,15 @@ let SEQ = Date.now();
 async function enfileirar(op) { op.k = op.k || uuid(); op.seq = ++SEQ; op.em = op.em || new Date().toISOString(); await idbPut('fila', op.k, op); await carregarFila(); render(); sincronizar(); }
 
 async function carregarServidor() {
-  const [lp, lc, lo, lpend, lpl] = await Promise.all([
+  const [lp, lc, lo, lpend, lpl, lfu] = await Promise.all([
     sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
     sb.from('pend_config').select('pavimentos,regras,listas').eq('obra', OBRA).maybeSingle(),
     NV.obras.obter(OBRA),
     sb.from('pendencias').select('*, pendencia_fotos(*), pendencia_eventos(*)').eq('obra', OBRA).order('numero', { ascending: false }),
-    sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo,elevacao').eq('obra', OBRA)
+    sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo,elevacao').eq('obra', OBRA),
+    sb.from('pend_funcionarios').select('id,nome,cargos,equipe,email,ativo').eq('obra', OBRA).order('nome')
   ]);
+  FUNC = lfu.error ? [] : (lfu.data || []);   // sem a tabela ainda: sem lista de funcionários
   // banco sem a altura das plantas: lê sem ela
   let pls = lpl; if (pls.error) pls = await sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA);
   // banco sem as colunas novas (regras/listas): lê só os pavimentos
@@ -366,11 +373,11 @@ async function carregarServidor() {
   L = LO.efetivas(LO.deTabela(lp.data), c.listas || null);
   CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO, regras: LO.normRegras(c.regras) };
   OBRA_NOME = lo.nome; PEND = lpend.data || []; ligarPlantas();
-  await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, OBRA_NOME, em: new Date().toISOString() });
+  await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, FUNC, OBRA_NOME, em: new Date().toISOString() });
 }
 async function carregarCache() {
   const c = await idbGet('cache', OBRA); if (!c) return false;
-  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; OBRA_NOME = c.OBRA_NOME; ligarPlantas(); return c.em;
+  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; FUNC = c.FUNC || []; OBRA_NOME = c.OBRA_NOME; ligarPlantas(); return c.em;
 }
 // imagem da planta: baixa uma vez e guarda no aparelho (funciona sem sinal)
 async function urlPlanta(pl) {
@@ -395,18 +402,19 @@ async function enviarFotos(op) {
     if (b) { const u = URLS.get(f.fid); URLS.delete(f.fid); if (u) URLS.set(caminho, u); await idbDel('blobs', f.fid); }
   }
 }
-// banco ainda sem a coluna equipe (falta rodar o atualizacao-locais.sql): envia sem ela
-const semEquipe = e => /equipe/i.test((e && e.message) || '');
+// banco ainda sem as colunas novas (falta rodar atualizacao-locais.sql / atualizacao-funcionarios.sql): envia sem elas
+const semEquipe = e => /equipe|responsavel/i.test((e && e.message) || '');
+const tiraNovas = (r, e) => { const m = (e && e.message) || ''; if (/responsavel/i.test(m)) { delete r.responsavel; delete r.responsavel_nome; } if (/equipe/i.test(m)) delete r.equipe; };
 async function executar(op) {
   if (op.op === 'criar') {
     if (!op.criada) { const row = Object.assign({ id: op.id, obra: OBRA, criado_em: op.em }, op.row);
       let { error } = await sb.from('pendencias').insert(row);
-      if (error && semEquipe(error)) { delete row.equipe; ({ error } = await sb.from('pendencias').insert(row)); }
+      for (let k = 0; k < 2 && error && semEquipe(error); k++) { tiraNovas(row, error); ({ error } = await sb.from('pendencias').insert(row)); }
       if (error && !jaExiste(error)) throw error; op.criada = true; await idbPut('fila', op.k, op); }
     await enviarFotos(op);
   } else if (op.op === 'fotos') await enviarFotos(op);
   else if (op.op === 'editar') { const c = Object.assign({}, op.campos); let { error } = await sb.from('pendencias').update(c).eq('id', op.id);
-    if (error && semEquipe(error)) { delete c.equipe; ({ error } = await sb.from('pendencias').update(c).eq('id', op.id)); } if (error) throw error; }
+    for (let k = 0; k < 2 && error && semEquipe(error); k++) { tiraNovas(c, error); ({ error } = await sb.from('pendencias').update(c).eq('id', op.id)); } if (error) throw error; }
   else if (op.op === 'status') { const { error } = await sb.rpc('pendencia_mudar', { p_id: op.id, p_para: op.para, p_comentario: op.comentario || null }); if (error) throw error; }
   else if (op.op === 'comentario') { const { error } = await sb.rpc('pendencia_comentar', { p_id: op.id, p_texto: op.texto }); if (error) throw error; }
   else if (op.op === 'excluir') {
@@ -471,9 +479,9 @@ function render() {
 
 function filtrar(its) {
   const q = F.q.trim().toLowerCase();
-  return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
+  return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.resp || (F.resp === '-' ? !p.responsavel_nome : p.responsavel_nome === F.resp)) && (!F.paraMim || paraMim(p)) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
     && (!F.blq || (p.bloqueios || []).length) && (!F.inc || incompleta(p)) && (!F.venc || vencida(p)) && (!F.fila || p._fila) && (!F.minhas || minha(p))
-    && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, EQUIPE[p.equipe] || '', p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
+    && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, p.responsavel_nome, EQUIPE[p.equipe] || '', p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => ST_ORD.indexOf(a.status) - ST_ORD.indexOf(b.status) || (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || (b.numero || 1e9) - (a.numero || 1e9));
 }
 function opcoes(vals, sel, todos) { return `<option value="">${todos}</option>` + vals.map(v => `<option ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join(''); }
@@ -487,11 +495,13 @@ function renderLista(its) {
       <div class="frow">
         <select class="fsel" id="fPav" aria-label="Pavimento">${opcoes(pavs, F.pav, 'Todos os pavimentos')}</select>
         <select class="fsel" id="fDisc" aria-label="Disciplina">${opcoes(usados('disciplina').sort(), F.disc, 'Todas as disciplinas')}</select>
+        ${usados('responsavel_nome').length ? `<select class="fsel" id="fResp" aria-label="Quem vai corrigir"><option value="">Todos os funcionários</option>${usados('responsavel_nome').sort().map(v => `<option ${v === F.resp ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option value="-" ${F.resp === '-' ? 'selected' : ''}>Sem funcionário escolhido</option></select>` : ''}
         <select class="fsel" id="fTipo" aria-label="Tipo de problema">${opcoes(usados('tipo').sort(), F.tipo, 'Todos os tipos')}</select>
         <select class="fsel" id="fPri" aria-label="Prioridade"><option value="">Todas as prioridades</option>${PRI_ORD.map(k => `<option value="${k}" ${F.pri === k ? 'selected' : ''}>${PRI[k][0]}</option>`).join('')}</select>
       </div>
       <div class="frow">
         ${podeCriar() ? `<button class="chip" data-tg="minhas" aria-pressed="${F.minhas}">Registradas por mim<b>${its.filter(minha).length}</b></button>` : ''}
+        ${its.some(paraMim) ? `<button class="chip" data-tg="paraMim" aria-pressed="${F.paraMim}">Escolhidas para mim<b>${its.filter(p => paraMim(p) && p.status !== 'fechada').length}</b></button>` : ''}
         <button class="chip" data-tg="blq" aria-pressed="${F.blq}">Com bloqueios</button>
         <button class="chip" data-tg="venc" aria-pressed="${F.venc}">Vencidas<b>${its.filter(vencida).length}</b></button>
         <button class="chip" data-tg="inc" aria-pressed="${F.inc}">Incompletas<b>${its.filter(p => incompleta(p) && p.status !== 'fechada').length}</b></button>
@@ -503,6 +513,7 @@ function renderLista(its) {
   b.querySelectorAll('[data-st]').forEach(x => x.onclick = () => { const s = x.dataset.st; F.st.has(s) ? F.st.delete(s) : F.st.add(s); render(); });
   b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { F[x.dataset.tg] = !F[x.dataset.tg]; render(); });
   $('fPav').onchange = e => { F.pav = e.target.value; render(); }; $('fDisc').onchange = e => { F.disc = e.target.value; render(); };
+  if ($('fResp')) $('fResp').onchange = e => { F.resp = e.target.value; render(); };
   $('fTipo').onchange = e => { F.tipo = e.target.value; render(); }; $('fPri').onchange = e => { F.pri = e.target.value; render(); };
   $('fQ').oninput = e => { F.q = e.target.value; clearTimeout(renderLista.t); renderLista.t = setTimeout(() => { render(); const q = $('fQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); };
   b.querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
@@ -565,7 +576,7 @@ function renderResumo(its) {
     <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(rotResp(p))} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
-    const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, pav: '', disc: '', tipo: '', pri: '', q: '' });
+    const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, resp: '', pav: '', disc: '', tipo: '', pri: '', q: '' });
     if (r.startsWith('st:')) F.st = new Set([r.slice(3)]); else { F.st = new Set(['aberta', 'em_correcao', 'corrigida']); F[r] = true; }
     TAB = 'lista'; render();
   });
@@ -616,6 +627,11 @@ function formPend(id) {
   const tiposOk = LO.ativos(L.problema).filter(t => cargo() === 'engenharia' || (cargo() === 'seguranca' && ehSegTipo(t.valor)));
   const f = ed ? clone(ed) : { pavimento: '', local_tipo: '', unidade: '', comodo: '', tipo: tiposOk.length === 1 ? tiposOk[0].valor : '', disciplina: '', equipe: '', prioridade: '', descricao: '', causador: '', bloqueios: [], prazo: '', observacoes: '' };
   if (!ed && f.tipo) f.disciplina = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina || '';
+  // quem vai corrigir: '' = não escolhido, '*' = todos do cargo, ou o id do funcionário
+  f.responsavel = ed ? (ed.responsavel || '*') : '';
+  // trocou o cargo: a pessoa escolhida precisa ter o novo cargo
+  const confereResp = () => { if (f.responsavel && f.responsavel !== '*' && !funcsDe(f.disciplina).some(x => x.id === f.responsavel) && !(ed && ed.responsavel === f.responsavel && ed.disciplina === f.disciplina)) f.responsavel = ''; };
+  const nomeFunc = id => (FUNC.find(x => x.id === id) || {}).nome || (ed && ed.responsavel === id ? ed.responsavel_nome : '') || 'funcionário';
   let prazoManual = !!ed;
   const novas = [];   // fotos novas {fid, url}
   const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unidades) || [];
@@ -639,7 +655,12 @@ function formPend(id) {
         : (f.local_tipo ? `<div class="fld"><label for="fUn2">Detalhe do local (opcional)</label><input id="fUn2" placeholder="Ex.: perto do elevador, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
       <div class="fld"><label for="fTipo2">Tipo de problema <span class="req">*</span></label><select id="fTipo2"><option value="">Escolha…</option>${tiposOk.map(t => `<option ${t.valor === f.tipo ? 'selected' : ''}>${esc(t.valor)}</option>`).join('')}</select></div>
       <div class="fld"><span class="l">Responsável pela correção <span class="req">*</span></span>${grupo('Disciplina', comAtual(ativos('disciplina'), f.disciplina), f.disciplina, 'disciplina', 'small')}</div>
-      ${f.disciplina ? `<div class="fld"><span class="l">${esc(f.disciplina)} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
+      ${f.disciplina ? (() => { const fs = funcsDe(f.disciplina).map(x => x.id); if (f.responsavel && f.responsavel !== '*' && !fs.includes(f.responsavel)) fs.push(f.responsavel);
+        return fs.length ? `<div class="fld"><span class="l">Quem vai corrigir <span class="req">*</span> <span class="muted" style="text-transform:none;letter-spacing:0">(o aviso vai só para quem você escolher)</span></span>
+          <div class="opts small" role="group" aria-label="Quem vai corrigir">${fs.map(id => { const fu = FUNC.find(x => x.id === id) || {}; return `<button type="button" class="opt" data-f="responsavel" data-v="${esc(id)}" aria-pressed="${f.responsavel === id}">${esc(nomeFunc(id))}${fu.equipe ? ' · ' + EQUIPE[fu.equipe] : ''}</button>`; }).join('')}
+            <button type="button" class="opt" data-f="responsavel" data-v="*" aria-pressed="${f.responsavel === '*'}">Todos de ${esc(f.disciplina)}</button></div></div>`
+          : `<p class="muted" style="margin:0">Nenhum funcionário de <b>${esc(f.disciplina)}</b> cadastrado nesta obra: o aviso vai para todos que têm esse cargo no sistema.${NV && NV.admin ? ' Cadastre em <b>Listas e regras → Funcionários</b>.' : ''}</p>`; })() : ''}
+      ${f.disciplina ? `<div class="fld"><span class="l">${esc(f.disciplina)}${f.responsavel && f.responsavel !== '*' ? ' (' + esc(nomeFunc(f.responsavel)) + ')' : ''} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
       <div class="fld"><span class="l">Prioridade <span class="req">*</span></span>${grupo('Prioridade', PRI_ORD, f.prioridade, 'prioridade')}</div>
       <details class="mais" ${ed || incompleta(f) === false ? 'open' : ''}><summary>${['descricao', 'causador', 'prazo', 'observacoes', 'bloqueios'].some(obrig) ? 'Mais detalhes (esta obra exige alguns: ' + [['descricao', 'descrição'], ['causador', 'quem causou'], ['prazo', 'prazo'], ['observacoes', 'observações'], ['bloqueios', 'serviço travado']].filter(x => obrig(x[0])).map(x => x[1]).join(', ') + ')' : 'Mais detalhes (opcional; sem eles a pendência fica INCOMPLETA)'}</summary>
         <div class="fld"><label for="fDesc">Descrição</label><textarea id="fDesc" placeholder="O que está errado e o que precisa ser feito">${esc(f.descricao || '')}</textarea></div>
@@ -663,8 +684,11 @@ function formPend(id) {
       if (k === 'local_tipo' && f.local_tipo !== v) { f.unidade = ''; f.comodo = ''; }
       f[k] = f[k] === v && k !== 'prioridade' ? '' : v;
       if (k === 'prioridade' && !prazoManual) f.prazo = somaDias(hoje(), prazoDe(v));
+      if (k === 'disciplina') confereResp();
+      // a equipe vem do cadastro do funcionário (dá para trocar)
+      if (k === 'responsavel' && f.responsavel && f.responsavel !== '*') { const fu = FUNC.find(x => x.id === f.responsavel); if (fu && fu.equipe) f.equipe = fu.equipe; }
       const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; });
-    $('fTipo2').onchange = e => { lerTextos(); f.tipo = e.target.value; const s = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina; if (s) f.disciplina = s; const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
+    $('fTipo2').onchange = e => { lerTextos(); f.tipo = e.target.value; const s = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina; if (s) { f.disciplina = s; confereResp(); } const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
     $('fPrazo').oninput = () => { prazoManual = true; };
     $('blqAdd').onclick = () => { lerTextos(); f.bloqueios.push({ servico: '', local: f.local_tipo === 'Apartamento' && f.unidade ? 'Apto ' + f.unidade : '' }); desenhar(); B.querySelector('details.mais').open = true; };
     B.querySelectorAll('[data-brm]').forEach(b => b.onclick = () => { lerTextos(); f.bloqueios.splice(+b.dataset.brm, 1); desenhar(); B.querySelector('details.mais').open = true; });
@@ -697,7 +721,7 @@ function formPend(id) {
     if (f.local_tipo === 'Apartamento' && !f.comodo) falta.push('cômodo');
     if (opcoesDo(f.local_tipo).length && !f.unidade) falta.push(f.local_tipo.toLowerCase() + ' (qual)');
     if (f.local_tipo === 'Outro' && !String(f.unidade || '').trim()) falta.push('qual local');
-    if (!f.tipo) falta.push('tipo de problema'); if (!f.disciplina) falta.push('responsável pela correção'); else if (!f.equipe) falta.push('equipe (próprio ou terceiro)'); if (!f.prioridade) falta.push('prioridade');
+    if (!f.tipo) falta.push('tipo de problema'); if (!f.disciplina) falta.push('responsável pela correção'); else if (!f.responsavel && funcsDe(f.disciplina).length) falta.push('quem vai corrigir'); else if (!f.equipe) falta.push('equipe (próprio ou terceiro)'); if (!f.prioridade) falta.push('prioridade');
     // campos que esta obra exige (Listas e regras → Regras)
     if (obrig('descricao') && !String(f.descricao || '').trim()) falta.push('descrição'); if (obrig('causador') && !String(f.causador || '').trim()) falta.push('responsável pelo problema');
     if (obrig('prazo') && !f.prazo) falta.push('prazo'); if (obrig('observacoes') && !String(f.observacoes || '').trim()) falta.push('observações');
@@ -706,7 +730,8 @@ function formPend(id) {
     if (falta.length) { if ($('ovlB').querySelector('details.mais')) $('ovlB').querySelector('details.mais').open = true; $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
     const row = { pavimento: f.pavimento, local_tipo: f.local_tipo, unidade: String(f.unidade || '').trim() || null, comodo: f.local_tipo === 'Apartamento' ? f.comodo : null,
       // de segurança: tipo de problema de segurança, ou registrada/editada pela Segurança
-      tipo: f.tipo, disciplina: f.disciplina, equipe: f.equipe || null, prioridade: f.prioridade, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
+      tipo: f.tipo, disciplina: f.disciplina, equipe: f.equipe || null, prioridade: f.prioridade,
+      responsavel: f.responsavel && f.responsavel !== '*' ? f.responsavel : null, responsavel_nome: f.responsavel && f.responsavel !== '*' ? nomeFunc(f.responsavel) : null, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
       descricao: String(f.descricao || '').trim() || null, causador: String(f.causador || '').trim() || null,
       bloqueios: (f.bloqueios || []).filter(b => b.servico).map(b => ({ servico: b.servico, local: String(b.local || '').trim() })),
       prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null,

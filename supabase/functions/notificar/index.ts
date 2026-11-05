@@ -47,6 +47,15 @@ async function membros(): Promise<Membro[]> {
 }
 const encarregadosDe = (ms: Membro[], disc: string) => ms.filter(m => m.cargo === 'encarregado' && (m.disciplinas || []).includes(disc)).map(m => low(m.email));
 const doCargo = (ms: Membro[], cargo: string) => ms.filter(m => m.cargo === cargo).map(m => low(m.email));
+// quem corrige: o funcionário escolhido na pendência (se ele tem acesso ao sistema);
+// sem ninguém escolhido (ou sem e-mail), todos os encarregados do cargo
+async function corrigeQuem(ms: Membro[], p: Record<string, unknown>): Promise<string[]> {
+  if (p.responsavel) {
+    const { data } = await sb.from('pend_funcionarios').select('email').eq('id', p.responsavel).maybeSingle();
+    if (data && data.email) return [low(data.email)];
+  }
+  return encarregadosDe(ms, String(p.disciplina || ''));
+}
 
 // envia para todos os aparelhos das pessoas; apaga inscrições que expiraram
 async function enviar(emails: string[], aviso: Aviso): Promise<number> {
@@ -83,21 +92,21 @@ async function evento(ev: Record<string, string>, site: string) {
   const obra = o && o.nome ? ' · ' + o.nome : '';
   let para: string[] = []; let title = ''; let body = rotulo(p) + ' — ' + p.tipo;
   if (ev.acao === 'criada') {
-    para = encarregadosDe(ms, p.disciplina);
+    para = await corrigeQuem(ms, p);
     title = 'Nova pendência ' + num + ' · ' + (PRI[p.prioridade] || p.prioridade) + obra;
   } else if (ev.acao === 'status' && ev.para === 'corrigida') {
     para = doCargo(ms, p.seguranca ? 'seguranca' : 'engenharia');
     title = 'Pendência ' + num + ' corrigida · conferir' + obra;
     if (ev.comentario) body += '\n' + ev.comentario;
   } else if (ev.acao === 'status' && ev.para === 'aberta' && (ev.de === 'corrigida' || ev.de === 'fechada')) {
-    para = encarregadosDe(ms, p.disciplina);
+    para = await corrigeQuem(ms, p);
     title = 'Pendência ' + num + (ev.de === 'fechada' ? ' reaberta' : ' reprovada') + obra;
     if (ev.comentario) body += '\nMotivo: ' + ev.comentario;
   } else if (ev.acao === 'comentario') {
     // comentário do encarregado vai para quem fecha; de quem fecha (ou outro), para os encarregados
     const quem = ms.find(m => low(m.email) === low(ev.por));
     const fecha = doCargo(ms, p.seguranca ? 'seguranca' : 'engenharia');
-    para = quem && quem.cargo === 'encarregado' ? fecha : encarregadosDe(ms, p.disciplina).concat(fecha);
+    para = quem && quem.cargo === 'encarregado' ? fecha : (await corrigeQuem(ms, p)).concat(fecha);
     title = 'Comentário na pendência ' + num + obra;
     body = rotulo(p) + '\n' + (ev.comentario || '');
   } else return { enviados: 0, motivo: 'evento sem aviso' };
@@ -108,8 +117,14 @@ async function evento(ev: Record<string, string>, site: string) {
 // todo dia: vencidas para a disciplina e para quem fecha; resumo para a Engenharia
 async function diario(site: string) {
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-  const { data, error } = await sb.from('pendencias').select('id,obra,numero,status,disciplina,prioridade,prazo,seguranca').is('excluida_em', null);
+  // deno-lint-ignore no-explicit-any
+  let r: { data: any[] | null; error: any } = await sb.from('pendencias').select('id,obra,numero,status,disciplina,prioridade,prazo,seguranca,responsavel').is('excluida_em', null);
+  if (r.error) r = await sb.from('pendencias').select('id,obra,numero,status,disciplina,prioridade,prazo,seguranca').is('excluida_em', null);
+  const { data, error } = r;
   if (error) throw error;
+  // e-mail de cada funcionário (para as vencidas de quem foi escolhido irem só para ele)
+  const emailFunc = new Map<string, string>();
+  try { const { data: fs } = await sb.from('pend_funcionarios').select('id,email'); for (const f of fs || []) if (f.email) emailFunc.set(f.id, low(f.email)); } catch (_) { /* tabela ainda não existe */ }
   const ps = data || [];
   const { data: obras } = await sb.from('obras').select('id,nome');
   const nomeObra = (id: string) => ((obras || []).find(o => o.id === id) || { nome: id }).nome;
@@ -129,9 +144,17 @@ async function diario(site: string) {
     const da = ps.filter(p => p.obra === obra);
     const venc = da.filter(p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje);
     const url = site + 'pendencias.html?obra=' + encodeURIComponent(obra);
-    // por disciplina, para os encarregados
-    for (const disc of [...new Set(venc.map(p => p.disciplina))]) {
-      const v = venc.filter(p => p.disciplina === disc);
+    // as de quem foi escolhido: para ele
+    const dePessoa = (p: Record<string, unknown>) => p.responsavel ? emailFunc.get(String(p.responsavel)) : undefined;
+    for (const email of [...new Set(venc.map(dePessoa).filter(Boolean))] as string[]) {
+      const v = venc.filter(p => dePessoa(p) === email);
+      enviados += await enviar([email], { title: v.length + ' pendência' + (v.length > 1 ? 's vencidas' : ' vencida') + ' para você',
+        body: nomeObra(obra) + ': ' + v.map(p => '#' + p.numero).join(', '), url, tag: 'venc-' + obra + '-eu' });
+    }
+    // as outras, por disciplina, para os encarregados
+    const semPessoa = venc.filter(p => !dePessoa(p));
+    for (const disc of [...new Set(semPessoa.map(p => p.disciplina))]) {
+      const v = semPessoa.filter(p => p.disciplina === disc);
       enviados += await enviar(encarregadosDe(ms, disc), { title: v.length + ' pendência' + (v.length > 1 ? 's vencidas' : ' vencida') + ' · ' + disc,
         body: nomeObra(obra) + ': ' + v.map(p => '#' + p.numero).join(', '), url, tag: 'venc-' + obra + '-' + disc });
     }
