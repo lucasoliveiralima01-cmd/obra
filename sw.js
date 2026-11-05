@@ -5,7 +5,7 @@
    e só usa a cópia guardada quando a conexão falha.
    Os dados (Supabase) não passam por aqui: ficam no IndexedDB da página.
    ===================================================================== */
-const CACHE = 'obra-v2';
+const CACHE = 'obra-v3';
 const BASICO = ['./', 'index.html', 'pendencias.html', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];

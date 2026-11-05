@@ -18,8 +18,8 @@ A obra **Start** é criada sozinha, com o modelo IFC, o mapa de risco do térreo
 
 Como funciona:
 
-1. A pessoa entra com login e escolhe a **ferramenta**.
-2. Escolhe a **obra** ou cadastra uma nova, com nome e modelo IFC.
+1. A pessoa entra com login e escolhe a **obra** (cada cartão mostra um resumo: pendências abertas e vencidas, última concretagem, última revisão do mapa de risco) ou cadastra uma nova, com nome e modelo IFC.
+2. Na página da obra, escolhe a **ferramenta**. Dentro da ferramenta, as abas no topo trocam de ferramenta na mesma obra, e um toque no nome da obra abre a lista para trocar de obra. As ações secundárias e o tema (automático, claro ou escuro) ficam no menu **⋯**.
 3. O modelo fica guardado **na obra** e serve para todas as ferramentas. Ele só precisa ser enviado uma vez.
 4. Cada ferramenta guarda os próprios dados de cada obra. Todos da equipe veem a mesma versão.
 5. Se duas pessoas alteram o mesmo item ao mesmo tempo, o painel avisa e deixa escolher qual versão fica.

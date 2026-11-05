@@ -167,6 +167,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
   .ttl{border-left:0;padding-left:0}
   .hctl{margin-left:0;width:100%}
   .lista{grid-template-columns:1fr}
+  .card{grid-template-columns:112px minmax(0,1fr)}
+  .th{width:112px;height:112px}
 }
 </style>
 </head>
@@ -177,9 +179,9 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
   <div class="hctl">
     <span class="modechip" id="modeChip" hidden>Carregando…</span>
     <a class="hbtn" id="bObras" href="index.html?ferramenta=pendencias">← Obras</a>
-    <button class="hbtn" id="bAvisos" type="button" title="Receber avisos neste aparelho">🔔 Avisos</button>
+    <button class="hbtn" id="bAvisos" type="button" data-menu title="Receber avisos neste aparelho">🔔 Avisos</button>
     <button class="hbtn" id="bPdf" type="button">Relatório PDF</button>
-    <button class="hbtn" id="bListas" type="button" hidden>Listas</button>
+    <button class="hbtn" id="bListas" type="button" data-menu hidden>Listas</button>
   </div>
 </div></header>
 
@@ -228,7 +230,8 @@ let CFG = { pavimentos: [] };                                                   
 let PEND = [];        // pendências do servidor (com fotos e eventos)
 let FILA = [];        // operações aguardando envio (deste aparelho)
 let TAB = 'lista';
-const F = { st: new Set(['aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, q: '' };
+const F = { st: new Set(['aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, q: '' };
+const minha = p => String(p.criado_por || '').toLowerCase() === String((NV && NV.usuario && NV.usuario.email) || '').toLowerCase();
 
 /* ======================= quem pode o quê (o banco confere de novo) ======================= */
 const cargo = () => NV && NV.cargo;
@@ -397,7 +400,7 @@ function render() {
 function filtrar(its) {
   const q = F.q.trim().toLowerCase();
   return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
-    && (!F.blq || (p.bloqueios || []).length) && (!F.inc || incompleta(p)) && (!F.venc || vencida(p)) && (!F.fila || p._fila)
+    && (!F.blq || (p.bloqueios || []).length) && (!F.inc || incompleta(p)) && (!F.venc || vencida(p)) && (!F.fila || p._fila) && (!F.minhas || minha(p))
     && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => ST_ORD.indexOf(a.status) - ST_ORD.indexOf(b.status) || (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || (b.numero || 1e9) - (a.numero || 1e9));
 }
@@ -416,6 +419,7 @@ function renderLista(its) {
         <select class="fsel" id="fPri" aria-label="Prioridade"><option value="">Todas as prioridades</option>${PRI_ORD.map(k => `<option value="${k}" ${F.pri === k ? 'selected' : ''}>${PRI[k][0]}</option>`).join('')}</select>
       </div>
       <div class="frow">
+        ${podeCriar() ? `<button class="chip" data-tg="minhas" aria-pressed="${F.minhas}">Registradas por mim<b>${its.filter(minha).length}</b></button>` : ''}
         <button class="chip" data-tg="blq" aria-pressed="${F.blq}">Com bloqueios</button>
         <button class="chip" data-tg="venc" aria-pressed="${F.venc}">Vencidas<b>${its.filter(vencida).length}</b></button>
         <button class="chip" data-tg="inc" aria-pressed="${F.inc}">Incompletas<b>${its.filter(p => incompleta(p) && p.status !== 'fechada').length}</b></button>
@@ -460,7 +464,7 @@ function renderResumo(its) {
     <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(p.disciplina)} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
-    const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, pav: '', disc: '', tipo: '', pri: '', q: '' });
+    const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, pav: '', disc: '', tipo: '', pri: '', q: '' });
     if (r.startsWith('st:')) F.st = new Set([r.slice(3)]); else { F.st = new Set(['aberta', 'em_correcao', 'corrigida']); F[r] = true; }
     TAB = 'lista'; render();
   });

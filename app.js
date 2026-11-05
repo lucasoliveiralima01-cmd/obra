@@ -1,20 +1,160 @@
 /* =====================================================================
-   App instalável: registra o sw.js (funcionamento sem sinal e
-   notificações) e mostra o botão "Instalar app" quando o navegador
-   permite (Chrome e Edge, no celular e no computador).
-   No iPhone a instalação é pelo Safari: Compartilhar > Adicionar à Tela
-   de Início (a tela de Avisos explica isso).
+   Peças comuns a todas as páginas
+   - App instalável: registra o sw.js e mostra o botão "Instalar app".
+   - Tema: automático (segue o aparelho), claro ou escuro.
+   - Menu "⋯" no topo: junta as ações secundárias (botões com data-menu).
+   - Nas ferramentas: abas para trocar de ferramenta na mesma obra e o
+     nome da obra vira um seletor para trocar de obra.
    ===================================================================== */
 (function () {
   'use strict';
   const ehIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const instalado = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  let pedido = null;
-  window.AppObra = { ehIOS, instalado, registro: null };
-  if ('serviceWorker' in navigator) {
-    window.AppObra.registro = navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw', e); return null; });
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const FERR = [
+    { id: 'risco', nome: 'Risco', pag: 'risco.html' },
+    { id: 'concretagem', nome: 'Concretagem', pag: 'concretagem.html' },
+    { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html' }
+  ];
+
+  /* ---------------- tema ---------------- */
+  const lerTema = () => { try { return localStorage.getItem('obra_tema') || ''; } catch (e) { return ''; } };
+  function aplicarTema(t) {
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('obra_tema', t || ''); } catch (e) {}
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#22425c';
+    document.querySelectorAll('[data-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tema === (t || ''))));
   }
-  function botao() {
+  aplicarTema(lerTema());
+
+  /* ---------------- estilos das peças ---------------- */
+  const css = `
+  .mo-btn{font-size:1.05rem!important;line-height:1;padding:5px 10px!important}
+  .mo-painel{position:fixed;z-index:60;min-width:230px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 80px);overflow:auto;background:var(--panel,#fff);color:var(--ink,#14222e);
+    border:1px solid var(--line,#d3dce3);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.28);padding:6px;display:grid;gap:2px}
+  .mo-painel .hbtn,.mo-painel a.hbtn{all:unset;box-sizing:border-box;display:flex;gap:8px;align-items:center;width:100%;padding:9px 10px;border-radius:7px;cursor:pointer;
+    font:600 .9rem var(--f-body,system-ui,sans-serif);color:var(--ink,#14222e)}
+  .mo-painel .hbtn:hover,.mo-painel .hbtn:focus-visible{background:var(--accent-soft,#dcebf2)}
+  .mo-painel .hbtn[hidden]{display:none!important}
+  .mo-painel .mo-sep{height:1px;background:var(--line,#d3dce3);margin:4px 2px}
+  .mo-painel .mo-tit{font:600 .68rem var(--f-disp,sans-serif);letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#5a6b78);padding:4px 10px 2px}
+  .mo-tema{display:flex;gap:4px;padding:2px 6px 4px}
+  .mo-tema button{flex:1;background:var(--bg,#eef2f5);border:1px solid var(--line,#d3dce3);border-radius:7px;padding:6px 4px;font:600 .8rem var(--f-body,sans-serif);color:var(--muted,#5a6b78);cursor:pointer}
+  .mo-tema button[aria-pressed="true"]{background:var(--accent,#074669);border-color:var(--accent,#074669);color:var(--accent-ink,#fff)}
+  .mo-abas{display:inline-flex;gap:2px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:2px;flex-wrap:wrap}
+  .mo-abas a{color:#d4e4ee;text-decoration:none;font:600 .8rem var(--f-body,sans-serif);padding:4px 10px;border-radius:6px;white-space:nowrap}
+  .mo-abas a:hover{background:rgba(255,255,255,.15);color:#fff}
+  .mo-abas a[aria-current="page"]{background:#fff;color:#22425c}
+  #obraNome.mo-trocar{cursor:pointer;background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.35);padding:0;color:#d4e4ee;font:inherit;font-size:.82rem;text-align:left}
+  #obraNome.mo-trocar::after{content:" ▾";opacity:.8}
+  #obraNome.mo-trocar:hover{color:#fff}
+  .mo-obras{display:grid;gap:2px;max-height:52dvh;overflow:auto}
+  .mo-obras a{display:flex;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:7px;color:var(--ink,#14222e);text-decoration:none;font:600 .92rem var(--f-body,sans-serif)}
+  .mo-obras a:hover{background:var(--accent-soft,#dcebf2)}
+  .mo-obras a[aria-current="true"]{background:var(--accent-soft,#dcebf2)}
+  .mo-obras a[aria-current="true"]::after{content:"atual";font:500 .72rem var(--f-mono,monospace);color:var(--muted,#5a6b78)}
+  .mo-busca{background:var(--bg,#eef2f5);border:1px solid var(--line,#d3dce3);border-radius:7px;padding:8px 10px;margin:2px 4px 6px;color:var(--ink,#14222e);font:inherit}
+  @media (max-width:640px){.mo-abas{width:100%;justify-content:space-between}.mo-abas a{flex:1;text-align:center;padding:6px 4px}}
+  `;
+  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  /* ---------------- janelinha flutuante (menu e lista de obras) ---------------- */
+  let aberto = null;
+  // os botões do menu ficam guardados (escondidos) na página: assim continuam
+  // achados pelo id e com as ações de sempre
+  let guarda = null;
+  const guardar = b => { if (!guarda) { guarda = document.createElement('div'); guarda.id = 'moGuarda'; guarda.hidden = true; document.body.appendChild(guarda); } guarda.appendChild(b); };
+  function fechar() { if (aberto) { aberto.querySelectorAll('.hbtn[data-guardado]').forEach(guardar); aberto.remove(); aberto = null; } }
+  function abrirPainel(ancora, conteudo) {
+    fechar();
+    const p = document.createElement('div'); p.className = 'mo-painel'; p.setAttribute('role', 'menu');
+    if (typeof conteudo === 'string') p.innerHTML = conteudo; else p.appendChild(conteudo);
+    document.body.appendChild(p); aberto = p;
+    const r = ancora.getBoundingClientRect(); const w = p.offsetWidth;
+    p.style.top = Math.round(r.bottom + 6) + 'px';
+    p.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))) + 'px';
+    if (r.left + w < window.innerWidth - 8 && ancora.id === 'obraNome') p.style.left = Math.round(Math.max(8, r.left)) + 'px';
+    return p;
+  }
+  document.addEventListener('click', ev => { if (aberto && !aberto.contains(ev.target) && !ev.target.closest('.mo-btn,#obraNome')) fechar(); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fechar(); });
+  window.addEventListener('resize', fechar);
+
+  /* ---------------- menu "⋯" ---------------- */
+  const itens = [];   // botões guardados no menu (mantêm as ações originais)
+  const extras = [];  // itens criados aqui (ex.: dados da obra)
+  function paraMenu(b) { if (!b || itens.includes(b)) return; itens.push(b); b.dataset.guardado = '1'; guardar(b); garantirBotao(); }
+  function itemMenu(rotulo, acao) { const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn'; b.textContent = rotulo; b.onclick = acao; b.dataset.guardado = '1'; extras.push(b); guardar(b); garantirBotao(); return b; }
+  function garantirBotao() {
+    if (document.getElementById('bMais')) return;
+    const h = document.querySelector('.hctl'); if (!h) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn mo-btn'; b.id = 'bMais'; b.textContent = '⋯';
+    b.title = 'Mais opções'; b.setAttribute('aria-label', 'Mais opções'); b.setAttribute('aria-haspopup', 'menu');
+    b.onclick = ev => {
+      ev.stopPropagation(); if (aberto && aberto.dataset.menu) { fechar(); return; }
+      const box = document.createElement('div'); box.style.display = 'contents';
+      const vis = itens.concat(extras).filter(x => !x.hidden);
+      vis.forEach(x => { box.appendChild(x); x.addEventListener('click', fechar, { once: true }); });
+      if (vis.length) { const s = document.createElement('div'); s.className = 'mo-sep'; box.appendChild(s); }
+      const t = document.createElement('div'); t.innerHTML = '<div class="mo-tit">Tema</div><div class="mo-tema"><button type="button" data-tema="">Automático</button><button type="button" data-tema="light">Claro</button><button type="button" data-tema="dark">Escuro</button></div>';
+      box.appendChild(t);
+      const p = abrirPainel(b, box); p.dataset.menu = '1';
+      p.querySelectorAll('[data-tema]').forEach(x => x.onclick = () => aplicarTema(x.dataset.tema));
+      aplicarTema(lerTema());
+    };
+    // fica antes do nome e do "Sair"
+    const quem = document.getElementById('bQuem'); if (quem) h.insertBefore(b, quem); else h.appendChild(b);
+  }
+  function montarMenu() {
+    document.querySelectorAll('.hctl [data-menu]').forEach(paraMenu);
+    garantirBotao();
+  }
+
+  /* ---------------- abas e troca de obra (nas ferramentas) ---------------- */
+  async function montarTroca(nv) {
+    if (!nv || !nv.obraId || !nv.ferramenta) return;
+    const id = nv.obraId, atual = nv.ferramenta;
+    const visiveis = FERR.filter(f => !(nv.cargo === 'encarregado' && f.id !== 'pendencias'));
+    // "← Obra": página da obra (ou a lista de obras, para quem só tem uma ferramenta)
+    const bo = document.getElementById('bObras');
+    if (bo) { if (visiveis.length > 1) { bo.href = 'index.html?obra=' + encodeURIComponent(id); bo.textContent = '← Obra'; bo.title = 'Página da obra: ferramentas e resumo'; } else { bo.href = 'index.html'; bo.textContent = '← Obras'; } }
+    // abas das ferramentas da mesma obra
+    const ttl = document.querySelector('.brand .ttl');
+    if (ttl && visiveis.length > 1 && !document.querySelector('.mo-abas')) {
+      const n = document.createElement('nav'); n.className = 'mo-abas'; n.setAttribute('aria-label', 'Ferramentas desta obra');
+      n.innerHTML = visiveis.map(f => `<a href="${f.pag}?obra=${encodeURIComponent(id)}" ${f.id === atual ? 'aria-current="page"' : ''}>${esc(f.nome)}</a>`).join('');
+      ttl.after(n);
+    }
+    // nome da obra vira o seletor de obra; o que ele fazia antes vai para o menu
+    const on = document.getElementById('obraNome'); if (!on) return;
+    const antigo = on.onclick;
+    if (antigo) itemMenu(atual === 'concretagem' ? 'Obra e concreteira padrão…' : 'Renomear a obra…', antigo);
+    on.onclick = null; on.classList.add('mo-trocar'); on.setAttribute('role', 'button'); on.tabIndex = 0;
+    on.title = 'Trocar de obra';
+    let obras = null;
+    const abrir = async ev => {
+      if (ev) ev.stopPropagation();
+      if (aberto && aberto.dataset.obras) { fechar(); return; }
+      const box = document.createElement('div'); box.style.display = 'contents';
+      box.innerHTML = '<div class="mo-tit">Trocar de obra</div><input class="mo-busca" type="search" placeholder="Buscar obra…" aria-label="Buscar obra"><div class="mo-obras"><span class="mo-tit" style="text-transform:none;letter-spacing:0">Carregando…</span></div><div class="mo-sep"></div><a class="hbtn" href="index.html">Ver todas as obras</a>';
+      const p = abrirPainel(on, box); p.dataset.obras = '1';
+      const pag = (FERR.find(f => f.id === atual) || {}).pag || 'index.html';
+      const lista = p.querySelector('.mo-obras'), busca = p.querySelector('.mo-busca');
+      const desenhar = () => { const q = busca.value.trim().toLowerCase(); const vis = (obras || []).filter(o => !q || o.nome.toLowerCase().includes(q));
+        lista.innerHTML = vis.length ? vis.map(o => `<a href="${pag}?obra=${encodeURIComponent(o.id)}" aria-current="${o.id === id}">${esc(o.nome)}</a>`).join('') : '<span class="mo-tit" style="text-transform:none;letter-spacing:0">Nenhuma obra encontrada.</span>'; };
+      busca.oninput = desenhar;
+      try { if (!obras) obras = await nv.obras.listar(); desenhar(); }
+      catch (e) { lista.innerHTML = '<span class="mo-tit" style="text-transform:none;letter-spacing:0">Sem conexão para listar as obras.</span>'; }
+      if (window.matchMedia('(pointer:fine)').matches) busca.focus();
+    };
+    on.addEventListener('click', abrir);
+    on.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(ev); } });
+  }
+
+  /* ---------------- instalar como app ---------------- */
+  let pedido = null;
+  function botaoInstalar() {
     if (!pedido || instalado() || document.getElementById('bInstalar')) return;
     const h = document.querySelector('.hctl'); if (!h) return;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn'; b.id = 'bInstalar';
@@ -22,7 +162,15 @@
     b.onclick = async () => { const p = pedido; pedido = null; b.remove(); try { p.prompt(); await p.userChoice; } catch (e) {} };
     h.insertBefore(b, h.firstChild);
   }
-  window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); pedido = ev; botao(); });
+  window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); pedido = ev; botaoInstalar(); });
   window.addEventListener('appinstalled', () => { pedido = null; const b = document.getElementById('bInstalar'); if (b) b.remove(); });
-  document.addEventListener('DOMContentLoaded', botao);
+
+  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema };
+  if ('serviceWorker' in navigator) window.AppObra.registro = navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw', e); return null; });
+
+  function iniciar() {
+    montarMenu(); botaoInstalar();
+    Promise.resolve(window.NUVEM_PRONTA).then(nv => { montarTroca(nv); garantirBotao(); }).catch(() => {});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();

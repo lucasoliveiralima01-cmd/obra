@@ -562,7 +562,9 @@
     q.title = 'Conectado como ' + usuario.email + (papel === 'leitor' ? ' (somente leitura)' : '') + (pessoas.disponivel() ? '. Clique para mudar o seu nome.' : '');
     if (pessoas.disponivel()) q.onclick = () => tNome(false);
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bSair'; b.textContent = 'Sair'; b.onclick = sair;
-    h.appendChild(q); h.appendChild(b);
+    h.appendChild(q);
+    // "Sair" vai para o menu "⋯" quando ele existe (app.js)
+    if (window.AppObra && window.AppObra.paraMenu) window.AppObra.paraMenu(b); else h.appendChild(b);
     if (papel === 'leitor') { const r = document.getElementById('bReset'); if (r) r.hidden = true; }
   }
 

@@ -117,6 +117,22 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .obra a.nm{font:700 1.15rem/1.2 var(--f-disp);color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
 .obra a.nm::after{content:" →";color:var(--accent)}
 .obra a.nm:hover{color:var(--accent)}
+.obra .rs{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.obra .rs li{display:grid;grid-template-columns:20px auto 1fr;gap:6px;align-items:center;font-size:.84rem;min-width:0}
+.obra .rs li a{font-weight:600;color:var(--ink);text-decoration:none;white-space:nowrap}
+.obra .rs li a:hover{color:var(--accent);text-decoration:underline}
+.obra .rs li>span:last-child{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.ic2{width:20px;height:20px;display:grid;place-items:center}.ic2 svg{width:18px;height:18px}
+.ruim{color:var(--bad)}
+.tool .rs1{margin:4px 0 0;font:600 .9rem var(--f-body);color:var(--ink)}
+.hero{display:grid;grid-template-columns:minmax(180px,320px) 1fr;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.hero .hft{aspect-ratio:16/7;border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(135deg,var(--navy),var(--petrol))}
+.hero .hft img{position:absolute;inset:0;width:100%;height:100%}
+.hero .hft span{position:absolute;left:14px;bottom:8px;font:700 1.8rem/1 var(--f-disp);color:rgba(255,255,255,.85)}
+.hero .hinfo{display:grid;gap:6px;min-width:0}
+.hero h2{margin:0;font:700 1.6rem/1.15 var(--f-disp)}
+.hero .acts{display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:640px){.hero{grid-template-columns:1fr}}
 .obra dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0;font-size:.84rem}
 .obra dt{color:var(--muted)} .obra dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .obra .acts{display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--line-2);padding-top:8px}
@@ -214,58 +230,114 @@ let NV = null, lista = [], filtro = '';
 const ferr = () => ferramentasVisiveis().find(f => f.id === new URLSearchParams(location.search).get('ferramenta')) || null;
 const podeEditar = () => NV && NV.papel === 'editor';
 
-/* ---------------- tela 1: escolher a ferramenta ---------------- */
-function telaFerramentas() {
-  document.title = 'Ferramentas da Obra';
-  $('main').innerHTML = `<div class="head"><div><h2>Escolha a ferramenta</h2>
-      <p>Cada ferramenta trabalha sobre o modelo IFC das obras cadastradas. O modelo é enviado uma vez e fica disponível em todas elas.</p></div></div>
-    ${NV ? '' : '<div class="aviso">Modo local: sem conexão com o banco online, os dados ficam só neste navegador e não há cadastro de obras.</div>'}
-    <div class="tools">${ferramentasVisiveis().map(f => f.pagina
-      ? `<a class="tool" href="${NV ? '?ferramenta=' + f.id : f.pagina}"><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p>${esc(f.desc)}</p></div><span class="go">${NV ? 'Escolher obra' : 'Abrir'} →</span></a>`
-      : `<div class="tool off" aria-disabled="true"><span class="tag">Em breve</span><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p>${esc(f.desc)}</p></div><span class="go muted">Em desenvolvimento</span></div>`).join('')}</div>`;
+/* ---------------- navegação: obra primeiro, depois a ferramenta ---------------- */
+const obraUrl = id => 'index.html?obra=' + encodeURIComponent(id);
+const ferramentasComPagina = () => ferramentasVisiveis().filter(f => f.pagina);
+// quem só tem uma ferramenta (encarregado) vai direto para ela
+const destinoObra = id => { const fs = ferramentasComPagina(); return fs.length === 1 ? fs[0].pagina + '?obra=' + encodeURIComponent(id) : obraUrl(id); };
+const obraAtual = () => new URLSearchParams(location.search).get('obra');
+function redesenhar() { if (obraAtual()) telaObra(obraAtual()); else desenharLista(); }
+
+/* ---------------- resumo de cada obra (pendências, concretagens, mapa de risco) ---------------- */
+let RESUMO = {};
+const hojeIso = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const fmtD = s => { if (!s) return ''; const [y, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
+async function carregarResumo() {
+  const R = {}; const g = id => R[id] || (R[id] = {});
+  const sb = NV.cliente; const hoje = hojeIso();
+  try {
+    const { data, error } = await sb.from('pendencias').select('obra,status,prazo');
+    if (!error) for (const p of data || []) { const r = g(p.obra); r.pend = r.pend || { abertas: 0, corrigidas: 0, fechadas: 0, venc: 0 };
+      if (p.status === 'aberta' || p.status === 'em_correcao') { r.pend.abertas++; if (p.prazo && p.prazo < hoje) r.pend.venc++; }
+      else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }
+  } catch (e) {}
+  if (NV.cargo !== 'encarregado') try {
+    const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas']);
+    if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
+      if (fe === 'concretagem' && x.colecao === 'concretagens') { r.conc = r.conc || { n: 0, ultima: '' }; r.conc.n++; if (x.data && x.data > r.conc.ultima) r.conc.ultima = x.data; }
+      if (fe === 'risco' && x.colecao === 'areas') { r.risco = r.risco || { areas: 0 }; r.risco.areas++; }
+      if (fe === 'risco' && x.colecao === 'revisoes') { r.risco = r.risco || { areas: 0 }; if (!r.risco.revData || (x.data || '') > r.risco.revData) { r.risco.revData = x.data || ''; r.risco.rev = x.rev; } } }
+  } catch (e) {}
+  RESUMO = R;
+}
+// uma linha de resumo por ferramenta
+function resumoDe(id, fid) {
+  const r = RESUMO[id] || {};
+  if (fid === 'pendencias') { const p = r.pend; if (!p) return 'Nenhuma pendência';
+    return [p.abertas ? p.abertas + ' aberta' + (p.abertas > 1 ? 's' : '') : 'Nenhuma aberta', p.venc ? `<b class="ruim">${p.venc} vencida${p.venc > 1 ? 's' : ''}</b>` : '', p.corrigidas ? p.corrigidas + ' para aprovar' : ''].filter(Boolean).join(' · '); }
+  if (fid === 'concretagem') { const c = r.conc; return c ? c.n + ' concretage' + (c.n > 1 ? 'ns' : 'm') + (c.ultima ? ' · última em ' + fmtD(c.ultima) : '') : 'Nenhuma concretagem'; }
+  if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
+  return '';
+}
+const fotoHtml = o => o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" style="${fotoEstilo(o.foto)}" hidden>` : `<span>${esc(iniciais(o.nome))}</span>`;
+const pintarFotos = box => box.querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; img.hidden = false; }).catch(() => {}));
+const acoesObra = o => podeEditar() ? `<div class="acts"><button class="btn sm ghost" data-ren="${esc(o.id)}">Renomear</button><button class="btn sm ghost" data-fot="${esc(o.id)}">Foto</button><button class="btn sm ghost" data-mod="${esc(o.id)}">${o.modelo && o.modelo.asset ? 'Trocar modelo' : 'Enviar modelo'}</button><button class="btn sm danger" data-del="${esc(o.id)}">Excluir</button></div>` : '';
+function ligarAcoes(box) {
+  const porId = id => lista.find(o => o.id === id);
+  box.querySelectorAll('[data-fot]').forEach(b => b.onclick = () => formFoto(null, porId(b.dataset.fot)));
+  box.querySelectorAll('[data-ren]').forEach(b => b.onclick = () => formRenomear(null, porId(b.dataset.ren)));
+  box.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => formModelo(null, porId(b.dataset.mod)));
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => formExcluir(null, porId(b.dataset.del)));
 }
 
-/* ---------------- tela 2: escolher (ou criar) a obra ---------------- */
-async function telaObras(f) {
-  document.title = f.nome + ' · Obras';
-  $('main').innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Ferramentas</a><span>›</span><span>${esc(f.nome)}</span></nav>
-    <div class="head"><div><h2>${esc(f.nome)}: escolha a obra</h2><p>Abra uma obra para trabalhar ou cadastre uma nova com o modelo IFC. Todos da equipe veem as mesmas obras.</p></div></div>
+/* ---------------- sem banco online: só as ferramentas (dados no navegador) ---------------- */
+function telaFerramentas() {
+  document.title = 'Ferramentas da Obra';
+  $('main').innerHTML = `<div class="head"><div><h2>Escolha a ferramenta</h2><p>Sem conexão com o banco online.</p></div></div>
+    <div class="aviso">Modo local: os dados ficam só neste navegador e não há cadastro de obras.</div>
+    <div class="tools">${ferramentasComPagina().map(f => `<a class="tool" href="${f.pagina}"><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p>${esc(f.desc)}</p></div><span class="go">Abrir →</span></a>`).join('')}</div>`;
+}
+
+/* ---------------- tela 1: as obras ---------------- */
+async function telaObras() {
+  document.title = 'Ferramentas da Obra';
+  $('main').innerHTML = `<div class="head"><div><h2>Obras</h2><p>Escolha a obra para abrir as ferramentas${ferramentasComPagina().length > 1 ? ': ' + ferramentasComPagina().map(f => f.nome.toLowerCase()).join(', ') : ''}.</p></div></div>
     <div class="bar"><input class="search" id="busca" type="search" placeholder="Buscar obra…" aria-label="Buscar obra" value="${esc(filtro)}">
       ${podeEditar() ? '<button class="btn" id="bNova">+ Nova obra</button>' : ''}</div>
     <div id="lista"><p class="muted">Carregando obras…</p></div>`;
-  $('busca').oninput = ev => { filtro = ev.target.value; desenharLista(f); };
-  if ($('bNova')) $('bNova').onclick = () => formNova(f);
-  await carregar();
-  desenharLista(f);
-  cargaStart(f);
+  $('busca').oninput = ev => { filtro = ev.target.value; desenharLista(); };
+  if ($('bNova')) $('bNova').onclick = () => formNova(null);
+  await Promise.all([carregar(), carregarResumo()]);
+  desenharLista();
+  cargaStart(null);
 }
 async function carregar() {
   try { lista = await NV.obras.listar(); }
   catch (e) { console.error(e); lista = null; }
 }
-function desenharLista(f) {
+function desenharLista() {
   const box = $('lista'); if (!box) return;
-  if (lista == null) { box.innerHTML = `<div class="vazio"><h3>Não foi possível carregar as obras</h3><p>Se esta é a primeira vez depois da atualização, rode o arquivo <b>atualizacao-obras.sql</b> no Supabase (SQL Editor). Depois recarregue a página.</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return; }
+  if (lista == null) { box.innerHTML = `<div class="vazio"><h3>Não foi possível carregar as obras</h3><p>Confira a conexão e recarregue a página.</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return; }
   if (!lista.length) { box.innerHTML = `<div class="vazio"><h3>Nenhuma obra cadastrada</h3><p>Cadastre a primeira obra com o nome e o modelo IFC. Depois ela aparece aqui para toda a equipe.</p>${podeEditar() ? '<button class="btn" id="bNova2">+ Nova obra</button>' : '<p class="muted">Peça a um editor para cadastrar a obra.</p>'}</div>`;
-    if ($('bNova2')) $('bNova2').onclick = () => formNova(f); return; }
+    if ($('bNova2')) $('bNova2').onclick = () => formNova(null); return; }
   const q = filtro.trim().toLowerCase();
   const vis = lista.filter(o => !q || (o.nome + ' ' + o.id).toLowerCase().includes(q));
   if (!vis.length) { box.innerHTML = '<p class="muted">Nenhuma obra encontrada com essa busca.</p>'; return; }
+  const fs = ferramentasComPagina();
   box.innerHTML = '<div class="obras">' + vis.map(o => `<article class="obra">
-      <a class="ft" href="${f.pagina}?obra=${encodeURIComponent(o.id)}" tabindex="-1" aria-hidden="true">${o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" style="${fotoEstilo(o.foto)}" hidden>` : `<span>${esc(iniciais(o.nome))}</span>`}</a>
-      <a class="nm" href="${f.pagina}?obra=${encodeURIComponent(o.id)}">${esc(o.nome)}</a>
-      <dl><dt>Modelo IFC</dt><dd>${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.bytes ? ' <span class="muted">(' + fmtMB(o.modelo.bytes) + ')</span>' : '') : '<span class="pill warn">sem modelo</span>'}</dd>
-      <dt>Alterada</dt><dd>${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' · ' + esc(quem(o.atualizado_por)) : ''}</dd></dl>
-      ${podeEditar() ? `<div class="acts"><button class="btn sm ghost" data-ren="${esc(o.id)}">Renomear</button><button class="btn sm ghost" data-fot="${esc(o.id)}">Foto</button><button class="btn sm ghost" data-mod="${esc(o.id)}">${o.modelo && o.modelo.asset ? 'Trocar modelo' : 'Enviar modelo'}</button><button class="btn sm danger" data-del="${esc(o.id)}">Excluir</button></div>` : ''}
+      <a class="ft" href="${destinoObra(o.id)}" tabindex="-1" aria-hidden="true">${fotoHtml(o)}</a>
+      <a class="nm" href="${destinoObra(o.id)}">${esc(o.nome)}</a>
+      <ul class="rs">${fs.map(f => `<li><span class="ic2">${f.icone}</span><a href="${f.pagina}?obra=${encodeURIComponent(o.id)}" title="Abrir ${esc(f.nome)}">${esc(f.nome)}</a><span>${resumoDe(o.id, f.id)}</span></li>`).join('')}</ul>
+      <dl><dt>Modelo IFC</dt><dd>${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.bytes ? ' <span class="muted">(' + fmtMB(o.modelo.bytes) + ')</span>' : '') : '<span class="pill warn">sem modelo</span>'}</dd></dl>
+      ${acoesObra(o)}
     </article>`).join('') + '</div>';
-  box.querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; img.hidden = false; }).catch(() => {}));
-  const porId = id => lista.find(o => o.id === id);
-  box.querySelectorAll('[data-fot]').forEach(b => b.onclick = () => formFoto(f, porId(b.dataset.fot)));
-  box.querySelectorAll('[data-ren]').forEach(b => b.onclick = () => formRenomear(f, porId(b.dataset.ren)));
-  box.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => formModelo(f, porId(b.dataset.mod)));
-  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => formExcluir(f, porId(b.dataset.del)));
+  pintarFotos(box); ligarAcoes(box);
 }
 
+/* ---------------- tela 2: a obra e as suas ferramentas ---------------- */
+async function telaObra(id) {
+  if (!lista.length) await carregar();
+  const o = (lista || []).find(x => x.id === id);
+  if (!o) { $('main').innerHTML = `<div class="vazio"><h3>Obra não encontrada</h3><p>Esta obra não existe ou foi excluída.</p><a class="btn" href="index.html" style="text-decoration:none">Ver as obras</a></div>`; return; }
+  const fs = ferramentasComPagina();
+  if (fs.length === 1) { location.replace(fs[0].pagina + '?obra=' + encodeURIComponent(id)); return; }
+  document.title = o.nome + ' · Ferramentas da Obra';
+  $('main').innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><span>${esc(o.nome)}</span></nav>
+    <section class="hero"><div class="hft">${fotoHtml(o)}</div><div class="hinfo"><h2>${esc(o.nome)}</h2>
+      <p class="muted" style="margin:0">Modelo IFC: ${o.modelo && o.modelo.asset ? esc(o.modelo.nome) : 'nenhum'} · alterada em ${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' por ' + esc(quem(o.atualizado_por)) : ''}</p>${acoesObra(o)}</div></section>
+    <div class="tools">${fs.map(f => `<a class="tool" href="${f.pagina}?obra=${encodeURIComponent(o.id)}"><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p class="rs1">${resumoDe(o.id, f.id)}</p><p>${esc(f.desc)}</p></div><span class="go">Abrir →</span></a>`).join('')}</div>`;
+  pintarFotos($('main')); ligarAcoes($('main'));
+}
 /* ---------------- IFC: confere, compacta e envia ---------------- */
 async function lerIfc(arq) {
   const buf = await arq.arrayBuffer();
@@ -332,12 +404,12 @@ function formNova(f) {
       if (arq) campos.modelo = await enviarModelo(obra.id, arq, prog, lido);
       if (Object.keys(campos).length) { prog('Salvando…', .9); obra = await NV.obras.alterar(obra.id, campos, obra.atualizado_em); }
       prog('Pronto. Abrindo…', 1);
-      location.href = f.pagina + '?obra=' + encodeURIComponent(obra.id);
+      location.href = destinoObra(obra.id);
     } catch (e) {
       console.error(e); ocupado(false); $('nOk').disabled = $('nC').disabled = false;
       $('nMsg').className = 'msg err';
       $('nMsg').textContent = obra ? 'A obra foi criada, mas o modelo não foi enviado (' + msgErro(e) + '). Envie depois pelo botão "Enviar modelo".' : 'Não foi possível criar: ' + msgErro(e);
-      if (obra) { $('nOk').textContent = 'Abrir a obra mesmo assim'; $('nOk').onclick = () => location.href = f.pagina + '?obra=' + encodeURIComponent(obra.id); carregar().then(() => desenharLista(f)); }
+      if (obra) { $('nOk').textContent = 'Abrir a obra mesmo assim'; $('nOk').onclick = () => location.href = destinoObra(obra.id); carregar().then(redesenhar); }
     }
   };
   $('nNome').onkeydown = ev => { if (ev.key === 'Enter') $('nOk').click(); };
@@ -346,7 +418,7 @@ function formNova(f) {
 function avisoConflito(e, f) {
   if (e && e.code === 'conflito') {
     toast(e.atual ? 'Esta obra foi alterada por ' + quem(e.por) + ' agora há pouco. A lista foi atualizada; confira e tente de novo.' : 'Esta obra foi excluída por outra pessoa.', 7000);
-    closeSheet(); carregar().then(() => desenharLista(f)); return true;
+    closeSheet(); carregar().then(redesenhar); return true;
   }
   return false;
 }
@@ -360,7 +432,7 @@ function formRenomear(f, o) {
   $('rOk').onclick = async () => {
     const nome = $('rNome').value.trim(); if (!nome) return;
     $('rOk').disabled = true;
-    try { await NV.obras.alterar(o.id, { nome }, o.atualizado_em); closeSheet(); toast('Obra renomeada.'); await carregar(); desenharLista(f); }
+    try { await NV.obras.alterar(o.id, { nome }, o.atualizado_em); closeSheet(); toast('Obra renomeada.'); await carregar(); redesenhar(); }
     catch (e) { if (!avisoConflito(e, f)) { $('rOk').disabled = false; $('rMsg').className = 'msg err'; $('rMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); } }
   };
 }
@@ -381,7 +453,7 @@ function formModelo(f, o) {
       prog('Salvando…', .9);
       await NV.obras.alterar(o.id, { modelo }, o.atualizado_em);
       if (tem) NV.obras.apagarArquivo(o.modelo.asset).catch(() => {});
-      ocupado(false); closeSheet(); toast('Modelo enviado. Ele vale para todas as ferramentas desta obra.'); await carregar(); desenharLista(f);
+      ocupado(false); closeSheet(); toast('Modelo enviado. Ele vale para todas as ferramentas desta obra.'); await carregar(); redesenhar();
     } catch (e) {
       ocupado(false); $('mOk').disabled = $('mC').disabled = false;
       if (modelo) NV.obras.apagarArquivo(modelo.asset).catch(() => {});
@@ -441,7 +513,7 @@ function formFoto(f, o) {
   const gravar = async (foto, apagarAntiga) => {
     await NV.obras.alterar(o.id, { foto }, o.atualizado_em);
     if (apagarAntiga && tem) NV.obras.apagarArquivo(o.foto.asset).catch(() => {});
-    fechar(); toast(foto ? 'Foto salva.' : 'Foto removida.'); await carregar(); desenharLista(f);
+    fechar(); toast(foto ? 'Foto salva.' : 'Foto removida.'); await carregar(); redesenhar();
   };
   if ($('fRem')) $('fRem').onclick = async () => { $('fRem').disabled = true; try { await gravar(null, true); } catch (e) { if (!avisoConflito(e, f)) { $('fRem').disabled = false; $('fMsg').className = 'msg err'; $('fMsg').textContent = msgErro(e); } } };
   $('fOk').onclick = async () => {
@@ -482,7 +554,7 @@ async function formEquipe() {
       }
       closeSheet(); toast('Nomes salvos.');
       const q = document.getElementById('bQuem'); if (q) q.textContent = NV.pessoas.nome(NV.usuario.email) + (NV.papel === 'leitor' ? ' · leitura' : '');
-      const f = ferr(); if (f && f.pagina) desenharLista(f);
+      redesenhar();
     } catch (e) { $('eqOk').disabled = false; $('eqMsg').className = 'msg err'; $('eqMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); }
   };
 }
@@ -595,7 +667,7 @@ async function formAdmin() {
   };
   desenhar();
 }
-function fecharAdmin() { $('ovl').querySelector('.sheet').classList.remove('larga'); closeSheet(); contarPendentes(); const f = ferr(); if (f && f.pagina && NV) desenharLista(f); }
+function fecharAdmin() { $('ovl').querySelector('.sheet').classList.remove('larga'); closeSheet(); contarPendentes(); if (NV) redesenhar(); }
 
 function formExcluir(f, o) {
   if (!o) return;
@@ -607,7 +679,7 @@ function formExcluir(f, o) {
   $('xTxt').oninput = () => { $('xOk').disabled = $('xTxt').value.trim().toUpperCase() !== 'EXCLUIR'; };
   $('xOk').onclick = async () => {
     $('xOk').disabled = $('xC').disabled = true; $('xOk').textContent = 'Excluindo…'; ocupado(true);
-    try { await NV.obras.apagar(o.id, FERRAMENTAS.map(x => x.id)); ocupado(false); closeSheet(); toast('Obra excluída.'); await carregar(); desenharLista(f); }
+    try { await NV.obras.apagar(o.id, FERRAMENTAS.map(x => x.id)); ocupado(false); closeSheet(); toast('Obra excluída.'); if (obraAtual()) { location.href = 'index.html'; return; } await carregar(); redesenhar(); }
     catch (e) { ocupado(false); $('xC').disabled = false; $('xOk').textContent = 'Excluir obra'; $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Não foi possível excluir: ' + msgErro(e); }
   };
 }
@@ -629,7 +701,7 @@ async function cargaStart(f) {
     $('csMsg').className = 'msg err'; $('csMsg').textContent = 'Não foi possível terminar: ' + msgErro(e) + '. Recarregue a página para continuar de onde parou.';
     $('ovlF').insertAdjacentHTML('beforeend', '<button class="btn" onclick="location.reload()">Recarregar</button>');
   }
-  await carregar(); desenharLista(f);
+  await carregar(); redesenhar();
 }
 /* ---------------- início ---------------- */
 (async function () {
@@ -643,11 +715,12 @@ async function cargaStart(f) {
       a.onclick = formAdmin; b.after(a); contarPendentes();
     }
   }
-  const f = ferr();
-  if (f && f.pagina && NV) {
-    await telaObras(f);
-    NV.obras.aoMudar(async () => { if (!$('ovl').hidden) return; await carregar(); desenharLista(f); });
-  } else telaFerramentas();
+  if (!NV) { telaFerramentas(); return; }
+  // Equipe vai para o menu "⋯" (Administração continua à vista, com o contador)
+  if (window.AppObra && AppObra.paraMenu) AppObra.paraMenu($('bEquipe'));
+  if (obraAtual()) { await Promise.all([carregar(), carregarResumo()]); await telaObra(obraAtual()); }
+  else await telaObras();
+  NV.obras.aoMudar(async () => { if (!$('ovl').hidden) return; await Promise.all([carregar(), carregarResumo()]); redesenhar(); });
 })();
 })();
 </script>
