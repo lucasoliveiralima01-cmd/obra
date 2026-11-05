@@ -83,7 +83,7 @@ table.mx th,table.mx td{border-bottom:1px solid var(--line-2);padding:5px 6px;te
 table.mx th:first-child,table.mx td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
 table.mx th{font:600 .72rem var(--f-disp);letter-spacing:.04em;color:var(--muted);vertical-align:bottom}
 table.mx td.impl input{opacity:.45}
-.pv{display:grid;grid-template-columns:22px minmax(120px,200px) 1fr auto;gap:6px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px}
+.pv{display:grid;grid-template-columns:22px minmax(120px,200px) 1fr auto auto;gap:6px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px}
 .pv input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;width:100%}
 .pv .ac{display:flex;gap:4px}.pv .ac button{background:none;border:1px solid var(--line);border-radius:5px;padding:3px 7px;font-size:.8rem;color:var(--muted)}
 .ger{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
@@ -179,7 +179,8 @@ async function carregar() {
     if (c.error) { c = await sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle(); if (c.data) c.data.semColunas = true; }
     CFG = Object.assign({ pavimentos: [], regras: {}, listas: null }, c.data || {});
     const o = await NV.obras.obter(OBRA); OBRA_NOME = o ? o.nome : OBRA;
-    const pl = await sb.from('pend_plantas').select('pavimento').eq('obra', OBRA); PLANTAS = pl.error ? [] : (pl.data || []).map(x => x.pavimento);
+    let pl = await sb.from('pend_plantas').select('pavimento,elevacao').eq('obra', OBRA); if (pl.error) pl = await sb.from('pend_plantas').select('pavimento').eq('obra', OBRA);
+    PLANTAS = pl.error ? [] : (pl.data || []);
   }
   try { OBRAS = await NV.obras.listar(); } catch (e) { OBRAS = []; }
   iniciarEdicao();
@@ -239,6 +240,7 @@ function telaLista(t) {
           <button type="button" data-up="${i}" aria-label="Subir">↑</button><button type="button" data-dn="${i}" aria-label="Descer">↓</button>${u ? '' : `<button type="button" data-rm="${i}" aria-label="Apagar">✕</button>`}</span>
         ${t === 'problema' ? `<span class="ex">Disciplina sugerida <select data-dsug="${i}"><option value="">—</option>${discs.concat(x.extra.disciplina && !discs.includes(x.extra.disciplina) ? [x.extra.disciplina] : []).map(d => `<option ${d === x.extra.disciplina ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
           <label><input type="checkbox" data-seg="${i}" ${x.extra.seguranca || x.extra.disciplina === 'Segurança' ? 'checked' : ''}> é de segurança</label></span>` : ''}
+        ${t === 'local' ? `<span class="ex">Depois do local, perguntar <input type="text" data-opc="${i}" value="${esc((x.extra.opcoes || []).join('; '))}" placeholder="ex.: Esquerda; Direita (vazio = não pergunta)" style="min-width:240px"></span>` : ''}
         ${t === 'disciplina' ? `<span class="ex">Grupo (disciplinas complementares) <input type="text" data-grp="${i}" value="${esc(x.extra.grupo || '')}" placeholder="ex.: Drywall e forro"></span>` : ''}
         ${x._orig && x._orig !== x.valor ? `<span class="ren">Era “${esc(x._orig)}”: ${u} pendência(s) serão atualizadas ao salvar.</span>` : ''}
       </div>`; }).join('')}</div>
@@ -254,6 +256,7 @@ function telaLista(t) {
   C.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { L.splice(+b.dataset.rm, 1); mudou(); telaLista(t); });
   C.querySelectorAll('[data-dsug]').forEach(s => s.onchange = () => { L[+s.dataset.dsug].extra.disciplina = s.value || undefined; mudou(); });
   C.querySelectorAll('[data-seg]').forEach(s => s.onchange = () => { L[+s.dataset.seg].extra.seguranca = s.checked; mudou(); });
+  C.querySelectorAll('[data-opc]').forEach(s => s.onchange = () => { const o = [...new Set(s.value.split(/[;,]/).map(v => v.trim()).filter(Boolean))]; if (o.length) L[+s.dataset.opc].extra.opcoes = o; else delete L[+s.dataset.opc].extra.opcoes; mudou(); });
   C.querySelectorAll('[data-grp]').forEach(s => s.onchange = () => { const g = s.value.trim(); if (g) L[+s.dataset.grp].extra.grupo = g; else delete L[+s.dataset.grp].extra.grupo; mudou(); });
   const add = () => { const v = $('novo').value.trim(); if (!v) return; if (L.some(y => y.valor === v)) { toast('Já existe.'); return; } L.push({ valor: v, ordem: L.length + 1, extra: {}, ativo: true }); mudou(); telaLista(t); $('novo').focus(); };
   $('bAdd').onclick = add; $('novo').onkeydown = e => { if (e.key === 'Enter') add(); };
@@ -282,12 +285,14 @@ function renomearDentro(t, de, para) {
 function locaisEfetivos(p) { if (p.locais && p.locais.length) return p.locais; const todos = ativosDe('local'); return (p.unidades || []).length ? todos : todos.filter(v => v !== 'Apartamento'); }
 function telaPavs() {
   const P = ED.pavimentos; const nomes = P.map(p => p.nome);
-  const doModelo = PLANTAS.filter(n => !nomes.includes(n));
+  const MAPA = LO.mapaPlantas(P, PLANTAS), ORD = LO.ordenarPlantas(PLANTAS);
+  const doModelo = ORD.filter(n => !nomes.includes(n) && !Object.values(MAPA).includes(n));
   const locs = ativosDe('local');
   $('corpo').innerHTML = `<div class="box"><h3>Pavimentos e unidades (de baixo para cima)</h3>
-    <p class="muted" style="margin:0">Use os mesmos nomes do modelo IFC (ex.: “Pavimento 04”) para a planta das pendências funcionar. Unidades separadas por vírgula.</p>
+    <p class="muted" style="margin:0">Os nomes podem ser diferentes dos do modelo IFC: a planta é ligada pelo nome igual e os demais pela ordem de altura (térreo ligado → o próximo é o 2º pavimento). Se algum ficar errado, escolha a planta certa na linha. Unidades separadas por vírgula.</p>
     <div class="itens" id="pavs">${P.map((p, i) => `<div class="pv" draggable="true" data-i="${i}"><span class="mao" title="Arrastar">⋮⋮</span>
       <input data-pn="${i}" value="${esc(p.nome)}" aria-label="Nome do pavimento"><input data-pu="${i}" value="${esc((p.unidades || []).join(', '))}" placeholder="sem unidades" aria-label="Unidades">
+      ${ORD.length ? `<select data-ppl="${i}" aria-label="Planta do IFC" title="Planta do modelo IFC"><option value="">Planta: automática${MAPA[p.nome] && !p.planta ? ' (' + esc(MAPA[p.nome]) + ')' : ' (nenhuma)'}</option>${ORD.map(n => `<option value="${esc(n)}" ${p.planta === n ? 'selected' : ''}>Planta: ${esc(n)}</option>`).join('')}</select>` : ''}
       <span class="ac"><span class="uso">${(p.unidades || []).length} un.</span><button type="button" data-pup="${i}">↑</button><button type="button" data-pdn="${i}">↓</button>${USO.some(x => x.obra === OBRA && x.pavimento === (p._orig || p.nome)) ? '' : `<button type="button" data-prm="${i}">✕</button>`}</span></div>`).join('')}</div>
     <div class="add"><input id="novoPav" placeholder="Novo pavimento (ex.: Pavimento 12)"><button class="btn sm" id="bAddPav" type="button">+ Pavimento</button>
       ${doModelo.length ? `<button class="btn sm ghost" id="bModelo" type="button">+ ${doModelo.length} pavimento(s) do modelo IFC</button>` : ''}</div></div>
@@ -307,6 +312,7 @@ function telaPavs() {
   const C = $('corpo'); const mud = () => { sujo(true); telaPavs(); };
   C.querySelectorAll('[data-pn]').forEach(i => i.onchange = () => { const p = P[+i.dataset.pn], v = i.value.trim(); if (!v || P.some((q, j) => j !== +i.dataset.pn && q.nome === v)) { i.value = p.nome; toast('Nome vazio ou repetido.'); return; }
     RENOMES.push({ campo: 'pavimento', de: p.nome, para: v, global: false }); p.nome = v; mud(); });
+  C.querySelectorAll('[data-ppl]').forEach(s => s.onchange = () => { const p = P[+s.dataset.ppl]; if (s.value) p.planta = s.value; else delete p.planta; mud(); });
   C.querySelectorAll('[data-pu]').forEach(i => i.onchange = () => { P[+i.dataset.pu].unidades = [...new Set(i.value.split(',').map(x => x.trim()).filter(Boolean))]; mud(); });
   C.querySelectorAll('[data-pup]').forEach(b => b.onclick = () => { const k = +b.dataset.pup; if (k > 0) { [P[k - 1], P[k]] = [P[k], P[k - 1]]; mud(); } });
   C.querySelectorAll('[data-pdn]').forEach(b => b.onclick = () => { const k = +b.dataset.pdn; if (k < P.length - 1) { [P[k + 1], P[k]] = [P[k], P[k + 1]]; mud(); } });
@@ -386,7 +392,7 @@ function avisos() {
   if (comRegra.length) { const usados = new Set(comRegra.flatMap(p => p.locais)); const nunca = ativosDe('local').filter(l => !usados.has(l) && ED.pavimentos.every(p => p.locais && p.locais.length)); if (nunca.length) out.push({ t: 'Local que não aparece em nenhum pavimento: ' + nunca.join(', ') }); }
   for (const p of ED.pavimentos) { if (p.locais && p.locais.includes('Apartamento') && !(p.unidades || []).length) out.push({ t: p.nome + ' tem “Apartamento” nos locais, mas nenhuma unidade cadastrada.' }); if ((p.unidades || []).length && p.locais && p.locais.length && !p.locais.includes('Apartamento')) out.push({ t: p.nome + ' tem unidades, mas “Apartamento” não está nos locais dele.' }); }
   const semDisc = ED.listas.problema.filter(x => x.ativo !== false && !x.extra.disciplina); if (semDisc.length) out.push({ t: 'Tipo(s) de problema sem disciplina sugerida: ' + semDisc.map(x => x.valor).join(', ') });
-  if (ED.pavimentos.length && PLANTAS.length) { const fora = ED.pavimentos.filter(p => !PLANTAS.includes(p.nome)).map(p => p.nome); if (fora.length) out.push({ t: 'Pavimento(s) sem planta (nome diferente do modelo IFC?): ' + fora.join(', ') }); }
+  if (ED.pavimentos.length && PLANTAS.length) { const M = LO.mapaPlantas(ED.pavimentos, PLANTAS); const fora = ED.pavimentos.filter(p => !M[p.nome]).map(p => p.nome); if (fora.length) out.push({ t: 'Pavimento(s) sem planta do IFC (escolha a planta em Pavimentos e unidades): ' + fora.join(', ') }); }
   if (!out.length) out.push({ ok: true, t: 'Nenhum problema encontrado na configuração.' });
   return out;
 }
@@ -402,7 +408,8 @@ function telaConferir() {
   $('sPav').onchange = () => { const p = pav(); $('sLoc').innerHTML = p ? '<option value="">Escolha…</option>' + locaisEfetivos(p).map(l => `<option>${esc(l)}</option>`).join('') : ''; $('sLoc').disabled = !p; $('sUn').innerHTML = ''; $('sUn').disabled = true;
     $('sRes').innerHTML = p ? 'Locais disponíveis: <b>' + locaisEfetivos(p).map(esc).join(', ') + '</b>' + (p.locais && p.locais.length ? '' : ' (sem regra própria)') : ''; };
   $('sLoc').onchange = () => { const p = pav(); const ap = $('sLoc').value === 'Apartamento'; $('sUn').disabled = !ap;
-    $('sUn').innerHTML = ap ? '<option value="">Escolha…</option>' + (p.unidades || []).map(u => `<option>${esc(u)}</option>`).join('') : ''; if (!ap) $('sRes').innerHTML = $('sLoc').value ? 'Sem apartamento: não pede cômodo.' : ''; };
+    $('sUn').innerHTML = ap ? '<option value="">Escolha…</option>' + (p.unidades || []).map(u => `<option>${esc(u)}</option>`).join('') : ''; if (!ap) { const o = ((ED.listas.local.find(x => x.valor === $('sLoc').value) || {}).extra || {}).opcoes || [];
+      $('sRes').innerHTML = !$('sLoc').value ? '' : o.length ? 'Depois pergunta: <b>' + o.map(esc).join(', ') + '</b>' : $('sLoc').value === 'Outro' ? 'Pede para escrever qual local.' : 'Não pede mais nada (detalhe opcional).'; } };
   $('sUn').onchange = () => { const u = $('sUn').value; if (!u) return; const tp = LO.tipologiaDe(ED.regras, u);
     $('sRes').innerHTML = (tp ? 'Tipologia <b>' + esc(tp.nome) + '</b>' + (ED.regras.unidades[u] ? ' (exceção desta unidade)' : ' (pelo final ' + LO.finalDe(u) + ')') : 'Sem tipologia') + ' · cômodos: <b>' + (tp ? tp.comodos : ativosDe('comodo')).map(esc).join(', ') + '</b>'; };
 }
@@ -423,7 +430,8 @@ async function exportar() {
   if (!window.XLSX) await carregarScript(XLSX_URL);
   const wb = XLSX.utils.book_new(); const add = (nome, linhas) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(linhas), nome);
   add('Problemas', [['Nome', 'Disciplina sugerida', 'Segurança', 'Ativo']].concat(ED.listas.problema.map(x => [x.valor, x.extra.disciplina || '', simNao(x.extra.seguranca || x.extra.disciplina === 'Segurança'), simNao(x.ativo !== false)])));
-  for (const [t, n] of [['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais']]) add(n, [['Nome', 'Ativo']].concat(ED.listas[t].map(x => [x.valor, simNao(x.ativo !== false)])));
+  for (const [t, n] of [['comodo', 'Cômodos'], ['servico', 'Serviços']]) add(n, [['Nome', 'Ativo']].concat(ED.listas[t].map(x => [x.valor, simNao(x.ativo !== false)])));
+  add('Locais', [['Nome', 'Opções', 'Ativo']].concat(ED.listas.local.map(x => [x.valor, (x.extra.opcoes || []).join('; '), simNao(x.ativo !== false)])));
   if (ESC === 'obra') {
     add('Pavimentos', [['Pavimento', 'Unidades', 'Locais']].concat(ED.pavimentos.map(p => [p.nome, (p.unidades || []).join(', '), (p.locais || []).join(', ')])));
     add('Tipologias', [['Tipologia', 'Cômodos', 'Finais']].concat(ED.regras.tipologias.map(t => [t.nome, t.comodos.join(', '), LO.finaisTxt(Object.keys(ED.regras.finais).filter(f => ED.regras.finais[f] === t.id))])));
@@ -438,7 +446,8 @@ async function importar(f) {
     const lista2 = (rows, ext) => rows.filter(r => String(r.Nome || '').trim()).map((r, i) => ({ valor: String(r.Nome).trim(), ordem: i + 1, extra: ext ? ext(r) : {}, ativo: r.Ativo === '' ? true : ehSim(r.Ativo) }));
     const rs = []; let r;
     if ((r = aba('Problemas'))) { ED.listas.problema = lista2(r, x => { const e = {}; if (String(x['Disciplina sugerida']).trim()) e.disciplina = String(x['Disciplina sugerida']).trim(); if (ehSim(x['Segurança'])) e.seguranca = true; return e; }); rs.push('problemas'); }
-    for (const [t, n] of [['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais']]) if ((r = aba(n))) { ED.listas[t] = lista2(r); rs.push(n.toLowerCase()); }
+    for (const [t, n] of [['comodo', 'Cômodos'], ['servico', 'Serviços']]) if ((r = aba(n))) { ED.listas[t] = lista2(r); rs.push(n.toLowerCase()); }
+    if ((r = aba('Locais'))) { ED.listas.local = lista2(r, x => { const o = String(x['Opções'] || '').split(/[;,]/).map(v => v.trim()).filter(Boolean); return o.length ? { opcoes: o } : {}; }); rs.push('locais'); }
     if (rs.length) ED.listasMudou = true;
     if (ESC === 'obra') {
       if ((r = aba('Pavimentos'))) { ED.pavimentos = r.filter(x => String(x.Pavimento).trim()).map(x => { const p = { nome: String(x.Pavimento).trim(), unidades: String(x.Unidades).split(',').map(s => s.trim()).filter(Boolean) }; const l = String(x.Locais).split(',').map(s => s.trim()).filter(Boolean); if (l.length) p.locais = l; return p; }); rs.push('pavimentos'); }
@@ -489,7 +498,7 @@ async function salvar() {
     else {
       if (discMudou) await gravarTabela(['disciplina'], () => ED.disciplina);
       const listas = ED.listasMudou === 'padrao' ? null : ED.listasMudou ? Object.fromEntries(LISTAS4.map(t => [t, limpar(ED.listas[t])])) : (CFG.listas || null);
-      const pav = ED.pavimentos.map(p => { const o = { nome: p.nome, unidades: p.unidades || [] }; if (p.locais && p.locais.length) o.locais = p.locais; return o; });
+      const pav = ED.pavimentos.map(p => { const o = { nome: p.nome, unidades: p.unidades || [] }; if (p.locais && p.locais.length) o.locais = p.locais; if (p.planta) o.planta = p.planta; return o; });
       const { error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pav, regras: ED.regras, listas });
       if (error) throw error;
     }

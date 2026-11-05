@@ -1160,7 +1160,7 @@ function avisarReprovados(antes,c){
   $('crS').onclick=async()=>{ $('crS').disabled=true;
     const hoje=new Date(); const prazo=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()+3);
     const row={id:(crypto.randomUUID?crypto.randomUUID():uid('p-')),obra:Nuvem.obraId,pavimento:c.pav||'—',local_tipo:'Outro',unidade:novos.map(t=>'C'+(t.ordem||'?')).join(', ')+' · '+fmtD(c.data),
-      tipo:'Concreto abaixo do fck',disciplina:'Projeto/Engenharia',prioridade:'alta',seguranca:false,
+      tipo:'Concreto abaixo do fck',disciplina:'Engenharia',prioridade:'alta',seguranca:false,
       descricao:(c.descricao?c.descricao+'. ':'')+linhas.join('; '),causador:c.fornecedor||null,prazo:iso(prazo),observacoes:'Aberta pelo Mapa de Concretagem.'};
     const {error}=await Nuvem.cliente.from('pendencias').insert(row);
     closeSheet(); toast(error?'Não foi possível abrir a pendência: '+error.message:'Pendência aberta em Pendências de obra.',6000) };

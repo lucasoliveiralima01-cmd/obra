@@ -55,6 +55,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 7. `atualizacao-melhorias.sql` (lixeira de 30 dias, comentários, local na planta, versões do modelo, espaço usado, avisos de concreto, backup semanal e limpeza diária). Depois dele, republique as funções `notificar` e `usuarios` com o código novo.
 8. `atualizacao-tipologias.sql` (preenchimento condicionado: locais por pavimento e cômodos por tipo de apartamento)
 9. `atualizacao-listas.sql` (listas próprias de cada obra a partir do padrão da empresa, e renomear itens atualizando as pendências já registradas). Tudo isso é editado na página **Listas e regras** (Pendências → ⋯ → Listas e regras, só administradores).
+10. `atualizacao-locais.sql` (locais de cada pavimento da Start, com Elevador e Fachada pedindo o lado; responsáveis pela correção por cargo, como Pedreiro e Eletricista, com "Próprio ou Terceiro"; altura das plantas do IFC para ligar os pavimentos pela ordem)
 
 ### Backup e lixeira
 

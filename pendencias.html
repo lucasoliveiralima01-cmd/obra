@@ -315,6 +315,14 @@ const comodosDe = u => { const r = regraComodos(u); return r ? r.comodos.slice()
 // mantém o valor já gravado visível, mesmo que a regra tenha mudado depois
 const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
 
+// planta do IFC de cada pavimento (nomes diferentes são ligados pela ordem de altura; ver ListasObra.mapaPlantas)
+let MAPA_PL = {};
+function ligarPlantas() { MAPA_PL = LO.mapaPlantas(CFG.pavimentos, Object.values(PLANTAS)); }
+const plantaDe = pav => MAPA_PL[pav] || (PLANTAS[pav] ? pav : null);
+// o que perguntar depois do local: apartamentos, opções do local (Elevador: Esquerda/Direita) ou nada
+const opcoesDo = local => ((L.local.find(x => x.valor === local) || {}).extra || {}).opcoes || [];
+const EQUIPE = { proprio: 'Próprio', terceiro: 'Terceiro' };
+const rotResp = p => p.disciplina + (p.equipe ? ' → ' + EQUIPE[p.equipe] : '');
 const rotLocal = p => [p.pavimento, p.local_tipo === 'Apartamento' ? (p.unidade ? 'Apto ' + p.unidade : 'Apartamento') : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo].filter(Boolean).join(' · ');
 const incompleta = p => !String(p.descricao || '').trim() || !String(p.causador || '').trim();
 const vencida = p => !!p.prazo && (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo < hoje();
@@ -344,23 +352,25 @@ async function carregarServidor() {
     sb.from('pend_config').select('pavimentos,regras,listas').eq('obra', OBRA).maybeSingle(),
     NV.obras.obter(OBRA),
     sb.from('pendencias').select('*, pendencia_fotos(*), pendencia_eventos(*)').eq('obra', OBRA).order('numero', { ascending: false }),
-    sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA)
+    sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo,elevacao').eq('obra', OBRA)
   ]);
+  // banco sem a altura das plantas: lê sem ela
+  let pls = lpl; if (pls.error) pls = await sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA);
   // banco sem as colunas novas (regras/listas): lê só os pavimentos
   let cfg = lc;
   if (cfg.error) { cfg = await sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle(); }
   for (const r of [lp, cfg, lpend]) if (r.error) throw r.error;
-  PLANTAS = {}; if (!lpl.error) for (const x of lpl.data || []) PLANTAS[x.pavimento] = x;
+  PLANTAS = {}; if (!pls.error) for (const x of pls.data || []) PLANTAS[x.pavimento] = x;
   if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
   const c = cfg.data || {};
   L = LO.efetivas(LO.deTabela(lp.data), c.listas || null);
   CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO, regras: LO.normRegras(c.regras) };
-  OBRA_NOME = lo.nome; PEND = lpend.data || [];
+  OBRA_NOME = lo.nome; PEND = lpend.data || []; ligarPlantas();
   await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, OBRA_NOME, em: new Date().toISOString() });
 }
 async function carregarCache() {
   const c = await idbGet('cache', OBRA); if (!c) return false;
-  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; OBRA_NOME = c.OBRA_NOME; return c.em;
+  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; OBRA_NOME = c.OBRA_NOME; ligarPlantas(); return c.em;
 }
 // imagem da planta: baixa uma vez e guarda no aparelho (funciona sem sinal)
 async function urlPlanta(pl) {
@@ -385,12 +395,18 @@ async function enviarFotos(op) {
     if (b) { const u = URLS.get(f.fid); URLS.delete(f.fid); if (u) URLS.set(caminho, u); await idbDel('blobs', f.fid); }
   }
 }
+// banco ainda sem a coluna equipe (falta rodar o atualizacao-locais.sql): envia sem ela
+const semEquipe = e => /equipe/i.test((e && e.message) || '');
 async function executar(op) {
   if (op.op === 'criar') {
-    if (!op.criada) { const { error } = await sb.from('pendencias').insert(Object.assign({ id: op.id, obra: OBRA, criado_em: op.em }, op.row)); if (error && !jaExiste(error)) throw error; op.criada = true; await idbPut('fila', op.k, op); }
+    if (!op.criada) { const row = Object.assign({ id: op.id, obra: OBRA, criado_em: op.em }, op.row);
+      let { error } = await sb.from('pendencias').insert(row);
+      if (error && semEquipe(error)) { delete row.equipe; ({ error } = await sb.from('pendencias').insert(row)); }
+      if (error && !jaExiste(error)) throw error; op.criada = true; await idbPut('fila', op.k, op); }
     await enviarFotos(op);
   } else if (op.op === 'fotos') await enviarFotos(op);
-  else if (op.op === 'editar') { const { error } = await sb.from('pendencias').update(op.campos).eq('id', op.id); if (error) throw error; }
+  else if (op.op === 'editar') { const c = Object.assign({}, op.campos); let { error } = await sb.from('pendencias').update(c).eq('id', op.id);
+    if (error && semEquipe(error)) { delete c.equipe; ({ error } = await sb.from('pendencias').update(c).eq('id', op.id)); } if (error) throw error; }
   else if (op.op === 'status') { const { error } = await sb.rpc('pendencia_mudar', { p_id: op.id, p_para: op.para, p_comentario: op.comentario || null }); if (error) throw error; }
   else if (op.op === 'comentario') { const { error } = await sb.rpc('pendencia_comentar', { p_id: op.id, p_texto: op.texto }); if (error) throw error; }
   else if (op.op === 'excluir') {
@@ -457,7 +473,7 @@ function filtrar(its) {
   const q = F.q.trim().toLowerCase();
   return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
     && (!F.blq || (p.bloqueios || []).length) && (!F.inc || incompleta(p)) && (!F.venc || vencida(p)) && (!F.fila || p._fila) && (!F.minhas || minha(p))
-    && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
+    && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, EQUIPE[p.equipe] || '', p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => ST_ORD.indexOf(a.status) - ST_ORD.indexOf(b.status) || (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || (b.numero || 1e9) - (a.numero || 1e9));
 }
 function opcoes(vals, sel, todos) { return `<option value="">${todos}</option>` + vals.map(v => `<option ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join(''); }
@@ -499,7 +515,7 @@ function cardHtml(p) {
     <span class="cb">
       <span class="l1"><span class="num">${p.numero ? '#' + p.numero : 'nº pendente'}</span><span class="pill st-${p.status}">${ST[p.status]}</span><span class="pill p-${p.prioridade}">${PRI[p.prioridade][0]}</span></span>
       <span class="loc">${esc(rotLocal(p))}</span>
-      <span class="sub">${esc(p.tipo)} · ${esc(p.disciplina)}</span>
+      <span class="sub">${esc(p.tipo)} · ${esc(rotResp(p))}</span>
       <span class="l1">${p.prazo ? `<span class="tag ${vencida(p) ? 'venc' : ''}">${vencida(p) ? 'vencida em ' : 'prazo '}${fmtD(p.prazo)}</span>` : ''}${incompleta(p) && p.status !== 'fechada' ? '<span class="tag inc">INCOMPLETA</span>' : ''}${(p.bloqueios || []).length ? `<span class="tag">trava ${p.bloqueios.length} serviço${p.bloqueios.length > 1 ? 's' : ''}</span>` : ''}${p._erro ? '<span class="tag err">erro ao enviar</span>' : p._fila ? '<span class="tag fila">aguardando envio</span>' : ''}</span>
     </span></button>`;
 }
@@ -507,16 +523,18 @@ function cardHtml(p) {
 // as pendências de um pavimento sobre a planta (com os mesmos filtros de status da lista)
 let PAV_PLANTA = '';
 function renderPlanta(its) {
-  const pavs = CFG.pavimentos.map(x => x.nome).filter(n => PLANTAS[n]).concat(Object.keys(PLANTAS).filter(n => !CFG.pavimentos.some(x => x.nome === n)));
+  const ligadas = new Set(CFG.pavimentos.map(x => plantaDe(x.nome)).filter(Boolean));
+  const pavs = CFG.pavimentos.map(x => x.nome).filter(n => plantaDe(n)).concat(Object.keys(PLANTAS).filter(n => !ligadas.has(n) && !CFG.pavimentos.some(x => x.nome === n)));
   const cont = n => its.filter(p => p.pavimento === n && F.st.has(p.status)).length;
-  if (!PAV_PLANTA || !PLANTAS[PAV_PLANTA]) PAV_PLANTA = F.pav && PLANTAS[F.pav] ? F.pav : (pavs.find(n => cont(n)) || pavs[0]);
+  if (!PAV_PLANTA || !plantaDe(PAV_PLANTA)) PAV_PLANTA = F.pav && plantaDe(F.pav) ? F.pav : (pavs.find(n => cont(n)) || pavs[0]);
+  const KEY = plantaDe(PAV_PLANTA);
   const f0 = F.pav; F.pav = ''; const doPav = filtrar(its).filter(p => p.pavimento === PAV_PLANTA); F.pav = f0;
-  const com = doPav.filter(p => p.ponto && p.ponto.pav === PAV_PLANTA), sem = doPav.filter(p => !(p.ponto && p.ponto.pav === PAV_PLANTA));
+  const com = doPav.filter(p => p.ponto && p.ponto.pav === KEY), sem = doPav.filter(p => !(p.ponto && p.ponto.pav === KEY));
   $('tabBody').innerHTML = `<div class="filtros"><div class="frow">
       <select class="fsel" id="plPav" aria-label="Pavimento">${pavs.map(n => `<option ${n === PAV_PLANTA ? 'selected' : ''} value="${esc(n)}">${esc(n)} (${cont(n)})</option>`).join('')}</select>
       ${ST_ORD.map(s => `<button class="chip" data-st="${s}" aria-pressed="${F.st.has(s)}">${ST[s]}</button>`).join('')}</div>
       <div class="legst">${ST_ORD.map(s => `<span><i style="background:${COR_ST[s]}"></i>${ST[s]}</span>`).join('')}</div></div>
-    <div class="box">${plantaBox(PAV_PLANTA, com.map(p => ({ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status], id: p.id, rot: p.numero ? String(p.numero) : '?', tit: (p.numero ? '#' + p.numero + ' · ' : '') + p.tipo + ' · ' + rotLocal(p) })), false)}
+    <div class="box">${plantaBox(KEY, com.map(p => ({ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status], id: p.id, rot: p.numero ? String(p.numero) : '?', tit: (p.numero ? '#' + p.numero + ' · ' : '') + p.tipo + ' · ' + rotLocal(p) })), false)}
       ${sem.length ? `<p class="muted" style="margin:0">${sem.length} pendência(s) deste pavimento sem local marcado: ${sem.map(p => `<a href="#" data-p="${esc(p.id)}">${p.numero ? '#' + p.numero : 'nova'}</a>`).join(', ')}.</p>` : ''}</div>`;
   const b = $('tabBody');
   $('plPav').onchange = e => { PAV_PLANTA = e.target.value; render(); };
@@ -544,7 +562,7 @@ function renderResumo(its) {
       const ord = [...m.entries()].sort((a, b) => (a[0] === 'Não informado') - (b[0] === 'Não informado') || b[1].n - a[1].n);
       return ord.length ? `<table class="t"><thead><tr><th>Quem causou</th><th>Total</th><th>Não fechadas</th><th>Tipos mais comuns</th></tr></thead><tbody>${ord.map(([k, o]) => `<tr><td>${esc(k)}</td><td>${o.n}</td><td>${o.ab || '·'}</td><td style="white-space:normal;text-align:left">${esc([...o.tipos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => t + ' (' + n + ')').join(', '))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin:0">Nada ainda.</p>'; })()}
       <p class="muted" style="margin:0">Base para o desconto de retrabalho nas medições. Preencha “Responsável pelo problema” nas pendências para este quadro ficar completo.</p></div>
-    <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(p.disciplina)} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
+    <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(rotResp(p))} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
     const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, pav: '', disc: '', tipo: '', pri: '', q: '' });
@@ -556,12 +574,13 @@ function renderResumo(its) {
 /* ======================= planta: marcar e mostrar o local ======================= */
 const COR_ST = { aberta: '#c23b2f', em_correcao: '#b86e00', corrigida: '#2f6fb0', fechada: '#23804a' };
 // pins: [{u, v, cor, id, rot}] com u, v de 0 a 1 sobre a imagem
+// pav: nome da planta do IFC (plantaDe(pavimento))
 function plantaBox(pav, pins, marcavel) {
   const pl = PLANTAS[pav]; if (!pl) return '';
   // marcavel: true = toque marca o local; 'ficha' = só mostra, já aproximado no alfinete
   const ficha = marcavel === 'ficha'; if (ficha) marcavel = false;
   return `<div class="pl" data-pav="${esc(pav)}"><div class="pl-sc"><div class="pl-in${marcavel ? ' marca' : ''}${ficha ? ' ficha' : ''}" style="width:100%">
-      <img alt="Planta do ${esc(pav)}" data-planta="${esc(pav)}" draggable="false">
+      <img alt="Planta" data-planta="${esc(pav)}" draggable="false">
       ${pins.map(p => `<span class="pin" style="left:${(p.u * 100).toFixed(3)}%;top:${(p.v * 100).toFixed(3)}%;--c:${p.cor}" ${p.id ? `data-pin="${esc(p.id)}" role="button" tabindex="0"` : ''} title="${esc(p.tit || p.rot || '')}">${p.rot ? `<b>${esc(p.rot)}</b>` : ''}</span>`).join('')}
     </div></div>
     <div class="pl-bar"><button type="button" class="btn sm ghost" data-z="-" aria-label="Diminuir">−</button><button type="button" class="btn sm ghost" data-z="+" aria-label="Aumentar">+</button>${marcavel ? '<span class="muted">Toque na planta para marcar o local.</span>' : ''}</div></div>`;
@@ -595,12 +614,12 @@ function formPend(id) {
   const ed = id ? itens().find(p => p.id === id) : null;
   if (ed && !editor(ed)) return;
   const tiposOk = LO.ativos(L.problema).filter(t => cargo() === 'engenharia' || (cargo() === 'seguranca' && ehSegTipo(t.valor)));
-  const f = ed ? clone(ed) : { pavimento: '', local_tipo: '', unidade: '', comodo: '', tipo: tiposOk.length === 1 ? tiposOk[0].valor : '', disciplina: '', prioridade: '', descricao: '', causador: '', bloqueios: [], prazo: '', observacoes: '' };
+  const f = ed ? clone(ed) : { pavimento: '', local_tipo: '', unidade: '', comodo: '', tipo: tiposOk.length === 1 ? tiposOk[0].valor : '', disciplina: '', equipe: '', prioridade: '', descricao: '', causador: '', bloqueios: [], prazo: '', observacoes: '' };
   if (!ed && f.tipo) f.disciplina = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina || '';
   let prazoManual = !!ed;
   const novas = [];   // fotos novas {fid, url}
   const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unidades) || [];
-  const grupo = (nome, lista, val, attr, extra) => `<div class="opts ${extra || ''}" role="group" aria-label="${nome}">${lista.map(v => `<button type="button" class="opt ${attr === 'prioridade' ? 'pri-' + v : ''}" data-f="${attr}" data-v="${esc(v)}" aria-pressed="${val === v}">${esc(attr === 'prioridade' ? PRI[v][0] : v)}</button>`).join('')}</div>`;
+  const grupo = (nome, lista, val, attr, extra) => `<div class="opts ${extra || ''}" role="group" aria-label="${nome}">${lista.map(v => `<button type="button" class="opt ${attr === 'prioridade' ? 'pri-' + v : ''}" data-f="${attr}" data-v="${esc(v)}" aria-pressed="${val === v}">${esc(attr === 'prioridade' ? PRI[v][0] : attr === 'equipe' ? EQUIPE[v] : v)}</button>`).join('')}</div>`;
   const desenhar = () => {
     const ehApto = f.local_tipo === 'Apartamento';
     const uns = unidadesDe(f.pavimento);
@@ -609,15 +628,18 @@ function formPend(id) {
         <div class="fotos">${(ed ? ed.fotos.filter(x => x.tipo === 'antes') : []).map(x => `<span class="ft"><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden></span>`).join('')}${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto nova" src="${x.url}"><button type="button" data-rm="${i}" aria-label="Remover foto">×</button></span>`).join('')}</div>
         <div class="addft"><label>📷 Tirar foto<input type="file" accept="image/*" capture="environment" id="fCam"></label><label>🖼 Da galeria<input type="file" accept="image/*" multiple id="fGal"></label></div></div>
       <div class="fld"><span class="l">Pavimento <span class="req">*</span></span>${grupo('Pavimento', CFG.pavimentos.map(x => x.nome), f.pavimento, 'pavimento', 'small')}</div>
-      ${f.pavimento && PLANTAS[f.pavimento] ? `<div class="fld" id="plBox"><span class="l">Local na planta ${obrig('ponto') ? '<span class="req">*</span>' : '(opcional)'}</span>${plantaBox(f.pavimento, f.ponto && f.ponto.pav === f.pavimento ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
+      ${f.pavimento && plantaDe(f.pavimento) ? `<div class="fld" id="plBox"><span class="l">Local na planta ${obrig('ponto') ? '<span class="req">*</span>' : '(opcional)'}</span>${plantaBox(plantaDe(f.pavimento), f.ponto && f.ponto.pav === plantaDe(f.pavimento) ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
         ${f.ponto ? '<button type="button" class="btn sm ghost" id="plLimpa" style="justify-self:start">Tirar a marcação</button>' : ''}</div>`
         : (f.pavimento && !Object.keys(PLANTAS).length && navigator.onLine ? '<p class="muted" style="margin:0">Para marcar o local na planta: alguém com acesso de edição abre o <b>Mapa de Risco</b> desta obra uma vez (as plantas são geradas a partir do modelo IFC).</p>' : '')}
       <div class="fld"><span class="l">Local <span class="req">*</span></span>${f.pavimento ? grupo('Local', comAtual(locaisDe(f.pavimento), f.local_tipo), f.local_tipo, 'local_tipo', 'small') : '<span class="muted">Escolha o pavimento primeiro.</span>'}</div>
       ${ehApto ? `<div class="fld"><span class="l">Apartamento <span class="req">*</span></span>${uns.length ? grupo('Apartamento', uns, f.unidade, 'unidade', 'small') : '<input id="fUn" placeholder="Número do apartamento" value="' + esc(f.unidade || '') + '">'}</div>
         <div class="fld"><span class="l">Cômodo <span class="req">*</span>${f.unidade && regraComodos(f.unidade) ? ' <span class="muted" style="text-transform:none;letter-spacing:0">(' + esc(regraComodos(f.unidade).nome) + ')</span>' : ''}</span>${String(f.unidade || '').trim() || !uns.length ? grupo('Cômodo', comAtual(comodosDe(f.unidade), f.comodo), f.comodo, 'comodo', 'small') : '<span class="muted">Escolha o apartamento para ver os cômodos dele.</span>'}</div>`
-        : (f.local_tipo ? `<div class="fld"><label for="fUn2">Qual (opcional)</label><input id="fUn2" placeholder="Ex.: hall dos elevadores, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
+        : opcoesDo(f.local_tipo).length ? `<div class="fld"><span class="l">${esc(f.local_tipo)} <span class="req">*</span></span>${grupo(f.local_tipo, comAtual(opcoesDo(f.local_tipo), f.unidade), f.unidade, 'unidade', 'small')}</div>`
+        : f.local_tipo === 'Outro' ? `<div class="fld"><label for="fUn2">Qual local? <span class="req">*</span></label><input id="fUn2" placeholder="Ex.: casa de máquinas, guarita" value="${esc(f.unidade || '')}"></div>`
+        : (f.local_tipo ? `<div class="fld"><label for="fUn2">Detalhe do local (opcional)</label><input id="fUn2" placeholder="Ex.: perto do elevador, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
       <div class="fld"><label for="fTipo2">Tipo de problema <span class="req">*</span></label><select id="fTipo2"><option value="">Escolha…</option>${tiposOk.map(t => `<option ${t.valor === f.tipo ? 'selected' : ''}>${esc(t.valor)}</option>`).join('')}</select></div>
       <div class="fld"><span class="l">Responsável pela correção <span class="req">*</span></span>${grupo('Disciplina', comAtual(ativos('disciplina'), f.disciplina), f.disciplina, 'disciplina', 'small')}</div>
+      ${f.disciplina ? `<div class="fld"><span class="l">${esc(f.disciplina)} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
       <div class="fld"><span class="l">Prioridade <span class="req">*</span></span>${grupo('Prioridade', PRI_ORD, f.prioridade, 'prioridade')}</div>
       <details class="mais" ${ed || incompleta(f) === false ? 'open' : ''}><summary>${['descricao', 'causador', 'prazo', 'observacoes', 'bloqueios'].some(obrig) ? 'Mais detalhes (esta obra exige alguns: ' + [['descricao', 'descrição'], ['causador', 'quem causou'], ['prazo', 'prazo'], ['observacoes', 'observações'], ['bloqueios', 'serviço travado']].filter(x => obrig(x[0])).map(x => x[1]).join(', ') + ')' : 'Mais detalhes (opcional; sem eles a pendência fica INCOMPLETA)'}</summary>
         <div class="fld"><label for="fDesc">Descrição</label><textarea id="fDesc" placeholder="O que está errado e o que precisa ser feito">${esc(f.descricao || '')}</textarea></div>
@@ -636,7 +658,7 @@ function formPend(id) {
     desenhar.ler = lerTextos;
     B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { lerTextos(); const k = b.dataset.f, v = b.dataset.v;
       // trocou o pavimento: o local precisa existir nele; trocou o apartamento: o cômodo precisa existir nele
-      if (k === 'pavimento' && f.pavimento !== v) { f.unidade = ''; if (f.ponto && f.ponto.pav !== v) f.ponto = null; if (f.local_tipo && !locaisDe(v).includes(f.local_tipo)) { f.local_tipo = ''; f.comodo = ''; } else if (f.local_tipo === 'Apartamento') f.comodo = ''; }
+      if (k === 'pavimento' && f.pavimento !== v) { f.unidade = ''; if (f.ponto && f.ponto.pav !== plantaDe(v)) f.ponto = null; if (f.local_tipo && !locaisDe(v).includes(f.local_tipo)) { f.local_tipo = ''; f.comodo = ''; } else if (f.local_tipo === 'Apartamento') f.comodo = ''; }
       if (k === 'unidade' && f.unidade !== v && f.comodo && !comodosDe(v).includes(f.comodo)) f.comodo = '';
       if (k === 'local_tipo' && f.local_tipo !== v) { f.unidade = ''; f.comodo = ''; }
       f[k] = f[k] === v && k !== 'prioridade' ? '' : v;
@@ -655,7 +677,7 @@ function formPend(id) {
     if (inn) {
       pintarPlantas(B.querySelector('#plBox'));
       inn.onclick = ev => { const r = inn.getBoundingClientRect(); const u = (ev.clientX - r.left) / r.width, v = (ev.clientY - r.top) / r.height; if (u < 0 || u > 1 || v < 0 || v > 1) return;
-        const pl = PLANTAS[f.pavimento]; const [x, y] = uvParaXY(pl, u, v); f.ponto = { pav: f.pavimento, u: +u.toFixed(4), v: +v.toFixed(4), x, y };
+        const pl = PLANTAS[plantaDe(f.pavimento)]; const [x, y] = uvParaXY(pl, u, v); f.ponto = { pav: plantaDe(f.pavimento), u: +u.toFixed(4), v: +v.toFixed(4), x, y };
         let pin = inn.querySelector('.pin'); if (!pin) { pin = document.createElement('span'); pin.className = 'pin'; pin.style.setProperty('--c', '#c23b2f'); inn.appendChild(pin); }
         pin.style.left = (u * 100) + '%'; pin.style.top = (v * 100) + '%';
         if (!$('plLimpa')) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm ghost'; b.id = 'plLimpa'; b.style.justifySelf = 'start'; b.textContent = 'Tirar a marcação'; B.querySelector('#plBox').appendChild(b); b.onclick = limpar; } };
@@ -673,20 +695,22 @@ function formPend(id) {
     if (!f.pavimento) falta.push('pavimento'); if (!f.local_tipo) falta.push('local');
     if (f.local_tipo === 'Apartamento' && !String(f.unidade || '').trim()) falta.push('apartamento');
     if (f.local_tipo === 'Apartamento' && !f.comodo) falta.push('cômodo');
-    if (!f.tipo) falta.push('tipo de problema'); if (!f.disciplina) falta.push('responsável pela correção'); if (!f.prioridade) falta.push('prioridade');
+    if (opcoesDo(f.local_tipo).length && !f.unidade) falta.push(f.local_tipo.toLowerCase() + ' (qual)');
+    if (f.local_tipo === 'Outro' && !String(f.unidade || '').trim()) falta.push('qual local');
+    if (!f.tipo) falta.push('tipo de problema'); if (!f.disciplina) falta.push('responsável pela correção'); else if (!f.equipe) falta.push('equipe (próprio ou terceiro)'); if (!f.prioridade) falta.push('prioridade');
     // campos que esta obra exige (Listas e regras → Regras)
     if (obrig('descricao') && !String(f.descricao || '').trim()) falta.push('descrição'); if (obrig('causador') && !String(f.causador || '').trim()) falta.push('responsável pelo problema');
     if (obrig('prazo') && !f.prazo) falta.push('prazo'); if (obrig('observacoes') && !String(f.observacoes || '').trim()) falta.push('observações');
-    if (obrig('ponto') && PLANTAS[f.pavimento] && !(f.ponto && f.ponto.pav === f.pavimento)) falta.push('local na planta');
+    if (obrig('ponto') && plantaDe(f.pavimento) && !(f.ponto && f.ponto.pav === plantaDe(f.pavimento))) falta.push('local na planta');
     if (obrig('bloqueios') && !(f.bloqueios || []).some(b => b.servico)) falta.push('serviço travado');
     if (falta.length) { if ($('ovlB').querySelector('details.mais')) $('ovlB').querySelector('details.mais').open = true; $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
     const row = { pavimento: f.pavimento, local_tipo: f.local_tipo, unidade: String(f.unidade || '').trim() || null, comodo: f.local_tipo === 'Apartamento' ? f.comodo : null,
       // de segurança: tipo de problema de segurança, ou registrada/editada pela Segurança
-      tipo: f.tipo, disciplina: f.disciplina, prioridade: f.prioridade, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
+      tipo: f.tipo, disciplina: f.disciplina, equipe: f.equipe || null, prioridade: f.prioridade, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
       descricao: String(f.descricao || '').trim() || null, causador: String(f.causador || '').trim() || null,
       bloqueios: (f.bloqueios || []).filter(b => b.servico).map(b => ({ servico: b.servico, local: String(b.local || '').trim() })),
       prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null,
-      ponto: f.ponto && f.ponto.pav === f.pavimento ? f.ponto : null };
+      ponto: f.ponto && f.ponto.pav === plantaDe(f.pavimento) ? f.ponto : null };
     $('pOk').disabled = true;
     for (const x of novas) await idbPut('blobs', x.fid, x.blob);
     const fotos = novas.map(x => ({ fid: x.fid, tipo: 'antes' }));
@@ -716,11 +740,11 @@ function detalhe(id, mantemRolagem) {
     ${op ? `<div class="aviso">Não foi enviado: ${esc(op.erro)}<div class="acts" style="margin-top:6px"><button class="btn sm" id="dRetry" type="button">Tentar de novo</button><button class="btn sm danger" id="dDescartar" type="button">Descartar esta alteração</button></div></div>` : ''}
     <div class="fld"><span class="l">Antes</span>${galeria(fotos('antes'))}</div>
     ${fotos('depois').length || p.status !== 'aberta' ? `<div class="fld"><span class="l">Depois</span>${galeria(fotos('depois'))}</div>` : ''}
-    <dl class="kv"><dt>Local</dt><dd>${esc(rotLocal(p))}</dd><dt>Tipo de problema</dt><dd>${esc(p.tipo)}</dd><dt>Corrige</dt><dd>${esc(p.disciplina)}</dd>
+    <dl class="kv"><dt>Local</dt><dd>${esc(rotLocal(p))}</dd><dt>Tipo de problema</dt><dd>${esc(p.tipo)}</dd><dt>Corrige</dt><dd>${esc(rotResp(p))}</dd>
       <dt>Prazo</dt><dd>${p.prazo ? fmtD(p.prazo) : '—'}</dd><dt>Descrição</dt><dd>${esc(p.descricao || '—')}</dd><dt>Quem causou</dt><dd>${esc(p.causador || '—')}</dd>
       <dt>Trava</dt><dd>${(p.bloqueios || []).length ? p.bloqueios.map(b => esc(b.servico) + (b.local ? ' (' + esc(b.local) + ')' : '')).join('; ') : '—'}</dd>
       <dt>Observações</dt><dd>${esc(p.observacoes || '—')}</dd><dt>Registrada</dt><dd>${fmtDH(p.criado_em)} por ${esc(nomeDe(p.criado_por))}</dd></dl>
-    ${p.ponto && PLANTAS[p.ponto.pav] ? `<div class="fld"><span class="l">Local na planta · ${esc(p.ponto.pav)}</span>${plantaBox(p.ponto.pav, [{ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status] }], 'ficha')}</div>` : ''}
+    ${p.ponto && PLANTAS[p.ponto.pav] ? `<div class="fld"><span class="l">Local na planta · ${esc(p.pavimento)}</span>${plantaBox(p.ponto.pav, [{ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status] }], 'ficha')}</div>` : ''}
     ${tem ? `<div class="fld"><label for="dCom">Comentar (sem mudar o status)</label><div class="com"><textarea id="dCom" rows="2" maxlength="2000" placeholder="Ex.: o material chega quinta; precisa de andaime"></textarea><button class="btn sm" id="dComOk" type="button">Enviar</button></div></div>` : ''}
     <div class="fld"><span class="l">Histórico</span><div class="hist">${evs.map(e => `<div><b>${esc(nomeDe(e.por))}</b> ${esc(evTxt(e))} <small>· ${fmtDH(e.em)}${e.local ? ' · aguardando envio' : ''}</small>${e.comentario ? `<span class="cm">${esc(e.comentario)}</span>` : ''}</div>`).join('')}</div></div>`,
     `<span class="msg" id="dMsg"></span>
@@ -849,7 +873,7 @@ async function gerarPdf(arr, g, stTxt, comFotos, prog) {
     precisa(14); pdf.setFillColor(220, 235, 242); pdf.rect(M, y - 5, W - 2 * M, 8, 'F'); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11.5); pdf.text(k + ' (' + lst.length + ')', M + 2, y + 0.5); y += 8;
     for (const p of lst) {
       n++; prog('Montando ' + n + ' de ' + arr.length + '…', n / arr.length);
-      const info = [['Local', rotLocal(p)], ['Tipo', p.tipo], ['Corrige', p.disciplina], ['Prioridade', PRI[p.prioridade][0] + (p.prazo ? ' · prazo ' + fmtD(p.prazo) + (vencida(p) ? ' (VENCIDA)' : '') : '')],
+      const info = [['Local', rotLocal(p)], ['Tipo', p.tipo], ['Corrige', rotResp(p)], ['Prioridade', PRI[p.prioridade][0] + (p.prazo ? ' · prazo ' + fmtD(p.prazo) + (vencida(p) ? ' (VENCIDA)' : '') : '')],
         ['Descrição', p.descricao || '—'], ['Quem causou', p.causador || '—'], ['Trava', (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') || '—'], ['Observações', p.observacoes || '']].filter(x => x[1]);
       const ls = info.map(([a, b]) => linhas(b, W - 2 * M - 30, 9));
       let fimgs = [];

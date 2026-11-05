@@ -2355,9 +2355,14 @@ const slugPav=n=>String(n).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
 async function gerarPlantasSePreciso(forcar){
   if(Store.kind!=='db'||S.readOnly||!S.res||S.isDemo||!S.obra||!S.obra.modelo||!window.Nuvem) return;
   const sb=Nuvem.cliente, asset=S.obra.modelo.asset;
-  const {data,error}=await sb.from('pend_plantas').select('pavimento,modelo,caminho').eq('obra',S.obra.id); if(error) return;
+  // elevacao: altura do pavimento, para o painel de Pendências ligar os pavimentos às plantas pela ordem
+  let comElev=true, {data,error}=await sb.from('pend_plantas').select('pavimento,modelo,caminho,elevacao').eq('obra',S.obra.id);
+  if(error){ comElev=false; ({data,error}=await sb.from('pend_plantas').select('pavimento,modelo,caminho').eq('obra',S.obra.id)); if(error) return }
   const sts=S.storeys.filter(st=>st.bb&&isFinite(st.bb[0])&&st.bb[2]>st.bb[0]);
-  if(!forcar&&sts.length&&sts.every(st=>(data||[]).some(r=>r.pavimento===st.name&&r.modelo===asset))) return;
+  if(!forcar&&sts.length&&sts.every(st=>(data||[]).some(r=>r.pavimento===st.name&&r.modelo===asset))){
+    // plantas prontas sem a altura: só completa a altura
+    if(comElev) for(const st of sts){ const r=(data||[]).find(r=>r.pavimento===st.name); if(r&&r.elevacao==null) await sb.from('pend_plantas').update({elevacao:+st.elev.toFixed(3)}).eq('obra',S.obra.id).eq('pavimento',st.name) }
+    return }
   toast('Preparando as plantas dos pavimentos para as pendências…',6000);
   const velhos=(data||[]).map(r=>r.caminho), novos=[], o=S.res.origin;
   for(const st of sts){ try{
@@ -2368,7 +2373,8 @@ async function gerarPlantasSePreciso(forcar){
     const caminho='pendencias/'+S.obra.id+'/plantas/'+slugPav(st.name)+'-'+Date.now().toString(36)+'.png';
     const up=await sb.storage.from('arquivos').upload(caminho,blob,{contentType:'image/png'}); if(up.error) throw up.error;
     const bb=[+(x0-mg+o[0]).toFixed(3),+(y0-mg+o[1]).toFixed(3),+(x1+mg+o[0]).toFixed(3),+(y1+mg+o[1]).toFixed(3)];
-    const r=await sb.from('pend_plantas').upsert({obra:S.obra.id,pavimento:st.name,caminho,bb,w:W,h:H,modelo:asset}); if(r.error) throw r.error;
+    const lin={obra:S.obra.id,pavimento:st.name,caminho,bb,w:W,h:H,modelo:asset}; if(comElev) lin.elevacao=+st.elev.toFixed(3);
+    const r=await sb.from('pend_plantas').upsert(lin); if(r.error) throw r.error;
     novos.push(caminho);
   }catch(e){ console.warn('planta',st.name,e) } }
   const apagar=velhos.filter(c=>!novos.includes(c)); if(apagar.length&&novos.length) sb.storage.from('arquivos').remove(apagar).catch(()=>{});

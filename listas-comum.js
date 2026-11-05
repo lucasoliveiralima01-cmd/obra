@@ -57,7 +57,9 @@
   // listas que valem na obra: as próprias (menos disciplinas, sempre do padrão) ou o padrão
   function efetivas(padrao, daObra) {
     if (!daObra) return padrao;
-    const o = normListas(daObra); o.disciplina = padrao.disciplina; return o;
+    // lista que a obra não tem (ex.: locais) vem do padrão
+    const o = normListas(daObra); for (const t of TIPOS) if (!Array.isArray(daObra[t])) o[t] = padrao[t];
+    o.disciplina = padrao.disciplina; return o;
   }
   const ativos = arr => (arr || []).filter(x => x.ativo !== false);
 
@@ -80,5 +82,32 @@
     return id ? (regras.tipologias || []).find(t => t.id === id) || null : null;
   }
 
-  window.ListasObra = { TIPOS, PRAZOS, lerFinais, finaisTxt, finalDe, numeroPav, normItem, normListas, deTabela, efetivas, ativos, normRegras, tipologiaDe };
+  // Liga os pavimentos da obra às plantas do IFC (que podem ter outros nomes).
+  //   pavimentos: [{nome, planta?}] de baixo para cima; plantas: [{pavimento, elevacao}]
+  //   1) "planta" escolhida à mão; 2) mesmo nome (sem acento/maiúsculas) ou os dois "térreo";
+  //   3) os demais pela ordem de altura, contando a partir do pavimento já ligado mais próximo
+  //      (térreo ligado → o próximo é o 2º pavimento, e assim por diante).
+  // Devolve {nomeDoPavimento: nomeDaPlanta}.
+  const normNome = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  function ordenarPlantas(plantas) {
+    const nat = (a, b) => String(a.pavimento).localeCompare(String(b.pavimento), 'pt', { numeric: true });
+    return (plantas || []).slice().sort((a, b) => {
+      const ea = a.elevacao, eb = b.elevacao;
+      if (ea != null && eb != null) return ea - eb; if (ea != null) return -1; if (eb != null) return 1; return nat(a, b);
+    }).map(p => p.pavimento);
+  }
+  function mapaPlantas(pavimentos, plantas) {
+    const ord = ordenarPlantas(plantas), pv = (pavimentos || []).map(p => p.nome);
+    const mapa = {}, usada = new Set(), anc = [];   // anc: [índice do pavimento, índice da planta]
+    pv.forEach((n, i) => { const esc = (pavimentos[i] || {}).planta; let j = esc ? ord.indexOf(esc) : -1;
+      if (j < 0) j = ord.findIndex(k => !usada.has(k) && (normNome(k) === normNome(n) || (normNome(k).includes('terreo') && normNome(n).includes('terreo'))));
+      if (j >= 0) { mapa[n] = ord[j]; usada.add(ord[j]); anc.push([i, j]); } });
+    if (!anc.length && ord.length) anc.push([0, 0]);
+    pv.forEach((n, i) => { if (mapa[n]) return;
+      let a = null; for (const x of anc) if (x[0] <= i) a = x; if (!a) a = anc.find(x => x[0] > i) || null; if (!a) return;
+      const j = a[1] + (i - a[0]); if (j >= 0 && j < ord.length && !usada.has(ord[j])) { mapa[n] = ord[j]; usada.add(ord[j]); } });
+    return mapa;
+  }
+
+  window.ListasObra = { TIPOS, PRAZOS, lerFinais, finaisTxt, finalDe, numeroPav, normItem, normListas, deTabela, efetivas, ativos, normRegras, tipologiaDe, normNome, ordenarPlantas, mapaPlantas };
 })();
