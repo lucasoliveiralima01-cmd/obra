@@ -52,6 +52,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 4. `atualizacao-pendencias.sql` (módulo de pendências; instalações novas também rodam este, depois do `supabase.sql`)
 5. `atualizacao-push.sql` (avisos; veja "App instalável e avisos")
 6. `atualizacao-admin2.sql` (página de Administração: atividade, convites e mais informações por pessoa)
+8. `atualizacao-tipologias.sql` (preenchimento condicionado: locais por pavimento e cômodos por final de apartamento; editáveis em Pendências → ⋯ → Listas)
 7. `atualizacao-melhorias.sql` (lixeira de 30 dias, comentários, local na planta, versões do modelo, espaço usado, avisos de concreto, backup semanal e limpeza diária). Depois dele, republique as funções `notificar` e `usuarios` com o código novo.
 
 ### Backup e lixeira

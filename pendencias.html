@@ -294,6 +294,22 @@ document.addEventListener('click', ev => { const img = ev.target.closest('img[da
 $('viewer').onclick = () => { $('viewer').hidden = true; };
 
 /* ======================= dados: servidor + fila local ======================= */
+/* ---------------- preenchimento condicionado (regras da obra, editáveis em Listas) ---------------- */
+const pavCfg = pav => CFG.pavimentos.find(x => x.nome === pav) || {};
+// locais do pavimento; sem regra: todos (e "Apartamento" só onde há apartamentos cadastrados)
+function locaisDe(pav) {
+  const c = pavCfg(pav); if (c.locais && c.locais.length) return c.locais.slice();
+  const todos = L.local.map(x => x.valor);
+  return (c.unidades || []).length ? todos : todos.filter(v => v !== 'Apartamento');
+}
+// final do apartamento: os dois últimos dígitos (601 → 01, 1007 → 07)
+const finalDe = u => { const m = String(u || '').trim().match(/(\d{2})$/); return m ? m[1] : null; };
+function regraComodos(u) { const f = finalDe(u); return f ? ((CFG.regras || {}).comodos || []).find(r => (r.finais || []).includes(f)) || null : null; }
+// cômodos do apartamento escolhido; sem regra (ex.: Zelador): a lista geral
+const comodosDe = u => { const r = regraComodos(u); return r ? r.comodos.slice() : L.comodo.map(x => x.valor); };
+// mantém o valor já gravado visível, mesmo que a regra tenha mudado depois
+const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
+
 const rotLocal = p => [p.pavimento, p.local_tipo === 'Apartamento' ? (p.unidade ? 'Apto ' + p.unidade : 'Apartamento') : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo].filter(Boolean).join(' · ');
 const incompleta = p => !String(p.descricao || '').trim() || !String(p.causador || '').trim();
 const vencida = p => !!p.prazo && (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo < hoje();
@@ -325,12 +341,15 @@ async function carregarServidor() {
     sb.from('pendencias').select('*, pendencia_fotos(*), pendencia_eventos(*)').eq('obra', OBRA).order('numero', { ascending: false }),
     sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA)
   ]);
+  // regras (cômodos por final): coluna nova; sem ela, segue sem regras
+  let lr = await sb.from('pend_config').select('regras').eq('obra', OBRA).maybeSingle();
+  if (lr.error) lr = { data: null };
   for (const r of [lp, lc, lpend]) if (r.error) throw r.error;
   PLANTAS = {}; if (!lpl.error) for (const x of lpl.data || []) PLANTAS[x.pavimento] = x;
   if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
   L = { problema: [], disciplina: [], comodo: [], servico: [], local: [] };
   for (const x of lp.data || []) (L[x.tipo] || (L[x.tipo] = [])).push(x);
-  CFG = { pavimentos: (lc.data && lc.data.pavimentos && lc.data.pavimentos.length) ? lc.data.pavimentos : PAV_PADRAO };
+  CFG = { pavimentos: (lc.data && lc.data.pavimentos && lc.data.pavimentos.length) ? lc.data.pavimentos : PAV_PADRAO, regras: (lr.data && lr.data.regras) || {} };
   OBRA_NOME = lo.nome; PEND = lpend.data || [];
   await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, OBRA_NOME, em: new Date().toISOString() });
 }
@@ -588,9 +607,9 @@ function formPend(id) {
       ${f.pavimento && PLANTAS[f.pavimento] ? `<div class="fld" id="plBox"><span class="l">Local na planta (opcional)</span>${plantaBox(f.pavimento, f.ponto && f.ponto.pav === f.pavimento ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
         ${f.ponto ? '<button type="button" class="btn sm ghost" id="plLimpa" style="justify-self:start">Tirar a marcação</button>' : ''}</div>`
         : (f.pavimento && !Object.keys(PLANTAS).length && navigator.onLine ? '<p class="muted" style="margin:0">Para marcar o local na planta: alguém com acesso de edição abre o <b>Mapa de Risco</b> desta obra uma vez (as plantas são geradas a partir do modelo IFC).</p>' : '')}
-      <div class="fld"><span class="l">Local <span class="req">*</span></span>${grupo('Local', L.local.map(x => x.valor), f.local_tipo, 'local_tipo', 'small')}</div>
+      <div class="fld"><span class="l">Local <span class="req">*</span></span>${f.pavimento ? grupo('Local', comAtual(locaisDe(f.pavimento), f.local_tipo), f.local_tipo, 'local_tipo', 'small') : '<span class="muted">Escolha o pavimento primeiro.</span>'}</div>
       ${ehApto ? `<div class="fld"><span class="l">Apartamento <span class="req">*</span></span>${uns.length ? grupo('Apartamento', uns, f.unidade, 'unidade', 'small') : '<input id="fUn" placeholder="Número do apartamento" value="' + esc(f.unidade || '') + '">'}</div>
-        <div class="fld"><span class="l">Cômodo <span class="req">*</span></span>${grupo('Cômodo', L.comodo.map(x => x.valor), f.comodo, 'comodo', 'small')}</div>`
+        <div class="fld"><span class="l">Cômodo <span class="req">*</span>${f.unidade && regraComodos(f.unidade) ? ' <span class="muted" style="text-transform:none;letter-spacing:0">(apartamento final ' + esc(finalDe(f.unidade)) + ')</span>' : ''}</span>${String(f.unidade || '').trim() || !uns.length ? grupo('Cômodo', comAtual(comodosDe(f.unidade), f.comodo), f.comodo, 'comodo', 'small') : '<span class="muted">Escolha o apartamento para ver os cômodos dele.</span>'}</div>`
         : (f.local_tipo ? `<div class="fld"><label for="fUn2">Qual (opcional)</label><input id="fUn2" placeholder="Ex.: hall dos elevadores, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
       <div class="fld"><label for="fTipo2">Tipo de problema <span class="req">*</span></label><select id="fTipo2"><option value="">Escolha…</option>${tiposOk.map(t => `<option ${t.valor === f.tipo ? 'selected' : ''}>${esc(t.valor)}</option>`).join('')}</select></div>
       <div class="fld"><span class="l">Responsável pela correção <span class="req">*</span></span>${grupo('Disciplina', L.disciplina.map(x => x.valor), f.disciplina, 'disciplina', 'small')}</div>
@@ -611,7 +630,9 @@ function formPend(id) {
       B.querySelectorAll('[data-bs]').forEach(s => { f.bloqueios[+s.dataset.bs].servico = s.value; }); B.querySelectorAll('[data-bl]').forEach(s => { f.bloqueios[+s.dataset.bl].local = s.value; }); };
     desenhar.ler = lerTextos;
     B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { lerTextos(); const k = b.dataset.f, v = b.dataset.v;
-      if (k === 'pavimento' && f.pavimento !== v) { f.unidade = ''; if (f.ponto && f.ponto.pav !== v) f.ponto = null; }
+      // trocou o pavimento: o local precisa existir nele; trocou o apartamento: o cômodo precisa existir nele
+      if (k === 'pavimento' && f.pavimento !== v) { f.unidade = ''; if (f.ponto && f.ponto.pav !== v) f.ponto = null; if (f.local_tipo && !locaisDe(v).includes(f.local_tipo)) { f.local_tipo = ''; f.comodo = ''; } else if (f.local_tipo === 'Apartamento') f.comodo = ''; }
+      if (k === 'unidade' && f.unidade !== v && f.comodo && !comodosDe(v).includes(f.comodo)) f.comodo = '';
       if (k === 'local_tipo' && f.local_tipo !== v) { f.unidade = ''; f.comodo = ''; }
       f[k] = f[k] === v && k !== 'prioridade' ? '' : v;
       if (k === 'prioridade' && !prazoManual) f.prazo = somaDias(hoje(), PRI[v][1]);
@@ -841,6 +862,22 @@ async function gerarPdf(arr, g, stTxt, comFotos, prog) {
 }
 
 /* ---------------- listas (administrador) ---------------- */
+// "03-07, 10" → ["03","04","05","06","07","10"] e o caminho de volta (para mostrar)
+function lerFinais(s) {
+  const out = [];
+  for (const t of String(s).split(/[,;\s]+/).filter(Boolean)) {
+    const m = t.match(/^(\d{1,2})\s*[-–a]\s*(\d{1,2})$/);
+    if (m) { for (let k = +m[1]; k <= +m[2]; k++) out.push(String(k).padStart(2, '0')); }
+    else if (/^\d{1,2}$/.test(t)) out.push(t.padStart(2, '0'));
+  }
+  return [...new Set(out)];
+}
+function finaisTxt(fs) {
+  const n = (fs || []).map(Number).sort((a, b) => a - b); const partes = [];
+  for (let i = 0; i < n.length;) { let j = i; while (j + 1 < n.length && n[j + 1] === n[j] + 1) j++;
+    partes.push(j - i >= 2 ? String(n[i]).padStart(2, '0') + '-' + String(n[j]).padStart(2, '0') : n.slice(i, j + 1).map(v => String(v).padStart(2, '0')).join(', ')); i = j + 1; }
+  return partes.join(', ');
+}
 function formListas() {
   const txt = t => L[t].map(x => x.valor + (t === 'problema' && x.extra && x.extra.disciplina ? ' ; ' + x.extra.disciplina : t === 'disciplina' && x.extra && x.extra.grupo ? ' ; ' + x.extra.grupo : '')).join('\n');
   const pavTxt = CFG.pavimentos.map(x => x.nome + ': ' + (x.unidades || []).join(', ')).join('\n');
@@ -851,7 +888,11 @@ function formListas() {
     ${area('lCom', 'Cômodos', txt('comodo'), '')}
     ${area('lSer', 'Serviços que podem ser travados', txt('servico'), '')}
     ${area('lLoc', 'Tipos de local', txt('local'), '“Apartamento” pede o número e o cômodo.')}
-    ${area('lPav', 'Pavimentos e unidades desta obra (de baixo para cima)', pavTxt, 'Formato: <b>Pavimento: unidade, unidade, …</b> Ex.: Pavimento 03: 301, 302, Zelador')}`,
+    ${area('lPav', 'Pavimentos e unidades desta obra (de baixo para cima)', pavTxt, 'Formato: <b>Pavimento: unidade, unidade, …</b> Ex.: Pavimento 03: 301, 302, Zelador')}
+    ${area('lLocPav', 'Locais de cada pavimento (desta obra)', CFG.pavimentos.filter(x => (x.locais || []).length).map(x => x.nome + ': ' + x.locais.join(', ')).join('\n'),
+      'Formato: <b>Pavimento: local, local, …</b> Ex.: Pavimento 06: Apartamento, Circulação/hall, Escadaria. Pavimento sem linha aqui mostra todos os locais (e “Apartamento” só se tiver unidades).')}
+    ${area('lTip', 'Cômodos por final de apartamento (desta obra)', ((CFG.regras || {}).comodos || []).map(r => finaisTxt(r.finais) + ': ' + r.comodos.join(', ')).join('\n'),
+      'Formato: <b>finais: cômodo, cômodo, …</b> Ex.: 01: Estar/sala, Cozinha · 03-07: Studio, Banheiro. O final são os dois últimos dígitos do apartamento (601 → 01). Apartamento sem regra mostra todos os cômodos.')}`,
     '<span class="msg" id="lMsg"></span><button class="btn ghost" id="lC" type="button">Cancelar</button><button class="btn" id="lOk" type="button">Salvar listas</button>', true);
   $('lC').onclick = () => { delete $('ovl').dataset.form; closeSheet(); };
   $('lOk').onclick = async () => {
@@ -863,13 +904,29 @@ function formListas() {
     [['lCom', 'comodo'], ['lSer', 'servico'], ['lLoc', 'local']].forEach(([id, t]) => lin(id).forEach((v, i) => novo.push({ tipo: t, valor: v, ordem: i + 1, extra: {} })));
     const pavs = lin('lPav').map(s => { const i = s.indexOf(':'); const nome = (i >= 0 ? s.slice(0, i) : s).trim(); const un = i >= 0 ? s.slice(i + 1).split(',').map(x => x.trim()).filter(Boolean) : []; return { nome, unidades: un }; }).filter(x => x.nome);
     if (!pavs.length) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Informe ao menos um pavimento.'; return; }
+    const lista = s => s.split(',').map(x => x.trim()).filter(Boolean);
+    const garantir = (tipo, v) => { if (!novo.some(x => x.tipo === tipo && x.valor === v)) novo.push({ tipo, valor: v, ordem: 900 + novo.length, extra: {} }); };
+    // locais de cada pavimento (os que não existirem entram na lista de tipos de local)
+    for (const s of lin('lLocPav')) { const i = s.indexOf(':'); if (i < 0) continue; const nome = s.slice(0, i).trim(); const ls = lista(s.slice(i + 1));
+      const pv = pavs.find(x => x.nome === nome); if (!pv) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Locais: o pavimento “' + nome + '” não está na lista de pavimentos.'; return; }
+      pv.locais = ls; ls.forEach(v => garantir('local', v)); }
+    // cômodos por final de apartamento
+    const tip = [];
+    for (const s of lin('lTip')) { const i = s.indexOf(':'); if (i < 0) continue; const finais = lerFinais(s.slice(0, i)); const cs = lista(s.slice(i + 1));
+      if (!finais.length || !cs.length) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Cômodos por final: linha inválida “' + s + '”.'; return; }
+      tip.push({ finais, comodos: cs }); cs.forEach(v => garantir('comodo', v)); }
+    const regras = Object.assign({}, CFG.regras || {}, { comodos: tip });
     const vistos = new Set(); for (const x of novo) { const k = x.tipo + '|' + x.valor; if (vistos.has(k)) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Repetido: ' + x.valor; return; } vistos.add(k); }
     $('lOk').disabled = true; $('lMsg').className = 'msg'; $('lMsg').textContent = 'Salvando…';
     try {
       for (const t of ['problema', 'disciplina', 'comodo', 'servico', 'local']) { const { error } = await sb.from('pend_listas').delete().eq('tipo', t); if (error) throw error; }
       { const { error } = await sb.from('pend_listas').insert(novo); if (error) throw error; }
-      { const { error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pavs }); if (error) throw error; }
-      await carregarServidor(); delete $('ovl').dataset.form; closeSheet(); toast('Listas salvas.');
+      let semRegras = false;
+      { let { error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pavs, regras });
+        if (error && /regras/i.test(error.message || '')) { semRegras = true; ({ error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pavs })); }
+        if (error) throw error; }
+      await carregarServidor(); delete $('ovl').dataset.form; closeSheet();
+      toast(semRegras ? 'Listas salvas, menos os cômodos por final: rode o atualizacao-tipologias.sql no Supabase.' : 'Listas salvas.', semRegras ? 8000 : 4000);
     } catch (e) { $('lOk').disabled = false; $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Não foi possível salvar: ' + (e.message || e); }
   };
 }
