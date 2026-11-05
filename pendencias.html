@@ -213,6 +213,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'pendencias';</script>
 <script src="nuvem.js"></script>
+<script src="listas-comum.js"></script>
 <script>
 (function () {
 'use strict';
@@ -250,7 +251,12 @@ const minha = p => String(p.criado_por || '').toLowerCase() === String((NV && NV
 /* ======================= quem pode o quê (o banco confere de novo) ======================= */
 const cargo = () => NV && NV.cargo;
 const podeCriar = () => cargo() === 'engenharia' || cargo() === 'seguranca';
-const ehSegTipo = t => ((L.problema.find(x => x.valor === t) || {}).extra || {}).disciplina === 'Segurança';
+const ehSegTipo = t => { const e = (L.problema.find(x => x.valor === t) || {}).extra || {}; return e.seguranca === true || e.disciplina === 'Segurança'; };
+// listas e regras: as da obra (ou o padrão da empresa). Itens desativados não aparecem no formulário.
+const LO = window.ListasObra;
+const ativos = t => LO.ativos(L[t]).map(x => x.valor);
+const prazoDe = k => ((CFG.regras || {}).prazos || LO.PRAZOS)[k];
+const obrig = k => !!((CFG.regras || {}).obrigatorios || {})[k];
 const editor = p => cargo() === 'engenharia' || (cargo() === 'seguranca' && p.seguranca);
 const fecha = p => p.seguranca ? cargo() === 'seguranca' : cargo() === 'engenharia';
 const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
@@ -299,14 +305,13 @@ const pavCfg = pav => CFG.pavimentos.find(x => x.nome === pav) || {};
 // locais do pavimento; sem regra: todos (e "Apartamento" só onde há apartamentos cadastrados)
 function locaisDe(pav) {
   const c = pavCfg(pav); if (c.locais && c.locais.length) return c.locais.slice();
-  const todos = L.local.map(x => x.valor);
+  const todos = ativos('local');
   return (c.unidades || []).length ? todos : todos.filter(v => v !== 'Apartamento');
 }
-// final do apartamento: os dois últimos dígitos (601 → 01, 1007 → 07)
-const finalDe = u => { const m = String(u || '').trim().match(/(\d{2})$/); return m ? m[1] : null; };
-function regraComodos(u) { const f = finalDe(u); return f ? ((CFG.regras || {}).comodos || []).find(r => (r.finais || []).includes(f)) || null : null; }
-// cômodos do apartamento escolhido; sem regra (ex.: Zelador): a lista geral
-const comodosDe = u => { const r = regraComodos(u); return r ? r.comodos.slice() : L.comodo.map(x => x.valor); };
+// tipologia do apartamento: exceção da unidade ou pelo final (dois últimos dígitos: 601 → 01)
+const regraComodos = u => u ? LO.tipologiaDe(CFG.regras || {}, u) : null;
+// cômodos do apartamento escolhido; sem tipologia (ex.: Zelador): a lista geral
+const comodosDe = u => { const r = regraComodos(u); return r ? r.comodos.slice() : ativos('comodo'); };
 // mantém o valor já gravado visível, mesmo que a regra tenha mudado depois
 const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
 
@@ -336,26 +341,26 @@ async function enfileirar(op) { op.k = op.k || uuid(); op.seq = ++SEQ; op.em = o
 async function carregarServidor() {
   const [lp, lc, lo, lpend, lpl] = await Promise.all([
     sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
-    sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle(),
+    sb.from('pend_config').select('pavimentos,regras,listas').eq('obra', OBRA).maybeSingle(),
     NV.obras.obter(OBRA),
     sb.from('pendencias').select('*, pendencia_fotos(*), pendencia_eventos(*)').eq('obra', OBRA).order('numero', { ascending: false }),
     sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA)
   ]);
-  // regras (cômodos por final): coluna nova; sem ela, segue sem regras
-  let lr = await sb.from('pend_config').select('regras').eq('obra', OBRA).maybeSingle();
-  if (lr.error) lr = { data: null };
-  for (const r of [lp, lc, lpend]) if (r.error) throw r.error;
+  // banco sem as colunas novas (regras/listas): lê só os pavimentos
+  let cfg = lc;
+  if (cfg.error) { cfg = await sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle(); }
+  for (const r of [lp, cfg, lpend]) if (r.error) throw r.error;
   PLANTAS = {}; if (!lpl.error) for (const x of lpl.data || []) PLANTAS[x.pavimento] = x;
   if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
-  L = { problema: [], disciplina: [], comodo: [], servico: [], local: [] };
-  for (const x of lp.data || []) (L[x.tipo] || (L[x.tipo] = [])).push(x);
-  CFG = { pavimentos: (lc.data && lc.data.pavimentos && lc.data.pavimentos.length) ? lc.data.pavimentos : PAV_PADRAO, regras: (lr.data && lr.data.regras) || {} };
+  const c = cfg.data || {};
+  L = LO.efetivas(LO.deTabela(lp.data), c.listas || null);
+  CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO, regras: LO.normRegras(c.regras) };
   OBRA_NOME = lo.nome; PEND = lpend.data || [];
   await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, OBRA_NOME, em: new Date().toISOString() });
 }
 async function carregarCache() {
   const c = await idbGet('cache', OBRA); if (!c) return false;
-  L = c.L; CFG = c.CFG; PEND = c.PEND; PLANTAS = c.PLANTAS || {}; OBRA_NOME = c.OBRA_NOME; return c.em;
+  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; OBRA_NOME = c.OBRA_NOME; return c.em;
 }
 // imagem da planta: baixa uma vez e guarda no aparelho (funciona sem sinal)
 async function urlPlanta(pl) {
@@ -589,7 +594,7 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('
 function formPend(id) {
   const ed = id ? itens().find(p => p.id === id) : null;
   if (ed && !editor(ed)) return;
-  const tiposOk = L.problema.filter(t => cargo() === 'engenharia' || (cargo() === 'seguranca' && ehSegTipo(t.valor)));
+  const tiposOk = LO.ativos(L.problema).filter(t => cargo() === 'engenharia' || (cargo() === 'seguranca' && ehSegTipo(t.valor)));
   const f = ed ? clone(ed) : { pavimento: '', local_tipo: '', unidade: '', comodo: '', tipo: tiposOk.length === 1 ? tiposOk[0].valor : '', disciplina: '', prioridade: '', descricao: '', causador: '', bloqueios: [], prazo: '', observacoes: '' };
   if (!ed && f.tipo) f.disciplina = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina || '';
   let prazoManual = !!ed;
@@ -604,23 +609,23 @@ function formPend(id) {
         <div class="fotos">${(ed ? ed.fotos.filter(x => x.tipo === 'antes') : []).map(x => `<span class="ft"><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden></span>`).join('')}${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto nova" src="${x.url}"><button type="button" data-rm="${i}" aria-label="Remover foto">×</button></span>`).join('')}</div>
         <div class="addft"><label>📷 Tirar foto<input type="file" accept="image/*" capture="environment" id="fCam"></label><label>🖼 Da galeria<input type="file" accept="image/*" multiple id="fGal"></label></div></div>
       <div class="fld"><span class="l">Pavimento <span class="req">*</span></span>${grupo('Pavimento', CFG.pavimentos.map(x => x.nome), f.pavimento, 'pavimento', 'small')}</div>
-      ${f.pavimento && PLANTAS[f.pavimento] ? `<div class="fld" id="plBox"><span class="l">Local na planta (opcional)</span>${plantaBox(f.pavimento, f.ponto && f.ponto.pav === f.pavimento ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
+      ${f.pavimento && PLANTAS[f.pavimento] ? `<div class="fld" id="plBox"><span class="l">Local na planta ${obrig('ponto') ? '<span class="req">*</span>' : '(opcional)'}</span>${plantaBox(f.pavimento, f.ponto && f.ponto.pav === f.pavimento ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
         ${f.ponto ? '<button type="button" class="btn sm ghost" id="plLimpa" style="justify-self:start">Tirar a marcação</button>' : ''}</div>`
         : (f.pavimento && !Object.keys(PLANTAS).length && navigator.onLine ? '<p class="muted" style="margin:0">Para marcar o local na planta: alguém com acesso de edição abre o <b>Mapa de Risco</b> desta obra uma vez (as plantas são geradas a partir do modelo IFC).</p>' : '')}
       <div class="fld"><span class="l">Local <span class="req">*</span></span>${f.pavimento ? grupo('Local', comAtual(locaisDe(f.pavimento), f.local_tipo), f.local_tipo, 'local_tipo', 'small') : '<span class="muted">Escolha o pavimento primeiro.</span>'}</div>
       ${ehApto ? `<div class="fld"><span class="l">Apartamento <span class="req">*</span></span>${uns.length ? grupo('Apartamento', uns, f.unidade, 'unidade', 'small') : '<input id="fUn" placeholder="Número do apartamento" value="' + esc(f.unidade || '') + '">'}</div>
-        <div class="fld"><span class="l">Cômodo <span class="req">*</span>${f.unidade && regraComodos(f.unidade) ? ' <span class="muted" style="text-transform:none;letter-spacing:0">(apartamento final ' + esc(finalDe(f.unidade)) + ')</span>' : ''}</span>${String(f.unidade || '').trim() || !uns.length ? grupo('Cômodo', comAtual(comodosDe(f.unidade), f.comodo), f.comodo, 'comodo', 'small') : '<span class="muted">Escolha o apartamento para ver os cômodos dele.</span>'}</div>`
+        <div class="fld"><span class="l">Cômodo <span class="req">*</span>${f.unidade && regraComodos(f.unidade) ? ' <span class="muted" style="text-transform:none;letter-spacing:0">(' + esc(regraComodos(f.unidade).nome) + ')</span>' : ''}</span>${String(f.unidade || '').trim() || !uns.length ? grupo('Cômodo', comAtual(comodosDe(f.unidade), f.comodo), f.comodo, 'comodo', 'small') : '<span class="muted">Escolha o apartamento para ver os cômodos dele.</span>'}</div>`
         : (f.local_tipo ? `<div class="fld"><label for="fUn2">Qual (opcional)</label><input id="fUn2" placeholder="Ex.: hall dos elevadores, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
       <div class="fld"><label for="fTipo2">Tipo de problema <span class="req">*</span></label><select id="fTipo2"><option value="">Escolha…</option>${tiposOk.map(t => `<option ${t.valor === f.tipo ? 'selected' : ''}>${esc(t.valor)}</option>`).join('')}</select></div>
-      <div class="fld"><span class="l">Responsável pela correção <span class="req">*</span></span>${grupo('Disciplina', L.disciplina.map(x => x.valor), f.disciplina, 'disciplina', 'small')}</div>
+      <div class="fld"><span class="l">Responsável pela correção <span class="req">*</span></span>${grupo('Disciplina', comAtual(ativos('disciplina'), f.disciplina), f.disciplina, 'disciplina', 'small')}</div>
       <div class="fld"><span class="l">Prioridade <span class="req">*</span></span>${grupo('Prioridade', PRI_ORD, f.prioridade, 'prioridade')}</div>
-      <details class="mais" ${ed || incompleta(f) === false ? 'open' : ''}><summary>Mais detalhes (opcional; sem eles a pendência fica INCOMPLETA)</summary>
+      <details class="mais" ${ed || incompleta(f) === false ? 'open' : ''}><summary>${['descricao', 'causador', 'prazo', 'observacoes', 'bloqueios'].some(obrig) ? 'Mais detalhes (esta obra exige alguns: ' + [['descricao', 'descrição'], ['causador', 'quem causou'], ['prazo', 'prazo'], ['observacoes', 'observações'], ['bloqueios', 'serviço travado']].filter(x => obrig(x[0])).map(x => x[1]).join(', ') + ')' : 'Mais detalhes (opcional; sem eles a pendência fica INCOMPLETA)'}</summary>
         <div class="fld"><label for="fDesc">Descrição</label><textarea id="fDesc" placeholder="O que está errado e o que precisa ser feito">${esc(f.descricao || '')}</textarea></div>
-        <div class="fld"><label for="fCaus">Responsável pelo problema (quem causou)</label><input id="fCaus" list="dlCaus" value="${esc(f.causador || '')}" placeholder="Ex.: Hidráulica (empreiteira X)"><datalist id="dlCaus">${L.disciplina.map(x => `<option value="${esc(x.valor)}">`).join('')}</datalist></div>
+        <div class="fld"><label for="fCaus">Responsável pelo problema (quem causou)</label><input id="fCaus" list="dlCaus" value="${esc(f.causador || '')}" placeholder="Ex.: Hidráulica (empreiteira X)"><datalist id="dlCaus">${ativos('disciplina').map(v => `<option value="${esc(v)}">`).join('')}</datalist></div>
         <div class="fld"><span class="l">Serviços que esta pendência trava</span>
-          <div id="blqBox" style="display:grid;gap:6px">${(f.bloqueios || []).map((b, i) => `<div class="blq"><select data-bs="${i}"><option value="">Serviço…</option>${L.servico.map(s => `<option ${s.valor === b.servico ? 'selected' : ''}>${esc(s.valor)}</option>`).join('')}</select><input data-bl="${i}" placeholder="Local (ex.: apto 403)" value="${esc(b.local || '')}"><button type="button" class="btn sm ghost" data-brm="${i}" aria-label="Remover">×</button></div>`).join('')}</div>
+          <div id="blqBox" style="display:grid;gap:6px">${(f.bloqueios || []).map((b, i) => `<div class="blq"><select data-bs="${i}"><option value="">Serviço…</option>${comAtual(ativos('servico'), b.servico).map(s => `<option ${s === b.servico ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select><input data-bl="${i}" placeholder="Local (ex.: apto 403)" value="${esc(b.local || '')}"><button type="button" class="btn sm ghost" data-brm="${i}" aria-label="Remover">×</button></div>`).join('')}</div>
           <button type="button" class="btn sm ghost" id="blqAdd" style="justify-self:start">+ Serviço travado</button></div>
-        <div class="fld"><label for="fPrazo">Prazo ${f.prioridade && !prazoManual ? '<span class="muted" style="text-transform:none;letter-spacing:0">(sugerido: ' + PRI[f.prioridade][1] + ' dia' + (PRI[f.prioridade][1] > 1 ? 's' : '') + ')</span>' : ''}</label><input type="date" id="fPrazo" value="${esc(f.prazo || '')}"></div>
+        <div class="fld"><label for="fPrazo">Prazo ${f.prioridade && !prazoManual ? '<span class="muted" style="text-transform:none;letter-spacing:0">(sugerido: ' + prazoDe(f.prioridade) + ' dia' + (prazoDe(f.prioridade) == 1 ? '' : 's') + ')</span>' : ''}</label><input type="date" id="fPrazo" value="${esc(f.prazo || '')}"></div>
         <div class="fld"><label for="fObs">Observações</label><textarea id="fObs">${esc(f.observacoes || '')}</textarea></div>
       </details>`;
     const B = $('ovlB');
@@ -635,7 +640,7 @@ function formPend(id) {
       if (k === 'unidade' && f.unidade !== v && f.comodo && !comodosDe(v).includes(f.comodo)) f.comodo = '';
       if (k === 'local_tipo' && f.local_tipo !== v) { f.unidade = ''; f.comodo = ''; }
       f[k] = f[k] === v && k !== 'prioridade' ? '' : v;
-      if (k === 'prioridade' && !prazoManual) f.prazo = somaDias(hoje(), PRI[v][1]);
+      if (k === 'prioridade' && !prazoManual) f.prazo = somaDias(hoje(), prazoDe(v));
       const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; });
     $('fTipo2').onchange = e => { lerTextos(); f.tipo = e.target.value; const s = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina; if (s) f.disciplina = s; const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
     $('fPrazo').oninput = () => { prazoManual = true; };
@@ -669,7 +674,12 @@ function formPend(id) {
     if (f.local_tipo === 'Apartamento' && !String(f.unidade || '').trim()) falta.push('apartamento');
     if (f.local_tipo === 'Apartamento' && !f.comodo) falta.push('cômodo');
     if (!f.tipo) falta.push('tipo de problema'); if (!f.disciplina) falta.push('responsável pela correção'); if (!f.prioridade) falta.push('prioridade');
-    if (falta.length) { $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
+    // campos que esta obra exige (Listas e regras → Regras)
+    if (obrig('descricao') && !String(f.descricao || '').trim()) falta.push('descrição'); if (obrig('causador') && !String(f.causador || '').trim()) falta.push('responsável pelo problema');
+    if (obrig('prazo') && !f.prazo) falta.push('prazo'); if (obrig('observacoes') && !String(f.observacoes || '').trim()) falta.push('observações');
+    if (obrig('ponto') && PLANTAS[f.pavimento] && !(f.ponto && f.ponto.pav === f.pavimento)) falta.push('local na planta');
+    if (obrig('bloqueios') && !(f.bloqueios || []).some(b => b.servico)) falta.push('serviço travado');
+    if (falta.length) { if ($('ovlB').querySelector('details.mais')) $('ovlB').querySelector('details.mais').open = true; $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
     const row = { pavimento: f.pavimento, local_tipo: f.local_tipo, unidade: String(f.unidade || '').trim() || null, comodo: f.local_tipo === 'Apartamento' ? f.comodo : null,
       // de segurança: tipo de problema de segurança, ou registrada/editada pela Segurança
       tipo: f.tipo, disciplina: f.disciplina, prioridade: f.prioridade, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
@@ -861,76 +871,6 @@ async function gerarPdf(arr, g, stTxt, comFotos, prog) {
   const b = pdf.output('blob'); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
 }
 
-/* ---------------- listas (administrador) ---------------- */
-// "03-07, 10" → ["03","04","05","06","07","10"] e o caminho de volta (para mostrar)
-function lerFinais(s) {
-  const out = [];
-  for (const t of String(s).split(/[,;\s]+/).filter(Boolean)) {
-    const m = t.match(/^(\d{1,2})\s*[-–a]\s*(\d{1,2})$/);
-    if (m) { for (let k = +m[1]; k <= +m[2]; k++) out.push(String(k).padStart(2, '0')); }
-    else if (/^\d{1,2}$/.test(t)) out.push(t.padStart(2, '0'));
-  }
-  return [...new Set(out)];
-}
-function finaisTxt(fs) {
-  const n = (fs || []).map(Number).sort((a, b) => a - b); const partes = [];
-  for (let i = 0; i < n.length;) { let j = i; while (j + 1 < n.length && n[j + 1] === n[j] + 1) j++;
-    partes.push(j - i >= 2 ? String(n[i]).padStart(2, '0') + '-' + String(n[j]).padStart(2, '0') : n.slice(i, j + 1).map(v => String(v).padStart(2, '0')).join(', ')); i = j + 1; }
-  return partes.join(', ');
-}
-function formListas() {
-  const txt = t => L[t].map(x => x.valor + (t === 'problema' && x.extra && x.extra.disciplina ? ' ; ' + x.extra.disciplina : t === 'disciplina' && x.extra && x.extra.grupo ? ' ; ' + x.extra.grupo : '')).join('\n');
-  const pavTxt = CFG.pavimentos.map(x => x.nome + ': ' + (x.unidades || []).join(', ')).join('\n');
-  const area = (id, rot, val, dica) => `<div class="fld"><label for="${id}">${rot}</label><textarea id="${id}" rows="6">${esc(val)}</textarea><span class="muted">${dica}</span></div>`;
-  openSheet('Listas das pendências', `<p class="muted" style="margin:0">Uma opção por linha. As mudanças valem para todos a partir de agora (as pendências já registradas não mudam).</p>
-    ${area('lProb', 'Tipos de problema', txt('problema'), 'Formato: <b>Tipo ; disciplina sugerida</b>. Os tipos sugeridos para “Segurança” são os de segurança.')}
-    ${area('lDisc', 'Disciplinas (responsável pela correção)', txt('disciplina'), 'Formato: <b>Disciplina ; grupo</b>. Disciplinas com o mesmo grupo são complementares (um encarregado pode ter as duas).')}
-    ${area('lCom', 'Cômodos', txt('comodo'), '')}
-    ${area('lSer', 'Serviços que podem ser travados', txt('servico'), '')}
-    ${area('lLoc', 'Tipos de local', txt('local'), '“Apartamento” pede o número e o cômodo.')}
-    ${area('lPav', 'Pavimentos e unidades desta obra (de baixo para cima)', pavTxt, 'Formato: <b>Pavimento: unidade, unidade, …</b> Ex.: Pavimento 03: 301, 302, Zelador')}
-    ${area('lLocPav', 'Locais de cada pavimento (desta obra)', CFG.pavimentos.filter(x => (x.locais || []).length).map(x => x.nome + ': ' + x.locais.join(', ')).join('\n'),
-      'Formato: <b>Pavimento: local, local, …</b> Ex.: Pavimento 06: Apartamento, Circulação/hall, Escadaria. Pavimento sem linha aqui mostra todos os locais (e “Apartamento” só se tiver unidades).')}
-    ${area('lTip', 'Cômodos por final de apartamento (desta obra)', ((CFG.regras || {}).comodos || []).map(r => finaisTxt(r.finais) + ': ' + r.comodos.join(', ')).join('\n'),
-      'Formato: <b>finais: cômodo, cômodo, …</b> Ex.: 01: Estar/sala, Cozinha · 03-07: Studio, Banheiro. O final são os dois últimos dígitos do apartamento (601 → 01). Apartamento sem regra mostra todos os cômodos.')}`,
-    '<span class="msg" id="lMsg"></span><button class="btn ghost" id="lC" type="button">Cancelar</button><button class="btn" id="lOk" type="button">Salvar listas</button>', true);
-  $('lC').onclick = () => { delete $('ovl').dataset.form; closeSheet(); };
-  $('lOk').onclick = async () => {
-    const lin = id => $(id).value.split('\n').map(s => s.trim()).filter(Boolean);
-    const par = s => { const [a, b] = s.split(';').map(x => x.trim()); return [a, b || '']; };
-    const novo = [];
-    lin('lProb').forEach((s, i) => { const [v, d] = par(s); novo.push({ tipo: 'problema', valor: v, ordem: i + 1, extra: d ? { disciplina: d } : {} }); });
-    lin('lDisc').forEach((s, i) => { const [v, gp] = par(s); novo.push({ tipo: 'disciplina', valor: v, ordem: i + 1, extra: gp ? { grupo: gp } : {} }); });
-    [['lCom', 'comodo'], ['lSer', 'servico'], ['lLoc', 'local']].forEach(([id, t]) => lin(id).forEach((v, i) => novo.push({ tipo: t, valor: v, ordem: i + 1, extra: {} })));
-    const pavs = lin('lPav').map(s => { const i = s.indexOf(':'); const nome = (i >= 0 ? s.slice(0, i) : s).trim(); const un = i >= 0 ? s.slice(i + 1).split(',').map(x => x.trim()).filter(Boolean) : []; return { nome, unidades: un }; }).filter(x => x.nome);
-    if (!pavs.length) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Informe ao menos um pavimento.'; return; }
-    const lista = s => s.split(',').map(x => x.trim()).filter(Boolean);
-    const garantir = (tipo, v) => { if (!novo.some(x => x.tipo === tipo && x.valor === v)) novo.push({ tipo, valor: v, ordem: 900 + novo.length, extra: {} }); };
-    // locais de cada pavimento (os que não existirem entram na lista de tipos de local)
-    for (const s of lin('lLocPav')) { const i = s.indexOf(':'); if (i < 0) continue; const nome = s.slice(0, i).trim(); const ls = lista(s.slice(i + 1));
-      const pv = pavs.find(x => x.nome === nome); if (!pv) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Locais: o pavimento “' + nome + '” não está na lista de pavimentos.'; return; }
-      pv.locais = ls; ls.forEach(v => garantir('local', v)); }
-    // cômodos por final de apartamento
-    const tip = [];
-    for (const s of lin('lTip')) { const i = s.indexOf(':'); if (i < 0) continue; const finais = lerFinais(s.slice(0, i)); const cs = lista(s.slice(i + 1));
-      if (!finais.length || !cs.length) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Cômodos por final: linha inválida “' + s + '”.'; return; }
-      tip.push({ finais, comodos: cs }); cs.forEach(v => garantir('comodo', v)); }
-    const regras = Object.assign({}, CFG.regras || {}, { comodos: tip });
-    const vistos = new Set(); for (const x of novo) { const k = x.tipo + '|' + x.valor; if (vistos.has(k)) { $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Repetido: ' + x.valor; return; } vistos.add(k); }
-    $('lOk').disabled = true; $('lMsg').className = 'msg'; $('lMsg').textContent = 'Salvando…';
-    try {
-      for (const t of ['problema', 'disciplina', 'comodo', 'servico', 'local']) { const { error } = await sb.from('pend_listas').delete().eq('tipo', t); if (error) throw error; }
-      { const { error } = await sb.from('pend_listas').insert(novo); if (error) throw error; }
-      let semRegras = false;
-      { let { error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pavs, regras });
-        if (error && /regras/i.test(error.message || '')) { semRegras = true; ({ error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pavs })); }
-        if (error) throw error; }
-      await carregarServidor(); delete $('ovl').dataset.form; closeSheet();
-      toast(semRegras ? 'Listas salvas, menos os cômodos por final: rode o atualizacao-tipologias.sql no Supabase.' : 'Listas salvas.', semRegras ? 8000 : 4000);
-    } catch (e) { $('lOk').disabled = false; $('lMsg').className = 'msg err'; $('lMsg').textContent = 'Não foi possível salvar: ' + (e.message || e); }
-  };
-}
-
 /* ---------------- avisos (notificações neste aparelho) ---------------- */
 const VAPID = (window.MAPA_CONFIG || {}).vapidPublica || '';
 const b64u8 = s => { const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
@@ -1012,7 +952,7 @@ async function formAvisos() {
   if (!ok) { const em = await carregarCache(); if (!em) { $('main').innerHTML = '<div class="vazio"><h3>Sem sinal e sem cópia neste aparelho</h3><p class="muted" style="margin:0">Abra esta obra uma vez com internet para poder usar sem sinal depois.</p></div>'; status(); return; }
     toast('Sem sinal: mostrando a cópia de ' + fmtDH(em) + '. O que você registrar será enviado depois.', 6000); }
   $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Pendências';
-  if (NV.admin) { $('bListas').hidden = false; $('bListas').onclick = formListas; }
+  if (NV.admin) { $('bListas').hidden = false; $('bListas').textContent = 'Listas e regras'; $('bListas').onclick = () => { location.href = 'listas.html?obra=' + encodeURIComponent(OBRA); }; }
   $('bPdf').onclick = formRelatorio;
   $('bAvisos').onclick = formAvisos; marcarAvisos();
   $('fab').onclick = () => formPend(null);

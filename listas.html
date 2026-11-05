@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Listas e regras das pendências: por obra ou padrão da empresa.">
+<meta name="theme-color" content="#22425c">
+<title>Listas e regras · Pendências</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
+  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
+  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
+  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
+  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:10px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
+  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
+  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
+  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
+  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);padding-bottom:90px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1180px;margin:0 auto;padding:12px 16px}
+.logo{display:block;color:inherit}.logo svg{height:34px;width:auto;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl .kick{font:600 .66rem var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--brand-soft)}
+.ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
+.ttl .obra{font-size:.82rem;color:#d4e4ee}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+main{max-width:1180px;margin:0 auto;padding:16px;display:grid;gap:12px}
+.muted{color:var(--muted);font-size:.88rem}
+.aviso{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:.9rem}
+.ok-box{background:var(--ok-soft);color:var(--ok);border-radius:8px;padding:9px 12px;font-size:.9rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)} .btn.sm{padding:4px 10px;font-size:.8rem} .btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.escopo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:var(--bg);border:0;padding:7px 12px;font:600 .88rem var(--f-body);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.escopo .info{flex:1 1 260px;font-size:.88rem;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:6px 13px;font:600 .86rem var(--f-body);color:var(--muted)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab .n{font:600 .72rem var(--f-mono);margin-left:4px;opacity:.8}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px;min-width:0}
+.box h3{margin:0;font:700 .82rem var(--f-disp);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.itens{display:grid;gap:4px}
+.it{display:grid;grid-template-columns:22px minmax(140px,1fr) auto;gap:6px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px;background:var(--panel)}
+.it.off{opacity:.55}
+.it.arrastando{outline:2px dashed var(--accent)}
+.it .mao{cursor:grab;color:var(--muted);text-align:center;user-select:none;font-size:1.1rem}
+.it input.nm{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;width:100%;font-weight:600}
+.it .ex{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;grid-column:2/-1;font-size:.84rem}
+.it .ex select,.it .ex input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:.84rem}
+.it .ac{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.it .ac button{background:none;border:1px solid var(--line);border-radius:5px;padding:3px 7px;font-size:.8rem;color:var(--muted)}
+.it .ac label{display:flex;gap:4px;align-items:center;font-size:.8rem;color:var(--muted)}
+.uso{font:500 .72rem var(--f-mono);color:var(--muted)}
+.ren{font-size:.76rem;color:var(--warn);grid-column:2/-1}
+.add{display:flex;gap:6px;flex-wrap:wrap}
+.add input{flex:1 1 200px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
+.tbl{overflow:auto}
+table.mx{border-collapse:collapse;font-size:.84rem;min-width:100%}
+table.mx th,table.mx td{border-bottom:1px solid var(--line-2);padding:5px 6px;text-align:center;white-space:nowrap}
+table.mx th:first-child,table.mx td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+table.mx th{font:600 .72rem var(--f-disp);letter-spacing:.04em;color:var(--muted);vertical-align:bottom}
+table.mx td.impl input{opacity:.45}
+.pv{display:grid;grid-template-columns:22px minmax(120px,200px) 1fr auto;gap:6px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px}
+.pv input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;width:100%}
+.pv .ac{display:flex;gap:4px}.pv .ac button{background:none;border:1px solid var(--line);border-radius:5px;padding:3px 7px;font-size:.8rem;color:var(--muted)}
+.ger{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.ger label{display:grid;gap:2px;font:600 .68rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ger select,.ger input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;text-transform:none;letter-spacing:0;font:500 .9rem var(--f-body);color:var(--ink)}
+.tp{border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;display:grid;gap:6px}
+.tp .cab{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tp .cab input{flex:1 1 200px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-weight:600}
+.cor{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:3px 10px;font:600 .8rem var(--f-body);color:var(--muted)}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.quadro{display:grid;gap:6px}
+.qrow{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:start}
+.qrow b{font-size:.84rem;padding-top:4px}
+.un{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 6px;font:600 .78rem var(--f-mono);background:var(--bg);cursor:pointer;margin:0 4px 4px 0}
+.un.exc{border-width:2px;border-color:var(--ink)}
+.un.sem{border-style:dashed;color:var(--muted)}
+.un select{font-size:.78rem}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted);align-items:center}
+.fld{display:grid;gap:4px}
+.fld label{font:600 .7rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fld input,.fld select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%}
+.grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.chk{display:flex;gap:8px;align-items:center;font-size:.92rem}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.avs{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.avs li{padding:7px 10px;border-radius:7px;background:var(--warn-soft);color:var(--warn);font-size:.88rem}
+.avs li.ok{background:var(--ok-soft);color:var(--ok)}
+.sim{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.salvar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:2px solid var(--warn);padding:10px max(16px,env(safe-area-inset-left,0px)) calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.15)}
+.salvar span{margin-right:auto;font-weight:600;color:var(--warn)}
+.overlay{position:fixed;inset:0;background:rgba(6,20,30,.5);display:grid;place-items:center;padding:16px;z-index:40}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:10px;width:min(560px,100%);max-height:calc(100dvh - 32px);display:grid;grid-template-rows:auto 1fr auto}
+.sheet>header{padding:12px 16px;border-bottom:1px solid var(--line)} .sheet>header h3{margin:0;font:700 1.2rem var(--f-disp)}
+.sheet .body{overflow:auto;padding:14px 16px;display:grid;gap:10px} .sheet>footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+@media (max-width:640px){
+  .brand::after{display:none}.ttl{border-left:0;padding-left:0}.hctl{margin-left:0;width:100%}
+  .it{grid-template-columns:22px 1fr}.it .ac{grid-column:1/-1;justify-content:flex-start}
+  .pv{grid-template-columns:22px 1fr}.pv>*{grid-column:2}.pv .mao{grid-column:1;grid-row:1}
+  .qrow{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" aria-label="Início"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="8" fill="none" stroke="currentColor" stroke-opacity=".35"/><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#ffffff"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg></a>
+  <div class="ttl"><span class="kick">Pendências de obra</span><h1>Listas e regras</h1><span class="obra" id="obraNome"></span></div>
+  <div class="hctl"><a class="hbtn" id="bVolta" href="index.html">← Pendências</a></div>
+</div></header>
+<main id="main"><p class="muted">Carregando…</p></main>
+<div class="salvar" id="barra" hidden><span>Alterações não salvas</span><button class="btn ghost" id="bDesc" type="button">Descartar</button><button class="btn" id="bSalvar" type="button">Salvar alterações</button></div>
+<div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true"><header><h3 id="ovlT"></h3></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script src="nuvem.js"></script>
+<script src="listas-comum.js"></script>
+<script>
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const LO = window.ListasObra;
+const clone = o => JSON.parse(JSON.stringify(o));
+const CORES = ['#2f7fb8', '#d9701c', '#2f9a59', '#7b52b0', '#c23b2f', '#11a3a3', '#b54d86', '#8a9a1e', '#4d6a80', '#e39b1c'];
+const ROT = { problema: 'Tipos de problema', comodo: 'Cômodos', servico: 'Serviços que podem ser travados', local: 'Tipos de local', disciplina: 'Disciplinas (responsável pela correção)' };
+const CAMPO = { problema: 'tipo', comodo: 'comodo', servico: 'servico', local: 'local_tipo', disciplina: 'disciplina' };
+const LISTAS4 = ['problema', 'comodo', 'servico', 'local'];
+const OBRIG = [['descricao', 'Descrição'], ['causador', 'Responsável pelo problema'], ['prazo', 'Prazo'], ['observacoes', 'Observações'], ['ponto', 'Local na planta (quando houver planta)'], ['bloqueios', 'Serviços travados']];
+const PRI = [['critica', 'Crítica'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']];
+
+let NV = null, sb = null, OBRA = new URLSearchParams(location.search).get('obra') || '', OBRA_NOME = '';
+let PADRAO = null, CFG = null, PLANTAS = [], USO = [], OBRAS = [];
+let ESC = OBRA ? 'obra' : 'padrao', ABA = 'problema';
+let ED = null;         // cópia em edição: {listas:{problema,comodo,servico,local}, disciplina:[...], pavimentos, regras, listasMudou}
+let RENOMES = [];      // {campo, de, para, global}
+let SUJO = false;
+
+/* ---------------- carregar ---------------- */
+async function carregar() {
+  const [lp, uso] = await Promise.all([sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
+    sb.from('pendencias').select('obra,tipo,comodo,local_tipo,disciplina,pavimento,bloqueios')]);
+  if (lp.error) throw lp.error;
+  PADRAO = LO.deTabela(lp.data); USO = uso.error ? [] : (uso.data || []);
+  if (OBRA) {
+    let c = await sb.from('pend_config').select('pavimentos,regras,listas').eq('obra', OBRA).maybeSingle();
+    if (c.error) { c = await sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle(); if (c.data) c.data.semColunas = true; }
+    CFG = Object.assign({ pavimentos: [], regras: {}, listas: null }, c.data || {});
+    const o = await NV.obras.obter(OBRA); OBRA_NOME = o ? o.nome : OBRA;
+    const pl = await sb.from('pend_plantas').select('pavimento').eq('obra', OBRA); PLANTAS = pl.error ? [] : (pl.data || []).map(x => x.pavimento);
+  }
+  try { OBRAS = await NV.obras.listar(); } catch (e) { OBRAS = []; }
+  iniciarEdicao();
+}
+function iniciarEdicao() {
+  const base = ESC === 'obra' && CFG && CFG.listas ? LO.efetivas(PADRAO, CFG.listas) : PADRAO;
+  const marca = arr => arr.map(x => Object.assign(clone(x), { _orig: x.valor }));
+  ED = { listas: {}, disciplina: marca(PADRAO.disciplina), listasMudou: false,
+    pavimentos: CFG ? clone(CFG.pavimentos || []).map(p => Object.assign(p, { _orig: p.nome })) : [],
+    regras: CFG ? LO.normRegras(CFG.regras) : LO.normRegras({}) };
+  for (const t of LISTAS4) ED.listas[t] = marca(base[t]);
+  RENOMES = []; sujo(false);
+}
+function sujo(v) { SUJO = v; $('barra').hidden = !v; }
+const lista = t => t === 'disciplina' ? ED.disciplina : ED.listas[t];
+const ativosDe = t => lista(t).filter(x => x.ativo !== false).map(x => x.valor);
+function usoDe(t, v) {
+  const daObra = p => ESC !== 'obra' || p.obra === OBRA;
+  if (t === 'servico') return USO.filter(p => daObra(p) && (p.bloqueios || []).some(b => b.servico === v)).length;
+  return USO.filter(p => (t === 'disciplina' || daObra(p)) && p[CAMPO[t]] === v).length;
+}
+
+/* ---------------- tela ---------------- */
+function render() {
+  const abas = [['problema', 'Problemas'], ['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais'], ['disciplina', 'Disciplinas']]
+    .concat(ESC === 'obra' ? [['pavs', 'Pavimentos e unidades'], ['tipos', 'Tipologias'], ['regras', 'Regras'], ['conferir', 'Conferir e simular']] : []).concat([['planilha', 'Planilha']]);
+  if (!abas.some(a => a[0] === ABA)) ABA = 'problema';
+  const nAv = ESC === 'obra' ? avisos().filter(a => !a.ok).length : 0;
+  $('main').innerHTML = `
+    <div class="escopo"><div class="seg" role="group" aria-label="Escopo">${OBRA ? `<button data-esc="obra" aria-pressed="${ESC === 'obra'}">Esta obra: ${esc(OBRA_NOME)}</button>` : ''}<button data-esc="padrao" aria-pressed="${ESC === 'padrao'}">Padrão da empresa</button></div>
+      <span class="info">${ESC === 'padrao' ? 'O padrão vale para as obras que não têm listas próprias e é a base de toda obra nova. As disciplinas são sempre do padrão (os cargos dos encarregados valem para todas as obras).'
+        : CFG.listas ? 'Esta obra tem <b>listas próprias</b> (problemas, cômodos, serviços e locais). Pavimentos, tipologias e regras são sempre da obra.'
+        : 'Esta obra usa as listas do <b>padrão da empresa</b>. Ao mudar problemas, cômodos, serviços ou locais aqui, ela passa a ter listas próprias.'}</span>
+      ${ESC === 'obra' ? `<button class="btn sm ghost" id="bCopiar" type="button">Copiar de outra obra…</button>${CFG.listas ? '<button class="btn sm ghost" id="bPadrao" type="button">Voltar ao padrão da empresa</button>' : ''}` : ''}</div>
+    ${CFG && CFG.semColunas && ESC === 'obra' ? '<div class="aviso">Rode os arquivos <b>atualizacao-tipologias.sql</b> e <b>atualizacao-listas.sql</b> no Supabase para salvar listas e regras desta obra.</div>' : ''}
+    <div class="tabs">${abas.map(([k, t]) => `<button class="tab" data-aba="${k}" aria-pressed="${ABA === k}">${t}${k === 'conferir' && nAv ? `<span class="n">${nAv}</span>` : ''}</button>`).join('')}</div>
+    <div id="corpo"></div>`;
+  $('main').querySelectorAll('[data-esc]').forEach(b => b.onclick = () => { if (b.dataset.esc === ESC) return; if (SUJO && !confirm('Descartar as alterações não salvas?')) return; ESC = b.dataset.esc; iniciarEdicao(); render(); });
+  $('main').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => { ABA = b.dataset.aba; render(); });
+  if ($('bCopiar')) $('bCopiar').onclick = formCopiar;
+  if ($('bPadrao')) $('bPadrao').onclick = () => { if (!confirm('Voltar esta obra às listas do padrão da empresa? As listas próprias dela deixam de valer (pavimentos, tipologias e regras continuam).')) return;
+    for (const t of LISTAS4) ED.listas[t] = PADRAO[t].map(x => Object.assign(clone(x), { _orig: x.valor })); ED.listasMudou = 'padrao'; sujo(true); render(); };
+  if (LISTAS4.includes(ABA) || ABA === 'disciplina') telaLista(ABA);
+  else if (ABA === 'pavs') telaPavs(); else if (ABA === 'tipos') telaTipos(); else if (ABA === 'regras') telaRegras(); else if (ABA === 'conferir') telaConferir(); else telaPlanilha();
+}
+
+/* ---------------- listas (problemas, cômodos, serviços, locais, disciplinas) ---------------- */
+function telaLista(t) {
+  const L = lista(t);
+  const discs = ED.disciplina.filter(x => x.ativo !== false).map(x => x.valor);
+  $('corpo').innerHTML = `<div class="box"><h3>${ROT[t]}${t === 'disciplina' ? ' · padrão da empresa' : ''}</h3>
+    <p class="muted" style="margin:0">Arraste (⋮⋮) ou use ↑ ↓ para mudar a ordem. <b>Desativar</b> tira do formulário, mas mantém nas pendências antigas e nos filtros. Renomear atualiza as pendências que já usam o nome${t === 'disciplina' ? ' (em todas as obras) e os encarregados' : ''}. Só dá para apagar o que nunca foi usado.</p>
+    <div class="itens" id="itens">${L.map((x, i) => { const u = usoDe(t, x._orig || x.valor);
+      return `<div class="it${x.ativo === false ? ' off' : ''}" draggable="true" data-i="${i}">
+        <span class="mao" title="Arrastar">⋮⋮</span><input class="nm" data-nm="${i}" value="${esc(x.valor)}" aria-label="Nome">
+        <span class="ac"><span class="uso">${u ? 'usado em ' + u : 'sem uso'}</span><label><input type="checkbox" data-at="${i}" ${x.ativo !== false ? 'checked' : ''}> ativo</label>
+          <button type="button" data-up="${i}" aria-label="Subir">↑</button><button type="button" data-dn="${i}" aria-label="Descer">↓</button>${u ? '' : `<button type="button" data-rm="${i}" aria-label="Apagar">✕</button>`}</span>
+        ${t === 'problema' ? `<span class="ex">Disciplina sugerida <select data-dsug="${i}"><option value="">—</option>${discs.concat(x.extra.disciplina && !discs.includes(x.extra.disciplina) ? [x.extra.disciplina] : []).map(d => `<option ${d === x.extra.disciplina ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
+          <label><input type="checkbox" data-seg="${i}" ${x.extra.seguranca || x.extra.disciplina === 'Segurança' ? 'checked' : ''}> é de segurança</label></span>` : ''}
+        ${t === 'disciplina' ? `<span class="ex">Grupo (disciplinas complementares) <input type="text" data-grp="${i}" value="${esc(x.extra.grupo || '')}" placeholder="ex.: Drywall e forro"></span>` : ''}
+        ${x._orig && x._orig !== x.valor ? `<span class="ren">Era “${esc(x._orig)}”: ${u} pendência(s) serão atualizadas ao salvar.</span>` : ''}
+      </div>`; }).join('')}</div>
+    <div class="add"><input id="novo" placeholder="Novo item…" aria-label="Novo item"><button class="btn sm" id="bAdd" type="button">+ Adicionar</button></div></div>`;
+  const C = $('corpo');
+  const mudou = () => { if (t !== 'disciplina') ED.listasMudou = ED.listasMudou || true; sujo(true); };
+  C.querySelectorAll('[data-nm]').forEach(inp => inp.onchange = () => { const x = L[+inp.dataset.nm], v = inp.value.trim(); if (!v) { inp.value = x.valor; return; }
+    if (L.some((y, j) => j !== +inp.dataset.nm && y.valor === v)) { toast('Já existe “' + v + '” nesta lista.'); inp.value = x.valor; return; }
+    renomearDentro(t, x.valor, v); x.valor = v; mudou(); telaLista(t); });
+  C.querySelectorAll('[data-at]').forEach(c => c.onchange = () => { L[+c.dataset.at].ativo = c.checked; mudou(); telaLista(t); });
+  C.querySelectorAll('[data-up]').forEach(b => b.onclick = () => mover(L, +b.dataset.up, -1, t, mudou));
+  C.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => mover(L, +b.dataset.dn, 1, t, mudou));
+  C.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { L.splice(+b.dataset.rm, 1); mudou(); telaLista(t); });
+  C.querySelectorAll('[data-dsug]').forEach(s => s.onchange = () => { L[+s.dataset.dsug].extra.disciplina = s.value || undefined; mudou(); });
+  C.querySelectorAll('[data-seg]').forEach(s => s.onchange = () => { L[+s.dataset.seg].extra.seguranca = s.checked; mudou(); });
+  C.querySelectorAll('[data-grp]').forEach(s => s.onchange = () => { const g = s.value.trim(); if (g) L[+s.dataset.grp].extra.grupo = g; else delete L[+s.dataset.grp].extra.grupo; mudou(); });
+  const add = () => { const v = $('novo').value.trim(); if (!v) return; if (L.some(y => y.valor === v)) { toast('Já existe.'); return; } L.push({ valor: v, ordem: L.length + 1, extra: {}, ativo: true }); mudou(); telaLista(t); $('novo').focus(); };
+  $('bAdd').onclick = add; $('novo').onkeydown = e => { if (e.key === 'Enter') add(); };
+  arrastar(C.querySelector('#itens'), '.it', (de, para) => { const [x] = L.splice(de, 1); L.splice(para, 0, x); mudou(); telaLista(t); });
+}
+function mover(L, i, d, t, mudou) { const j = i + d; if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; mudou(); telaLista(t); }
+// arrastar para reordenar (computador); no celular, ↑ ↓
+function arrastar(box, sel, fn) {
+  if (!box) return; let de = null;
+  box.querySelectorAll(sel).forEach(el => {
+    el.addEventListener('dragstart', e => { de = +el.dataset.i; el.classList.add('arrastando'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(de)); } catch (x) {} });
+    el.addEventListener('dragend', () => el.classList.remove('arrastando'));
+    el.addEventListener('dragover', e => { e.preventDefault(); });
+    el.addEventListener('drop', e => { e.preventDefault(); const para = +el.dataset.i; if (de != null && de !== para) fn(de, para); de = null; });
+  });
+}
+// renomear um item também dentro das regras desta edição (tipologias, locais por pavimento, disciplinas sugeridas)
+function renomearDentro(t, de, para) {
+  RENOMES.push({ campo: CAMPO[t], de, para, global: t === 'disciplina' || ESC === 'padrao' });
+  if (t === 'comodo') for (const tp of ED.regras.tipologias) tp.comodos = tp.comodos.map(c => c === de ? para : c);
+  if (t === 'local') for (const p of ED.pavimentos) if (p.locais) p.locais = p.locais.map(c => c === de ? para : c);
+  if (t === 'disciplina') for (const x of ED.listas.problema) if (x.extra.disciplina === de) x.extra.disciplina = para;
+}
+
+/* ---------------- pavimentos, unidades e locais por pavimento ---------------- */
+function locaisEfetivos(p) { if (p.locais && p.locais.length) return p.locais; const todos = ativosDe('local'); return (p.unidades || []).length ? todos : todos.filter(v => v !== 'Apartamento'); }
+function telaPavs() {
+  const P = ED.pavimentos; const nomes = P.map(p => p.nome);
+  const doModelo = PLANTAS.filter(n => !nomes.includes(n));
+  const locs = ativosDe('local');
+  $('corpo').innerHTML = `<div class="box"><h3>Pavimentos e unidades (de baixo para cima)</h3>
+    <p class="muted" style="margin:0">Use os mesmos nomes do modelo IFC (ex.: “Pavimento 04”) para a planta das pendências funcionar. Unidades separadas por vírgula.</p>
+    <div class="itens" id="pavs">${P.map((p, i) => `<div class="pv" draggable="true" data-i="${i}"><span class="mao" title="Arrastar">⋮⋮</span>
+      <input data-pn="${i}" value="${esc(p.nome)}" aria-label="Nome do pavimento"><input data-pu="${i}" value="${esc((p.unidades || []).join(', '))}" placeholder="sem unidades" aria-label="Unidades">
+      <span class="ac"><span class="uso">${(p.unidades || []).length} un.</span><button type="button" data-pup="${i}">↑</button><button type="button" data-pdn="${i}">↓</button>${USO.some(x => x.obra === OBRA && x.pavimento === (p._orig || p.nome)) ? '' : `<button type="button" data-prm="${i}">✕</button>`}</span></div>`).join('')}</div>
+    <div class="add"><input id="novoPav" placeholder="Novo pavimento (ex.: Pavimento 12)"><button class="btn sm" id="bAddPav" type="button">+ Pavimento</button>
+      ${doModelo.length ? `<button class="btn sm ghost" id="bModelo" type="button">+ ${doModelo.length} pavimento(s) do modelo IFC</button>` : ''}</div></div>
+  <div class="box"><h3>Gerador de unidades</h3>
+    <div class="ger"><label>Do pavimento<select id="gDe">${P.map((p, i) => `<option value="${i}">${esc(p.nome)}</option>`).join('')}</select></label>
+      <label>até<select id="gAte">${P.map((p, i) => `<option value="${i}" ${i === P.length - 1 ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></label>
+      <label>Finais de<input id="gF1" type="number" min="1" max="99" value="1" style="width:70px"></label><label>até<input id="gF2" type="number" min="1" max="99" value="12" style="width:70px"></label>
+      <label class="chk" style="text-transform:none;letter-spacing:0;font:500 .88rem var(--f-body)"><input type="checkbox" id="gSub"> substituir as unidades que já existem</label>
+      <button class="btn sm" id="bGerar" type="button">Gerar</button></div>
+    <p class="muted" style="margin:0">O número é o do pavimento seguido do final: Pavimento 04 + finais 01 a 12 → 401 … 412. Unidades sem número (Zelador, Terraço) entram digitando na linha do pavimento.</p></div>
+  <div class="box"><h3>Locais de cada pavimento</h3>
+    <p class="muted" style="margin:0">Marque os locais que existem em cada pavimento. Linha sem nenhuma marcação própria (marcas apagadas) mostra todos os locais, e “Apartamento” só onde há unidades. <button class="btn sm ghost" id="bLimpaLoc" type="button">Tirar as regras de todos</button></p>
+    <div class="tbl"><table class="mx"><thead><tr><th>Pavimento</th>${locs.map(l => `<th>${esc(l)}</th>`).join('')}<th></th></tr></thead><tbody>
+      ${P.map((p, i) => { const ef = locaisEfetivos(p), reg = !!(p.locais && p.locais.length);
+        return `<tr><td>${esc(p.nome)}</td>${locs.map(l => `<td class="${reg ? '' : 'impl'}"><input type="checkbox" data-lx="${i}" data-l="${esc(l)}" ${ef.includes(l) ? 'checked' : ''} aria-label="${esc(l)} no ${esc(p.nome)}"></td>`).join('')}
+        <td>${reg ? `<button class="btn sm ghost" data-lsem="${i}" type="button">sem regra</button>` : '<span class="muted">todos</span>'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  const C = $('corpo'); const mud = () => { sujo(true); telaPavs(); };
+  C.querySelectorAll('[data-pn]').forEach(i => i.onchange = () => { const p = P[+i.dataset.pn], v = i.value.trim(); if (!v || P.some((q, j) => j !== +i.dataset.pn && q.nome === v)) { i.value = p.nome; toast('Nome vazio ou repetido.'); return; }
+    RENOMES.push({ campo: 'pavimento', de: p.nome, para: v, global: false }); p.nome = v; mud(); });
+  C.querySelectorAll('[data-pu]').forEach(i => i.onchange = () => { P[+i.dataset.pu].unidades = [...new Set(i.value.split(',').map(x => x.trim()).filter(Boolean))]; mud(); });
+  C.querySelectorAll('[data-pup]').forEach(b => b.onclick = () => { const k = +b.dataset.pup; if (k > 0) { [P[k - 1], P[k]] = [P[k], P[k - 1]]; mud(); } });
+  C.querySelectorAll('[data-pdn]').forEach(b => b.onclick = () => { const k = +b.dataset.pdn; if (k < P.length - 1) { [P[k + 1], P[k]] = [P[k], P[k + 1]]; mud(); } });
+  C.querySelectorAll('[data-prm]').forEach(b => b.onclick = () => { if (confirm('Tirar o ' + P[+b.dataset.prm].nome + '?')) { P.splice(+b.dataset.prm, 1); mud(); } });
+  arrastar(C.querySelector('#pavs'), '.pv', (de, para) => { const [x] = P.splice(de, 1); P.splice(para, 0, x); mud(); });
+  const addPav = () => { const v = $('novoPav').value.trim(); if (!v || P.some(p => p.nome === v)) return; P.push({ nome: v, unidades: [] }); mud(); };
+  $('bAddPav').onclick = addPav; $('novoPav').onkeydown = e => { if (e.key === 'Enter') addPav(); };
+  if ($('bModelo')) $('bModelo').onclick = () => { for (const n of doModelo) P.push({ nome: n, unidades: [] }); mud(); toast(doModelo.length + ' pavimento(s) adicionados. Ajuste a ordem se precisar.'); };
+  $('bGerar').onclick = () => { const a = +$('gDe').value, b = +$('gAte').value, f1 = +$('gF1').value, f2 = +$('gF2').value; if (!(f1 >= 1 && f2 >= f1)) { toast('Finais inválidos.'); return; }
+    let n = 0, sem = [];
+    for (let i = Math.min(a, b); i <= Math.max(a, b); i++) { const p = P[i]; const num = LO.numeroPav(p.nome); if (num == null) { sem.push(p.nome); continue; }
+      const novos = []; for (let f = f1; f <= f2; f++) novos.push(String(num * 100 + f)); const todas = $('gSub').checked ? novos : [...new Set((p.unidades || []).concat(novos))];
+      // números em ordem; unidades com nome (Zelador, Terraço) no fim
+      p.unidades = todas.filter(x => /^\d+$/.test(x)).sort((a, z) => a - z).concat(todas.filter(x => !/^\d+$/.test(x))); n += novos.length; }
+    mud(); toast(n + ' unidade(s) geradas' + (sem.length ? '. Sem número no nome (ignorados): ' + sem.join(', ') : '.'), 6000); };
+  C.querySelectorAll('[data-lx]').forEach(c => c.onchange = () => { const p = P[+c.dataset.lx]; const ef = new Set(locaisEfetivos(p)); if (c.checked) ef.add(c.dataset.l); else ef.delete(c.dataset.l);
+    p.locais = ativosDe('local').filter(l => ef.has(l)).concat((p.locais || []).filter(l => !ativosDe('local').includes(l) && ef.has(l))); mud(); });
+  C.querySelectorAll('[data-lsem]').forEach(b => b.onclick = () => { delete P[+b.dataset.lsem].locais; mud(); });
+  $('bLimpaLoc').onclick = () => { if (!confirm('Tirar a regra de locais de todos os pavimentos?')) return; P.forEach(p => delete p.locais); mud(); };
+}
+
+/* ---------------- tipologias: cômodos por tipo de apartamento ---------------- */
+const corTip = id => CORES[Math.max(0, ED.regras.tipologias.findIndex(t => t.id === id)) % CORES.length];
+const todasUnidades = () => ED.pavimentos.flatMap(p => (p.unidades || []).map(u => ({ u, pav: p.nome })));
+function telaTipos() {
+  const R = ED.regras; const T = R.tipologias; const coms = ativosDe('comodo');
+  const finais = [...new Set(todasUnidades().map(x => LO.finalDe(x.u)).filter(Boolean))].sort();
+  $('corpo').innerHTML = `<div class="box"><h3>Tipologias de apartamento</h3>
+    <p class="muted" style="margin:0">Cada tipologia tem os seus cômodos. Ligue as tipologias aos finais (abaixo) e marque exceções unidade por unidade no quadro.</p>
+    ${T.map((t, i) => `<div class="tp"><div class="cab"><span class="cor" style="background:${corTip(t.id)}"></span><input data-tn="${i}" value="${esc(t.nome)}" aria-label="Nome da tipologia">
+      <span class="uso">${todasUnidades().filter(x => LO.tipologiaDe(R, x.u) === t).length} un.</span><button class="btn sm danger" data-trm="${i}" type="button">Apagar</button></div>
+      <div class="chips">${coms.concat(t.comodos.filter(c => !coms.includes(c))).map(c => `<button type="button" data-tc="${i}" data-c="${esc(c)}" aria-pressed="${t.comodos.includes(c)}">${esc(c)}</button>`).join('')}</div></div>`).join('') || '<p class="muted" style="margin:0">Nenhuma tipologia ainda.</p>'}
+    <div class="add"><input id="novaTip" placeholder="Nova tipologia (ex.: Tipo A – suíte + 1 dorm.)"><button class="btn sm" id="bAddTip" type="button">+ Tipologia</button></div></div>
+  <div class="box"><h3>Por final do apartamento</h3>
+    ${finais.length ? `<div class="grid4">${finais.map(f => `<div class="fld"><label>Final ${f}</label><select data-fin="${f}"><option value="">— sem tipologia</option>${T.map(t => `<option value="${t.id}" ${R.finais[f] === t.id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></div>`).join('')}</div>`
+      : '<p class="muted" style="margin:0">Cadastre as unidades em “Pavimentos e unidades” primeiro.</p>'}</div>
+  <div class="box"><h3>Quadro: pavimento × apartamento</h3>
+    <div class="leg">${T.map(t => `<span><span class="cor" style="background:${corTip(t.id)}"></span> ${esc(t.nome)}</span>`).join('')}<span><span class="un sem">tracejado</span> sem tipologia (mostra todos os cômodos)</span><span><span class="un exc">borda grossa</span> exceção</span></div>
+    <p class="muted" style="margin:0">Toque numa unidade para mudar a tipologia só dela.</p>
+    <div class="quadro">${ED.pavimentos.filter(p => (p.unidades || []).length).map(p => `<div class="qrow"><b>${esc(p.nome)}</b><div>${p.unidades.map(u => { const tp = LO.tipologiaDe(R, u), exc = !!R.unidades[u];
+      return `<span class="un${tp ? '' : ' sem'}${exc ? ' exc' : ''}" data-un="${esc(u)}" role="button" tabindex="0" title="${esc(tp ? tp.nome : 'sem tipologia')}${exc ? ' (exceção)' : ''}" ${tp ? `style="border-color:${corTip(tp.id)};color:${corTip(tp.id)}"` : ''}>${esc(u)}</span>`; }).join('')}</div></div>`).join('') || '<p class="muted" style="margin:0">Nenhuma unidade cadastrada.</p>'}</div></div>`;
+  const C = $('corpo'); const mud = () => { sujo(true); telaTipos(); };
+  C.querySelectorAll('[data-tn]').forEach(i => i.onchange = () => { const v = i.value.trim(); if (v) { T[+i.dataset.tn].nome = v; sujo(true); } });
+  C.querySelectorAll('[data-trm]').forEach(b => b.onclick = () => { const t = T[+b.dataset.trm]; if (!confirm('Apagar a tipologia “' + t.nome + '”? As unidades ligadas a ela ficam sem tipologia.')) return;
+    T.splice(+b.dataset.trm, 1); for (const k of Object.keys(R.finais)) if (R.finais[k] === t.id) delete R.finais[k]; for (const k of Object.keys(R.unidades)) if (R.unidades[k] === t.id) delete R.unidades[k]; mud(); });
+  C.querySelectorAll('[data-tc]').forEach(b => b.onclick = () => { const t = T[+b.dataset.tc], c = b.dataset.c; const k = t.comodos.indexOf(c); if (k >= 0) t.comodos.splice(k, 1); else { t.comodos.push(c); t.comodos.sort((a, z) => coms.indexOf(a) - coms.indexOf(z)); } mud(); });
+  const addTip = () => { const v = $('novaTip').value.trim(); if (!v) return; T.push({ id: 't' + Date.now().toString(36), nome: v, comodos: [] }); mud(); };
+  $('bAddTip').onclick = addTip; $('novaTip').onkeydown = e => { if (e.key === 'Enter') addTip(); };
+  C.querySelectorAll('[data-fin]').forEach(s => s.onchange = () => { if (s.value) R.finais[s.dataset.fin] = s.value; else delete R.finais[s.dataset.fin]; mud(); });
+  C.querySelectorAll('[data-un]').forEach(el => { const abrir = () => { const u = el.dataset.un; const pelo = R.finais[LO.finalDe(u)]; const tf = T.find(t => t.id === pelo);
+    el.innerHTML = `<select aria-label="Tipologia de ${esc(u)}"><option value="">${esc(u)}: seguir o final (${esc(tf ? tf.nome : 'sem tipologia')})</option>${T.map(t => `<option value="${t.id}" ${R.unidades[u] === t.id ? 'selected' : ''}>${esc(u)}: ${esc(t.nome)}</option>`).join('')}</select>`;
+    const s = el.querySelector('select'); s.focus(); s.onchange = () => { if (s.value) R.unidades[u] = s.value; else delete R.unidades[u]; mud(); }; s.onblur = () => setTimeout(telaTipos, 150); el.onclick = null; };
+    el.onclick = abrir; el.onkeydown = e => { if (e.key === 'Enter') abrir(); }; });
+}
+
+/* ---------------- regras: prazos e campos obrigatórios ---------------- */
+function telaRegras() {
+  const R = ED.regras;
+  $('corpo').innerHTML = `<div class="box"><h3>Prazo sugerido por prioridade (dias)</h3>
+    <div class="grid4">${PRI.map(([k, n]) => `<div class="fld"><label for="pz_${k}">${n}</label><input id="pz_${k}" type="number" min="0" max="365" value="${R.prazos[k]}" data-pz="${k}"></div>`).join('')}</div>
+    <p class="muted" style="margin:0">Ao escolher a prioridade, o prazo da pendência é preenchido com hoje + estes dias (dá para mudar na hora).</p></div>
+  <div class="box"><h3>Campos obrigatórios nesta obra</h3>
+    <p class="muted" style="margin:0">Fotos do antes, pavimento, local, apartamento e cômodo, tipo, responsável pela correção e prioridade são sempre obrigatórios. Marque os outros que esta obra exige.</p>
+    ${OBRIG.map(([k, n]) => `<label class="chk"><input type="checkbox" data-ob="${k}" ${R.obrigatorios[k] ? 'checked' : ''}> ${n}</label>`).join('')}</div>`;
+  $('corpo').querySelectorAll('[data-pz]').forEach(i => i.onchange = () => { const v = Math.max(0, Math.min(365, parseInt(i.value, 10) || 0)); R.prazos[i.dataset.pz] = v; i.value = v; sujo(true); });
+  $('corpo').querySelectorAll('[data-ob]').forEach(c => c.onchange = () => { R.obrigatorios[c.dataset.ob] = c.checked; sujo(true); });
+}
+
+/* ---------------- conferir e simular ---------------- */
+function avisos() {
+  if (!ED || ESC !== 'obra') return [];
+  const R = ED.regras, out = []; const uns = todasUnidades();
+  const semTip = uns.filter(x => LO.finalDe(x.u) && !LO.tipologiaDe(R, x.u));
+  if (R.tipologias.length && semTip.length) out.push({ t: semTip.length + ' apartamento(s) com número sem tipologia (mostram todos os cômodos): ' + semTip.slice(0, 12).map(x => x.u).join(', ') + (semTip.length > 12 ? '…' : '') });
+  for (const t of R.tipologias) { if (!t.comodos.length) out.push({ t: 'A tipologia “' + t.nome + '” não tem cômodos.' }); const inat = t.comodos.filter(c => !ativosDe('comodo').includes(c)); if (inat.length) out.push({ t: 'A tipologia “' + t.nome + '” usa cômodo(s) desativado(s) ou fora da lista: ' + inat.join(', ') }); }
+  const comRegra = ED.pavimentos.filter(p => p.locais && p.locais.length);
+  if (comRegra.length) { const usados = new Set(comRegra.flatMap(p => p.locais)); const nunca = ativosDe('local').filter(l => !usados.has(l) && ED.pavimentos.every(p => p.locais && p.locais.length)); if (nunca.length) out.push({ t: 'Local que não aparece em nenhum pavimento: ' + nunca.join(', ') }); }
+  for (const p of ED.pavimentos) { if (p.locais && p.locais.includes('Apartamento') && !(p.unidades || []).length) out.push({ t: p.nome + ' tem “Apartamento” nos locais, mas nenhuma unidade cadastrada.' }); if ((p.unidades || []).length && p.locais && p.locais.length && !p.locais.includes('Apartamento')) out.push({ t: p.nome + ' tem unidades, mas “Apartamento” não está nos locais dele.' }); }
+  const semDisc = ED.listas.problema.filter(x => x.ativo !== false && !x.extra.disciplina); if (semDisc.length) out.push({ t: 'Tipo(s) de problema sem disciplina sugerida: ' + semDisc.map(x => x.valor).join(', ') });
+  if (ED.pavimentos.length && PLANTAS.length) { const fora = ED.pavimentos.filter(p => !PLANTAS.includes(p.nome)).map(p => p.nome); if (fora.length) out.push({ t: 'Pavimento(s) sem planta (nome diferente do modelo IFC?): ' + fora.join(', ') }); }
+  if (!out.length) out.push({ ok: true, t: 'Nenhum problema encontrado na configuração.' });
+  return out;
+}
+function telaConferir() {
+  const P = ED.pavimentos;
+  $('corpo').innerHTML = `<div class="box"><h3>Conferência</h3><ul class="avs">${avisos().map(a => `<li class="${a.ok ? 'ok' : ''}">${esc(a.t)}</li>`).join('')}</ul></div>
+  <div class="box"><h3>Simular o formulário</h3><p class="muted" style="margin:0">Veja as opções que a equipe vai ter (com as alterações ainda não salvas).</p>
+    <div class="sim"><div class="fld"><label for="sPav">Pavimento</label><select id="sPav"><option value="">Escolha…</option>${P.map(p => `<option>${esc(p.nome)}</option>`).join('')}</select></div>
+      <div class="fld"><label for="sLoc">Local</label><select id="sLoc" disabled></select></div>
+      <div class="fld"><label for="sUn">Apartamento</label><select id="sUn" disabled></select></div></div>
+    <div id="sRes" class="muted"></div></div>`;
+  const pav = () => P.find(p => p.nome === $('sPav').value);
+  $('sPav').onchange = () => { const p = pav(); $('sLoc').innerHTML = p ? '<option value="">Escolha…</option>' + locaisEfetivos(p).map(l => `<option>${esc(l)}</option>`).join('') : ''; $('sLoc').disabled = !p; $('sUn').innerHTML = ''; $('sUn').disabled = true;
+    $('sRes').innerHTML = p ? 'Locais disponíveis: <b>' + locaisEfetivos(p).map(esc).join(', ') + '</b>' + (p.locais && p.locais.length ? '' : ' (sem regra própria)') : ''; };
+  $('sLoc').onchange = () => { const p = pav(); const ap = $('sLoc').value === 'Apartamento'; $('sUn').disabled = !ap;
+    $('sUn').innerHTML = ap ? '<option value="">Escolha…</option>' + (p.unidades || []).map(u => `<option>${esc(u)}</option>`).join('') : ''; if (!ap) $('sRes').innerHTML = $('sLoc').value ? 'Sem apartamento: não pede cômodo.' : ''; };
+  $('sUn').onchange = () => { const u = $('sUn').value; if (!u) return; const tp = LO.tipologiaDe(ED.regras, u);
+    $('sRes').innerHTML = (tp ? 'Tipologia <b>' + esc(tp.nome) + '</b>' + (ED.regras.unidades[u] ? ' (exceção desta unidade)' : ' (pelo final ' + LO.finalDe(u) + ')') : 'Sem tipologia') + ' · cômodos: <b>' + (tp ? tp.comodos : ativosDe('comodo')).map(esc).join(', ') + '</b>'; };
+}
+
+/* ---------------- planilha (Excel): exportar e importar ---------------- */
+const carregarScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('não foi possível carregar ' + src)); document.head.appendChild(s); });
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const simNao = v => v ? 'sim' : 'não';
+const ehSim = v => /^(s|sim|x|1|true|verdadeiro)$/i.test(String(v || '').trim());
+function telaPlanilha() {
+  $('corpo').innerHTML = `<div class="box"><h3>Planilha</h3>
+    <p class="muted" style="margin:0">Baixe as listas${ESC === 'obra' ? ', os pavimentos, as unidades e as tipologias desta obra' : ' do padrão da empresa'} em Excel, edite na planilha e suba de volta. Ao subir, o que estiver na planilha substitui o que está aqui (você confere antes de salvar).</p>
+    <div class="add"><button class="btn" id="bExp" type="button">Baixar planilha</button><label class="btn ghost" style="cursor:pointer">Subir planilha<input type="file" id="fImp" accept=".xlsx,.xls" hidden></label></div>
+    <p class="muted" style="margin:0">Abas da planilha: Problemas (Nome, Disciplina sugerida, Segurança, Ativo) · Cômodos · Serviços · Locais (Nome, Ativo)${ESC === 'obra' ? ' · Pavimentos (Pavimento, Unidades, Locais) · Tipologias (Tipologia, Cômodos, Finais) · Exceções (Unidade, Tipologia)' : ' · Disciplinas (Nome, Grupo, Ativo)'}.</p></div>`;
+  $('bExp').onclick = exportar; $('fImp').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importar(f); };
+}
+async function exportar() {
+  if (!window.XLSX) await carregarScript(XLSX_URL);
+  const wb = XLSX.utils.book_new(); const add = (nome, linhas) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(linhas), nome);
+  add('Problemas', [['Nome', 'Disciplina sugerida', 'Segurança', 'Ativo']].concat(ED.listas.problema.map(x => [x.valor, x.extra.disciplina || '', simNao(x.extra.seguranca || x.extra.disciplina === 'Segurança'), simNao(x.ativo !== false)])));
+  for (const [t, n] of [['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais']]) add(n, [['Nome', 'Ativo']].concat(ED.listas[t].map(x => [x.valor, simNao(x.ativo !== false)])));
+  if (ESC === 'obra') {
+    add('Pavimentos', [['Pavimento', 'Unidades', 'Locais']].concat(ED.pavimentos.map(p => [p.nome, (p.unidades || []).join(', '), (p.locais || []).join(', ')])));
+    add('Tipologias', [['Tipologia', 'Cômodos', 'Finais']].concat(ED.regras.tipologias.map(t => [t.nome, t.comodos.join(', '), LO.finaisTxt(Object.keys(ED.regras.finais).filter(f => ED.regras.finais[f] === t.id))])));
+    add('Exceções', [['Unidade', 'Tipologia']].concat(Object.entries(ED.regras.unidades).map(([u, id]) => [u, (ED.regras.tipologias.find(t => t.id === id) || {}).nome || ''])));
+  } else add('Disciplinas', [['Nome', 'Grupo', 'Ativo']].concat(ED.disciplina.map(x => [x.valor, x.extra.grupo || '', simNao(x.ativo !== false)])));
+  XLSX.writeFile(wb, (ESC === 'obra' ? 'listas-' + OBRA : 'listas-padrao') + '.xlsx');
+}
+async function importar(f) {
+  try {
+    if (!window.XLSX) await carregarScript(XLSX_URL);
+    const wb = XLSX.read(await f.arrayBuffer()); const aba = n => { const s = wb.Sheets[n]; return s ? XLSX.utils.sheet_to_json(s, { defval: '' }) : null; };
+    const lista2 = (rows, ext) => rows.filter(r => String(r.Nome || '').trim()).map((r, i) => ({ valor: String(r.Nome).trim(), ordem: i + 1, extra: ext ? ext(r) : {}, ativo: r.Ativo === '' ? true : ehSim(r.Ativo) }));
+    const rs = []; let r;
+    if ((r = aba('Problemas'))) { ED.listas.problema = lista2(r, x => { const e = {}; if (String(x['Disciplina sugerida']).trim()) e.disciplina = String(x['Disciplina sugerida']).trim(); if (ehSim(x['Segurança'])) e.seguranca = true; return e; }); rs.push('problemas'); }
+    for (const [t, n] of [['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais']]) if ((r = aba(n))) { ED.listas[t] = lista2(r); rs.push(n.toLowerCase()); }
+    if (rs.length) ED.listasMudou = true;
+    if (ESC === 'obra') {
+      if ((r = aba('Pavimentos'))) { ED.pavimentos = r.filter(x => String(x.Pavimento).trim()).map(x => { const p = { nome: String(x.Pavimento).trim(), unidades: String(x.Unidades).split(',').map(s => s.trim()).filter(Boolean) }; const l = String(x.Locais).split(',').map(s => s.trim()).filter(Boolean); if (l.length) p.locais = l; return p; }); rs.push('pavimentos'); }
+      if ((r = aba('Tipologias'))) { const R = ED.regras; R.tipologias = []; R.finais = {};
+        r.filter(x => String(x.Tipologia).trim()).forEach((x, i) => { const id = 't' + Date.now().toString(36) + i; R.tipologias.push({ id, nome: String(x.Tipologia).trim(), comodos: String(x['Cômodos']).split(',').map(s => s.trim()).filter(Boolean) }); LO.lerFinais(String(x.Finais)).forEach(fi => { R.finais[fi] = id; }); }); rs.push('tipologias'); }
+      if ((r = aba('Exceções'))) { const R = ED.regras; R.unidades = {}; for (const x of r) { const t = R.tipologias.find(t => t.nome === String(x.Tipologia).trim()); if (t && String(x.Unidade).trim()) R.unidades[String(x.Unidade).trim()] = t.id; } rs.push('exceções'); }
+    } else if ((r = aba('Disciplinas'))) { ED.disciplina = lista2(r, x => String(x.Grupo).trim() ? { grupo: String(x.Grupo).trim() } : {}); rs.push('disciplinas'); }
+    if (!rs.length) { toast('Nenhuma aba conhecida na planilha.', 6000); return; }
+    sujo(true); render(); toast('Planilha lida (' + rs.join(', ') + '). Confira e clique em “Salvar alterações”.', 7000);
+  } catch (e) { toast('Não foi possível ler a planilha: ' + e.message, 7000); }
+}
+
+/* ---------------- copiar de outra obra ---------------- */
+function formCopiar() {
+  const outras = OBRAS.filter(o => o.id !== OBRA);
+  $('ovlT').textContent = 'Copiar de outra obra';
+  $('ovlB').innerHTML = outras.length ? `<div class="fld"><label for="cpO">Obra de origem</label><select id="cpO">${outras.map(o => `<option value="${esc(o.id)}">${esc(o.nome)}</option>`).join('')}</select></div>
+    <label class="chk"><input type="checkbox" id="cpL" checked> Listas (problemas, cômodos, serviços, locais)</label>
+    <label class="chk"><input type="checkbox" id="cpP"> Pavimentos, unidades e locais por pavimento</label>
+    <label class="chk"><input type="checkbox" id="cpT" checked> Tipologias, prazos e campos obrigatórios</label>
+    <p class="muted" style="margin:0">O que for copiado substitui o desta obra. Você confere antes de salvar.</p>` : '<p class="muted">Não há outras obras.</p>';
+  $('ovlF').innerHTML = '<span class="msg" id="cpM"></span><button class="btn ghost" id="cpC" type="button">Cancelar</button>' + (outras.length ? '<button class="btn" id="cpOk" type="button">Copiar</button>' : '');
+  $('ovl').hidden = false; $('cpC').onclick = () => { $('ovl').hidden = true; };
+  if ($('cpOk')) $('cpOk').onclick = async () => { const id = $('cpO').value;
+    const { data, error } = await sb.from('pend_config').select('pavimentos,regras,listas').eq('obra', id).maybeSingle();
+    if (error || !data) { $('cpM').className = 'msg err'; $('cpM').textContent = 'A obra de origem não tem configuração.'; return; }
+    if ($('cpL').checked) { const l = LO.efetivas(PADRAO, data.listas); for (const t of LISTAS4) ED.listas[t] = l[t].map(x => clone(x)); ED.listasMudou = true; }
+    if ($('cpP').checked) ED.pavimentos = clone(data.pavimentos || []);
+    if ($('cpT').checked) ED.regras = LO.normRegras(data.regras);
+    $('ovl').hidden = true; sujo(true); render(); toast('Copiado de ' + ((OBRAS.find(o => o.id === id) || {}).nome || id) + '. Confira e salve.', 6000); };
+}
+
+/* ---------------- salvar ---------------- */
+const limpar = arr => arr.map((x, i) => { const e = Object.assign({}, x.extra || {}); Object.keys(e).forEach(k => { if (e[k] === undefined || e[k] === false) delete e[k]; }); return { valor: x.valor, ordem: i + 1, extra: e, ativo: x.ativo !== false }; });
+async function gravarTabela(tipos, fonte) {
+  for (const t of tipos) {
+    const linhas = limpar(fonte(t)).map(x => ({ tipo: t, valor: x.valor, ordem: x.ordem, extra: x.ativo ? x.extra : Object.assign({}, x.extra, { ativo: false }) }));
+    const { error: e1 } = await sb.from('pend_listas').delete().eq('tipo', t); if (e1) throw e1;
+    if (linhas.length) { const { error: e2 } = await sb.from('pend_listas').insert(linhas); if (e2) throw e2; }
+  }
+}
+async function salvar() {
+  const b = $('bSalvar'); b.disabled = true; b.textContent = 'Salvando…';
+  try {
+    // disciplinas: sempre do padrão (só grava se mudou)
+    const discMudou = JSON.stringify(limpar(ED.disciplina)) !== JSON.stringify(limpar(PADRAO.disciplina));
+    if (ESC === 'padrao') await gravarTabela(LISTAS4.concat('disciplina'), t => lista(t));
+    else {
+      if (discMudou) await gravarTabela(['disciplina'], () => ED.disciplina);
+      const listas = ED.listasMudou === 'padrao' ? null : ED.listasMudou ? Object.fromEntries(LISTAS4.map(t => [t, limpar(ED.listas[t])])) : (CFG.listas || null);
+      const pav = ED.pavimentos.map(p => { const o = { nome: p.nome, unidades: p.unidades || [] }; if (p.locais && p.locais.length) o.locais = p.locais; return o; });
+      const { error } = await sb.from('pend_config').upsert({ obra: OBRA, pavimentos: pav, regras: ED.regras, listas });
+      if (error) throw error;
+    }
+    // renomes: atualiza as pendências que já usam o nome antigo
+    let n = 0;
+    for (const r of RENOMES) { if (r.de === r.para) continue;
+      const { data, error } = await sb.rpc('pend_renomear', { p_obra: r.global ? null : OBRA, p_campo: r.campo, p_de: r.de, p_para: r.para });
+      if (error) toast('Não foi possível atualizar as pendências de “' + r.de + '”: ' + error.message, 7000); else n += data || 0; }
+    await carregar(); render(); toast('Salvo.' + (n ? ' ' + n + ' pendência(s) atualizadas com os novos nomes.' : ''), 5000);
+  } catch (e) { toast('Não foi possível salvar: ' + (e.message || e), 8000); }
+  b.disabled = false; b.textContent = 'Salvar alterações';
+}
+$('bSalvar').onclick = salvar;
+$('bDesc').onclick = () => { if (confirm('Descartar as alterações?')) { iniciarEdicao(); render(); } };
+window.addEventListener('beforeunload', e => { if (SUJO) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------------- início ---------------- */
+(async function () {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="aviso">Precisa do banco online.</div>'; return; }
+  if (!NV.admin) { $('main').innerHTML = '<div class="aviso">Só administradores editam as listas e regras.</div>'; return; }
+  sb = NV.cliente;
+  if (OBRA) { $('bVolta').href = 'pendencias.html?obra=' + encodeURIComponent(OBRA); }
+  try { await carregar(); } catch (e) { $('main').innerHTML = '<div class="aviso">Não foi possível carregar: ' + esc(e.message || e) + '</div>'; return; }
+  $('obraNome').textContent = OBRA ? OBRA_NOME : 'Padrão da empresa';
+  document.title = 'Listas e regras · ' + (OBRA ? OBRA_NOME : 'Padrão');
+  render();
+})();
+})();
+</script>
+</body>
+</html>
