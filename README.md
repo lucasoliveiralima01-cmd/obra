@@ -51,6 +51,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 3. `atualizacao-admin.sql` (troque `SEU_EMAIL@exemplo.com`, no fim, pelo seu e-mail antes de rodar)
 4. `atualizacao-pendencias.sql` (módulo de pendências; instalações novas também rodam este, depois do `supabase.sql`)
 5. `atualizacao-push.sql` (avisos; veja "App instalável e avisos")
+6. `atualizacao-admin2.sql` (página de Administração: atividade, convites e mais informações por pessoa)
 
 Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
 
@@ -114,7 +115,14 @@ A chave pública das notificações fica no `config.js` (`vapidPublica`); a priv
 
 ## Dar acesso a outras pessoas
 
-**Pelo site (administradores):** na página inicial, o botão **Administração** lista todas as contas. Quem criou a conta e ainda não foi liberado aparece no topo, como "aguardando liberação". Para cada pessoa, escolha **Sem acesso**, **Só visualizar**, **Editar** ou **Administrador**. Também dá para liberar um e-mail antes de a pessoa criar a conta. O convite por e-mail continua sendo enviado pelo Supabase (**Authentication → Users → Invite user**).
+**Pelo site (administradores):** o botão **Administração** abre a página `admin.html`:
+
+- **Resumo no topo**: pessoas, aguardando liberação, convites não aceitos, quantos por cargo e quantos com avisos ligados (cada número filtra a lista).
+- **Pessoas**: acesso aos mapas (Sem acesso, Só visualizar, Editar, Administrador), cargo nas pendências e disciplinas, nome, último acesso, pendências registradas e avisos ligados; ações para **enviar link de senha**, **reenviar convite** e **excluir conta**.
+- **+ Convidar pessoa**: e-mail, nome, acesso e cargo num passo só; o convite sai por e-mail.
+- **Atividade**: quem mudou o acesso ou o cargo de quem, convites, links de senha e exclusões.
+
+Para convidar e excluir contas pelo site, publique também a Edge Function `usuarios` (mesmo jeito da `notificar`: **Edge Functions → Deploy a new function → Via Editor**, nome `usuarios`, cole `supabase/functions/usuarios/index.ts`, publique e desligue **Verify JWT**). Ela não precisa de segredos novos. Sem ela, o resto da página funciona e o convite pode ser feito pelo Supabase (**Authentication → Users → Invite user**).
 
 **Pelo Supabase**, sem o painel, são duas coisas, nesta ordem:
 

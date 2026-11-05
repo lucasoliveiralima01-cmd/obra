@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Administração: pessoas, acessos, cargos, convites e atividade.">
+<meta name="theme-color" content="#22425c">
+<title>Administração · Ferramentas da Obra</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra">
+<link rel="icon" href="icone-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
+  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
+  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
+  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
+  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:10px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
+  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
+  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
+  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
+  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1180px;margin:0 auto;padding:12px 16px}
+.logo{display:block;color:inherit}.logo svg{height:34px;width:auto;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl .kick{font:600 .66rem var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--brand-soft)}
+.ttl h1{font:700 1.4rem/1.1 var(--f-disp);margin:0}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+main{max-width:1180px;margin:0 auto;padding:18px 16px 48px;display:grid;gap:14px}
+.muted{color:var(--muted);font-size:.88rem}
+.aviso{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:.9rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.sm{padding:4px 10px;font-size:.8rem}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;display:grid;gap:2px;text-align:left;color:inherit}
+.tile:hover{border-color:var(--accent)}
+.tile b{font:700 1.7rem/1 var(--f-disp)} .tile span{font-size:.82rem;color:var(--muted)}
+.tile.alerta{border-color:var(--warn);background:var(--warn-soft)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:6px 14px;font:600 .9rem var(--f-body);color:var(--muted)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.barra{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 11px;font:600 .82rem var(--f-body);color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip b{font-family:var(--f-mono);font-weight:600;margin-left:4px}
+.busca{flex:1 1 220px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 11px;min-width:0}
+.pessoas{display:grid;gap:10px}
+.p{display:grid;grid-template-columns:44px minmax(0,1fr) 210px;gap:8px 12px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.p.pend{border-color:var(--warn);box-shadow:inset 4px 0 0 var(--warn)}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font:700 1rem var(--f-disp)}
+.pi{display:grid;gap:4px;min-width:0}
+.pi .nm{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.pi input.nome{background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 6px;margin-left:-6px;font:700 1.02rem var(--f-body);min-width:0;flex:1 1 180px}
+.pi input.nome:hover,.pi input.nome:focus{border-color:var(--line);background:var(--bg)}
+.pi .em{font-size:.84rem;color:var(--muted);overflow-wrap:anywhere}
+.pi .info{font-size:.78rem;color:var(--muted)}
+.pill{font:600 .7rem var(--f-body);padding:1px 8px;border-radius:10px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neu{background:var(--bg);color:var(--muted)}
+.pc{display:grid;gap:6px}
+.pc label{display:grid;gap:2px;font:600 .68rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pc select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%;text-transform:none;letter-spacing:0;font:500 .9rem var(--f-body);color:var(--ink)}
+.dsc{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:5px}
+.dsc button{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font:600 .8rem var(--f-body);color:var(--muted)}
+.dsc button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.dsc button:disabled{opacity:.4;cursor:default}
+.pa{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px;border-top:1px dashed var(--line-2);padding-top:8px}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;max-width:760px}
+.form .full{grid-column:1/-1}
+.fld{display:grid;gap:4px}
+.fld label,.fld .l{font:600 .7rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fld input,.fld select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+.msg{font-size:.86rem}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.ativ{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:6px 14px}
+.ativ div{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:.9rem}
+.ativ div:last-child{border-bottom:0}
+.ativ time{font:500 .78rem var(--f-mono);color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+.vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center}
+@media (max-width:720px){
+  .brand::after{display:none}.ttl{border-left:0;padding-left:0}.hctl{margin-left:0;width:100%}
+  .p{grid-template-columns:40px minmax(0,1fr)}.pc{grid-column:1/-1}.dsc,.pa{grid-column:1/-1}
+  .form{grid-template-columns:1fr}.ativ div{grid-template-columns:1fr;gap:2px}
+}
+</style>
+</head>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" aria-label="Início"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="8" fill="none" stroke="currentColor" stroke-opacity=".35"/><rect x="7" y="25.5" width="17" height="6.5" rx="1" fill="#9fc3d6"/><rect x="7" y="18.5" width="17" height="5.5" rx="1" fill="#9fc3d6" fill-opacity=".75"/><rect x="7" y="11.5" width="17" height="5.5" rx="1" fill="none" stroke="#9fc3d6" stroke-width="1.3" stroke-dasharray="2.2 1.6"/><path d="M29 33V7.5M18.5 7.5H35M29 7.5l-4.5 4" stroke="#f0a93a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M33 7.5v5" stroke="#f0a93a" stroke-width="1.3"/><rect x="31.6" y="12.4" width="2.8" height="2.6" rx=".5" fill="#f0a93a"/></svg></a>
+  <div class="ttl"><span class="kick">Ferramentas da Obra</span><h1>Administração</h1></div>
+  <div class="hctl"><a class="hbtn" href="index.html">← Obras</a></div>
+</div></header>
+<main id="main"><p class="muted">Carregando…</p></main>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script src="nuvem.js"></script>
+<script>
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const fmtDia = s => s ? new Date(s).toLocaleDateString('pt-BR') : '';
+const fmtDH = s => { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const iniciais = n => String(n || '').trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('');
+const ACESSOS = [['nenhum', 'Sem acesso'], ['leitor', 'Só visualizar'], ['editor', 'Editar'], ['admin', 'Administrador']];
+const CARGOS = [['', 'Sem cargo'], ['engenharia', 'Engenharia'], ['seguranca', 'Segurança'], ['encarregado', 'Encarregado']];
+const acessoDe = u => !u.papel ? 'nenhum' : u.admin ? 'admin' : u.papel;
+const rotAcesso = v => (ACESSOS.find(a => a[0] === v) || [, v])[1];
+const rotCargo = v => (CARGOS.find(a => a[0] === (v || '')) || [, v])[1];
+
+let NV = null, sb = null, LISTA = [], DISC = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '';
+const grupoDe = v => (((DISC.find(d => d.valor === v) || {}).extra) || {}).grupo || v;
+const nomeDe = e => { const u = LISTA.find(x => x.email === String(e || '').toLowerCase()); return (u && u.nome) || (NV ? NV.pessoas.nome(e) : String(e || '').split('@')[0]); };
+const site = () => location.href.replace(/[^/]*$/, '');
+const aguardando = u => u.tem_conta && !u.papel;
+const conviteAberto = u => u.tem_conta && !u.confirmado;
+
+/* ---------------- chamadas ---------------- */
+async function carregar() {
+  try { const r = await sb.from('pend_listas').select('valor,extra,ordem').eq('tipo', 'disciplina').order('ordem'); if (!r.error) DISC = r.data || []; } catch (e) {}
+  await NV.pessoas.carregar();
+  LISTA = await NV.administracao.listar();
+}
+async function funcaoUsuarios(acao, email) {
+  const { data: { session } } = await sb.auth.getSession();
+  const C = window.MAPA_CONFIG || {}; const base = String(C.supabaseUrl || '').replace(/\/+$/, '');
+  let r;
+  try { r = await fetch(base + '/functions/v1/usuarios', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + (session && session.access_token) }, body: JSON.stringify({ acao, email, redirect: site() + 'index.html' }) }); }
+  catch (e) { const x = new Error('A função "usuarios" não respondeu. Ela já foi publicada no Supabase? (veja o README)'); x.semFuncao = true; throw x; }
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 404) { const x = new Error('A função "usuarios" ainda não foi publicada no Supabase (veja o README).'); x.semFuncao = true; throw x; }
+  if (!r.ok) throw new Error(j.erro || j.message || ('erro ' + r.status));
+  return j;
+}
+async function linkSenha(email) {
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: site() + 'index.html' });
+  if (error) throw error;
+  try { await sb.rpc('admin_registrar', { p_alvo: email, p_acao: 'senha', p_detalhe: 'link para criar/redefinir a senha' }); } catch (e) {}
+}
+
+/* ---------------- tela ---------------- */
+function render() {
+  const n = k => LISTA.filter(k).length;
+  const tiles = [['todos', LISTA.length, 'pessoas'], ['aguardando', n(aguardando), 'aguardando liberação'], ['convite', n(conviteAberto), 'convite não aceito'],
+    ['engenharia', n(u => u.cargo === 'engenharia'), 'Engenharia'], ['seguranca', n(u => u.cargo === 'seguranca'), 'Segurança'], ['encarregado', n(u => u.cargo === 'encarregado'), 'encarregados'],
+    ['avisos', n(u => u.avisos > 0), 'com avisos ligados']];
+  $('main').innerHTML = `
+    <div class="tiles">${tiles.map(([k, v, t]) => `<button class="tile ${(k === 'aguardando' || k === 'convite') && v ? 'alerta' : ''}" data-fil="${k}"><b>${v}</b><span>${t}</span></button>`).join('')}</div>
+    <div class="tabs"><button class="tab" data-aba="pessoas" aria-pressed="${ABA === 'pessoas'}">Pessoas</button><button class="tab" data-aba="convidar" aria-pressed="${ABA === 'convidar'}">+ Convidar pessoa</button><button class="tab" data-aba="atividade" aria-pressed="${ABA === 'atividade'}">Atividade</button></div>
+    <div id="corpo"></div>`;
+  $('main').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => { ABA = b.dataset.aba; render(); });
+  $('main').querySelectorAll('[data-fil]').forEach(b => b.onclick = () => { ABA = 'pessoas'; FILTRO = b.dataset.fil; render(); });
+  if (ABA === 'convidar') telaConvidar(); else if (ABA === 'atividade') telaAtividade(); else telaPessoas();
+}
+
+const FILTROS = {
+  todos: ['Todos', () => true], aguardando: ['Aguardando liberação', aguardando], convite: ['Convite não aceito', conviteAberto],
+  semacesso: ['Sem acesso', u => !u.papel], leitor: ['Só visualizar', u => u.papel === 'leitor' && u.cargo !== 'encarregado'], editor: ['Editar', u => u.papel === 'editor' && !u.admin],
+  admin: ['Administradores', u => u.admin], engenharia: ['Engenharia', u => u.cargo === 'engenharia'], seguranca: ['Segurança', u => u.cargo === 'seguranca'],
+  encarregado: ['Encarregados', u => u.cargo === 'encarregado'], semcargo: ['Sem cargo', u => u.papel && !u.cargo], avisos: ['Com avisos', u => u.avisos > 0]
+};
+function telaPessoas() {
+  const q = BUSCA.trim().toLowerCase();
+  const vis = LISTA.filter(FILTROS[FILTRO][1]).filter(u => !q || (u.email + ' ' + (u.nome || '') + ' ' + (u.disciplinas || []).join(' ')).toLowerCase().includes(q))
+    .sort((a, b) => (+aguardando(b) - +aguardando(a)) || String(a.nome || a.email).localeCompare(String(b.nome || b.email), 'pt-BR'));
+  $('corpo').innerHTML = `<div class="barra">${Object.entries(FILTROS).map(([k, [t, f]]) => `<button class="chip" data-f="${k}" aria-pressed="${FILTRO === k}">${t}<b>${LISTA.filter(f).length}</b></button>`).join('')}</div>
+    <div class="barra"><input class="busca" id="busca" type="search" placeholder="Buscar por nome, e-mail ou disciplina…" value="${esc(BUSCA)}" aria-label="Buscar pessoa"></div>
+    <div class="pessoas">${vis.length ? vis.map(pessoaHtml).join('') : '<div class="vazio muted">Ninguém com este filtro.</div>'}</div>`;
+  const C = $('corpo');
+  C.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { FILTRO = b.dataset.f; telaPessoas(); });
+  $('busca').oninput = e => { BUSCA = e.target.value; clearTimeout(telaPessoas.t); telaPessoas.t = setTimeout(() => { telaPessoas(); const b = $('busca'); b.focus(); b.setSelectionRange(b.value.length, b.value.length); }, 250); };
+  ligarPessoas(C);
+}
+function pessoaHtml(u) {
+  const i = LISTA.indexOf(u), sou = u.email === EU, pend = aguardando(u);
+  const badges = [pend ? '<span class="pill warn">aguardando liberação</span>' : '', conviteAberto(u) ? '<span class="pill warn">convite não aceito</span>' : '',
+    !u.tem_conta ? '<span class="pill neu">liberado, sem conta ainda</span>' : '', sou ? '<span class="pill ok">você</span>' : '',
+    u.avisos ? `<span class="pill ok" title="Aparelhos com avisos ligados">🔔 ${u.avisos}</span>` : (u.papel ? '<span class="pill neu" title="Nenhum aparelho com avisos ligados">sem avisos</span>' : '')].join('');
+  const info = [u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) : '', u.ultimo_acesso ? 'último acesso em ' + fmtDH(u.ultimo_acesso) : (u.tem_conta ? 'ainda não entrou' : ''), u.pendencias ? u.pendencias + ' pendência(s) registrada(s)' : ''].filter(Boolean).join(' · ');
+  const acesso = u.cargo === 'encarregado' ? `<select disabled title="Encarregados usam só o painel de pendências. Para mudar, troque o cargo."><option>Só pendências</option></select>`
+    : `<select data-acesso="${i}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+  const dsc = u.cargo === 'encarregado' ? `<div class="dsc" role="group" aria-label="Disciplinas">${DISC.map(d => { const on = (u.disciplinas || []).includes(d.valor); const g = grupoDe(d.valor); const ok = on || !(u.disciplinas || []).length || (u.disciplinas || []).every(x => grupoDe(x) === g);
+      return `<button type="button" data-disc="${i}" data-v="${esc(d.valor)}" aria-pressed="${on}" ${ok ? '' : 'disabled title="Não é complementar às disciplinas já escolhidas"'}>${esc(d.valor)}</button>`; }).join('')}</div>` : '';
+  const acoes = [u.tem_conta && !sou ? `<button class="btn sm ghost" data-senha="${i}" type="button">Enviar link de senha</button>` : '',
+    (!u.tem_conta || conviteAberto(u)) ? `<button class="btn sm ghost" data-conv="${i}" type="button">${u.tem_conta ? 'Reenviar convite' : 'Enviar convite'}</button>` : '',
+    !sou ? `<button class="btn sm danger" data-exc="${i}" type="button">${u.tem_conta ? 'Excluir conta' : 'Remover'}</button>` : ''].join('');
+  return `<article class="p${pend ? ' pend' : ''}">
+    <span class="av" aria-hidden="true">${esc(iniciais(u.nome || u.email))}</span>
+    <div class="pi"><div class="nm"><input class="nome" data-nome="${i}" maxlength="80" value="${esc(u.nome || '')}" placeholder="${esc(u.email.split('@')[0])} (sem nome)" aria-label="Nome de ${esc(u.email)}">${badges}</div>
+      <span class="em">${esc(u.email)}</span><span class="info">${esc(info)}</span></div>
+    <div class="pc"><label>Acesso aos mapas ${acesso}</label>
+      ${u.papel ? `<label>Cargo nas pendências <select data-cargo="${i}">${CARGOS.map(([v, t]) => `<option value="${v}" ${(u.cargo || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>` : ''}</div>
+    ${dsc}${acoes ? `<div class="pa">${acoes}</div>` : ''}
+  </article>`;
+}
+function ligarPessoas(C) {
+  const L = i => LISTA[+i];
+  C.querySelectorAll('[data-acesso]').forEach(s => s.onchange = async () => { const u = L(s.dataset.acesso), v = s.value, antes = acessoDe(u); s.disabled = true;
+    try { await NV.administracao.definir(u.email, v === 'admin' ? 'editor' : v, v === 'admin'); toast((u.nome || u.email) + ': ' + rotAcesso(v).toLowerCase() + '.'); LOG = null; await recarregar(); }
+    catch (e) { s.value = antes; s.disabled = false; toast('Não foi possível: ' + e.message, 6000); } });
+  C.querySelectorAll('[data-cargo]').forEach(s => s.onchange = async () => { const u = L(s.dataset.cargo), v = s.value || null;
+    if (v === 'encarregado') { u.cargo = 'encarregado'; u.disciplinas = []; telaPessoas(); toast('Escolha as disciplinas (só as complementares).'); return; }
+    try { await NV.administracao.definirCargo(u.email, v, []); toast((u.nome || u.email) + ': ' + rotCargo(v).toLowerCase() + '.'); LOG = null; await recarregar(); }
+    catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); } });
+  C.querySelectorAll('[data-disc]').forEach(b => b.onclick = async () => { const u = L(b.dataset.disc), v = b.dataset.v, ds = (u.disciplinas || []).slice(); const k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v);
+    if (!ds.length) { u.disciplinas = []; telaPessoas(); toast('O encarregado precisa de ao menos uma disciplina.'); return; }
+    try { await NV.administracao.definirCargo(u.email, 'encarregado', ds); LOG = null; await recarregar(); toast((u.nome || u.email) + ': encarregado · ' + ds.join(', ') + '.'); }
+    catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); } });
+  C.querySelectorAll('[data-nome]').forEach(inp => inp.onchange = async () => { const u = L(inp.dataset.nome), n = inp.value.trim();
+    try { await NV.pessoas.salvarNome(u.email, n); u.nome = n; toast('Nome salvo.'); } catch (e) { toast('Não foi possível salvar o nome: ' + e.message, 6000); } });
+  C.querySelectorAll('[data-senha]').forEach(b => b.onclick = async () => { const u = L(b.dataset.senha);
+    if (!confirm('Enviar para ' + u.email + ' um e-mail com o link para criar ou redefinir a senha?')) return; b.disabled = true;
+    try { await linkSenha(u.email); LOG = null; toast('Link enviado para ' + u.email + '.'); } catch (e) { toast('Não foi possível enviar: ' + e.message, 6000); } b.disabled = false; });
+  C.querySelectorAll('[data-conv]').forEach(b => b.onclick = async () => { const u = L(b.dataset.conv); b.disabled = true;
+    try { const r = await funcaoUsuarios('convidar', u.email); LOG = null; toast(r.existia ? 'A conta já existia: enviei o link para criar a senha.' : 'Convite enviado para ' + u.email + '.', 6000); await recarregar(); }
+    catch (e) { toast(e.message, 8000); b.disabled = false; } });
+  C.querySelectorAll('[data-exc]').forEach(b => b.onclick = async () => { const u = L(b.dataset.exc);
+    const txt = u.tem_conta ? 'Excluir a conta de ' + u.email + '?\n\nA pessoa perde o acesso e o login deixa de existir. As pendências e registros feitos por ela continuam.' : 'Remover a liberação de ' + u.email + '?';
+    if (!confirm(txt)) return; b.disabled = true;
+    try {
+      if (u.tem_conta) await funcaoUsuarios('excluir', u.email); else await NV.administracao.definir(u.email, 'nenhum', false);
+      LOG = null; toast(u.tem_conta ? 'Conta excluída.' : 'Liberação removida.'); await recarregar();
+    } catch (e) { toast((e.semFuncao ? '' : 'Não foi possível: ') + e.message, 8000); b.disabled = false; } });
+}
+
+function telaConvidar() {
+  $('corpo').innerHTML = `<form class="form" id="fC" autocomplete="off">
+    <p class="muted full" style="margin:0">A pessoa recebe um e-mail para criar a senha e já entra com o acesso e o cargo escolhidos aqui. Se ela já tiver conta, recebe um link para criar/redefinir a senha.</p>
+    <div class="fld"><label for="cEmail">E-mail *</label><input id="cEmail" type="email" required placeholder="colega@empresa.com"></div>
+    <div class="fld"><label for="cNome">Nome</label><input id="cNome" maxlength="80" placeholder="Como aparece para a equipe"></div>
+    <div class="fld"><label for="cCargo">Cargo nas pendências</label><select id="cCargo">${CARGOS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
+    <div class="fld" id="cAcBox"><label for="cAcesso">Acesso aos mapas</label><select id="cAcesso">${ACESSOS.filter(a => a[0] !== 'nenhum').map(([v, t]) => `<option value="${v}" ${v === 'editor' ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div class="fld full" id="cDiscBox" hidden><span class="l">Disciplinas do encarregado (só as complementares)</span><div class="dsc" id="cDisc" style="grid-column:auto"></div></div>
+    <label class="full" style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="cEnviar" checked> Enviar o convite por e-mail agora</label>
+    <div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" id="cOk" type="button">Convidar e liberar</button><span class="msg" id="cMsg"></span></div>
+  </form>`;
+  let ds = [];
+  const desenharDisc = () => { const enc = $('cCargo').value === 'encarregado'; $('cDiscBox').hidden = !enc; $('cAcBox').hidden = enc;
+    $('cDisc').innerHTML = DISC.map(d => { const on = ds.includes(d.valor), g = grupoDe(d.valor), ok = on || !ds.length || ds.every(x => grupoDe(x) === g);
+      return `<button type="button" data-v="${esc(d.valor)}" aria-pressed="${on}" ${ok ? '' : 'disabled'}>${esc(d.valor)}</button>`; }).join('');
+    $('cDisc').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const v = b.dataset.v, k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v); desenharDisc(); }); };
+  $('cCargo').onchange = () => { ds = []; desenharDisc(); }; desenharDisc();
+  $('cOk').onclick = async () => {
+    const msg = (t, ok) => { $('cMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('cMsg').textContent = t; };
+    const email = $('cEmail').value.trim().toLowerCase(), nome = $('cNome').value.trim(), cargo = $('cCargo').value || null, ac = $('cAcesso').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg('Escreva um e-mail válido.'); return; }
+    if (cargo === 'encarregado' && !ds.length) { msg('Escolha ao menos uma disciplina.'); return; }
+    if (LISTA.some(u => u.email === email && u.papel) && !confirm(email + ' já tem acesso. Atualizar o acesso e o cargo e reenviar o e-mail?')) return;
+    $('cOk').disabled = true; msg('Liberando…', true);
+    try {
+      await NV.administracao.definir(email, cargo === 'encarregado' ? 'leitor' : (ac === 'admin' ? 'editor' : ac), cargo !== 'encarregado' && ac === 'admin');
+      if (nome) await NV.pessoas.salvarNome(email, nome);
+      if (cargo) await NV.administracao.definirCargo(email, cargo, cargo === 'encarregado' ? ds : []);
+      let aviso = 'Acesso liberado.';
+      if ($('cEnviar').checked) {
+        try { const r = await funcaoUsuarios('convidar', email); aviso = r.existia ? 'Acesso liberado. A conta já existia: enviei o link para criar/redefinir a senha.' : 'Acesso liberado e convite enviado para ' + email + '.'; }
+        catch (e) { aviso = 'Acesso liberado, mas o convite não foi enviado: ' + e.message + ' Enquanto isso, convide pelo Supabase (Authentication → Users → Invite user).'; }
+      }
+      LOG = null; await recarregar(); ABA = 'pessoas'; FILTRO = 'todos'; BUSCA = email; render(); toast(aviso, 9000);
+    } catch (e) { msg('Não foi possível: ' + e.message); $('cOk').disabled = false; }
+  };
+}
+
+async function telaAtividade() {
+  $('corpo').innerHTML = '<p class="muted">Carregando…</p>';
+  if (!LOG) { const { data, error } = await sb.from('admin_log').select('*').order('em', { ascending: false }).limit(300);
+    if (error) { $('corpo').innerHTML = '<div class="aviso">Para ver a atividade, rode o arquivo <b>atualizacao-admin2.sql</b> no Supabase.</div>'; return; } LOG = data || []; }
+  const ACAO = { acesso: 'mudou o acesso de', cargo: 'mudou o cargo de', convite: 'convidou', senha: 'enviou link de senha para', exclusao: 'excluiu' };
+  $('corpo').innerHTML = LOG.length ? `<div class="ativ">${LOG.map(l => `<div><time>${fmtDH(l.em)}</time><span><b>${esc(nomeDe(l.por))}</b> ${esc(ACAO[l.acao] || l.acao)} <b>${esc(nomeDe(l.alvo))}</b>${l.alvo && nomeDe(l.alvo) !== l.alvo ? ' <span class="muted">(' + esc(l.alvo) + ')</span>' : ''}${l.detalhe ? ' · ' + esc(l.detalhe) : ''}</span></div>`).join('')}</div>`
+    : '<div class="vazio muted">Nenhuma atividade registrada ainda. A partir de agora, cada mudança de acesso, cargo, convite e exclusão aparece aqui.</div>';
+}
+
+async function recarregar() { try { await carregar(); } catch (e) { toast('Não foi possível atualizar a lista: ' + e.message, 6000); } render(); }
+
+(async function () {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="vazio">A administração precisa do banco online.</div>'; return; }
+  if (!NV.admin) { $('main').innerHTML = '<div class="vazio"><h3 style="margin:0 0 6px">Só administradores</h3><p class="muted" style="margin:0">Peça a um administrador para mudar o seu acesso.</p></div>'; return; }
+  sb = NV.cliente; EU = String(NV.usuario.email).toLowerCase();
+  try { await carregar(); } catch (e) { $('main').innerHTML = '<div class="aviso">Não foi possível carregar as pessoas: ' + esc(e.message) + '</div>'; return; }
+  if (LISTA.length && !('confirmado' in LISTA[0])) toast('Rode o atualizacao-admin2.sql no Supabase para ver todas as informações.', 8000);
+  const p = new URLSearchParams(location.search); if (p.get('filtro') && FILTROS[p.get('filtro')]) FILTRO = p.get('filtro');
+  render();
+})();
+})();
+</script>
+</body>
+</html>

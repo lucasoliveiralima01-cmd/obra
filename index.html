@@ -559,116 +559,13 @@ async function formEquipe() {
   };
 }
 
-/* ---------------- administração: acesso de cada pessoa (só administradores) ---------------- */
-const ACESSOS = [['nenhum', 'Sem acesso'], ['leitor', 'Só visualizar'], ['editor', 'Editar'], ['admin', 'Administrador']];
-const acessoDe = u => !u.papel ? 'nenhum' : u.admin ? 'admin' : u.papel;
-const fmtDia = s => s ? new Date(s).toLocaleDateString('pt-BR') : '';
+/* ---------------- administração (página admin.html) ---------------- */
 async function contarPendentes() {
   const b = $('bAdmin'); if (!b) return;
   try { const l = await NV.administracao.listar(); const n = l.filter(u => u.tem_conta && !u.papel).length;
-    b.innerHTML = 'Administração' + (n ? ` <span class="cnt" title="${n} aguardando liberação">${n}</span>` : ''); } catch (e) {}
+    b.innerHTML = 'Administração' + (n ? ` <span class="cnt" title="${n} aguardando liberação">${n}</span>` : '');
+    b.href = 'admin.html' + (n ? '?filtro=aguardando' : ''); } catch (e) {}
 }
-async function formAdmin() {
-  openSheet('Administração', '<p class="muted" style="margin:0">Carregando…</p>', '<button class="btn ghost" id="adC">Fechar</button>');
-  $('ovl').querySelector('.sheet').classList.add('larga');
-  $('adC').onclick = fecharAdmin;
-  let lista;
-  let DISC = [];
-  try { const r = await NV.cliente.from('pend_listas').select('valor,extra,ordem').eq('tipo', 'disciplina').order('ordem'); if (!r.error) DISC = r.data || []; } catch (e) {}
-  try { await NV.pessoas.carregar(); lista = await NV.administracao.listar(); }
-  catch (e) {
-    $('ovlB').innerHTML = `<p class="msg err" style="margin:0">Não foi possível carregar a lista: ${esc(msgErro(e))}</p><p class="muted" style="margin:0">Se esta é a primeira vez, rode o arquivo <b>atualizacao-admin.sql</b> no Supabase (SQL Editor) e recarregue a página.</p>`;
-    return;
-  }
-  const eu = String(NV.usuario.email).toLowerCase();
-  let filtroAd = '';
-  // cargos das pendências (só aparecem depois de rodar o atualizacao-pendencias.sql)
-  const temCargos = lista.length ? ('cargo' in lista[0]) : false;
-  const CARGOS = [['', 'Sem cargo'], ['engenharia', 'Engenharia'], ['seguranca', 'Segurança'], ['encarregado', 'Encarregado']];
-  const grupoDe = v => (((DISC.find(d => d.valor === v) || {}).extra) || {}).grupo || v;
-  const desenhar = () => {
-    const q = filtroAd.trim().toLowerCase();
-    const vis = lista.filter(u => !q || (u.email + ' ' + (u.nome || '')).toLowerCase().includes(q))
-      .sort((a, b) => (+(b.tem_conta && !b.papel) - +(a.tem_conta && !a.papel)) || String(a.nome || a.email).localeCompare(String(b.nome || b.email), 'pt-BR'));
-    const nPend = lista.filter(u => u.tem_conta && !u.papel).length;
-    $('adList').innerHTML = (nPend ? `<p class="aviso" style="margin:0">${nPend} pessoa${nPend > 1 ? 's criaram' : ' criou'} a conta e ${nPend > 1 ? 'aguardam' : 'aguarda'} liberação. Escolha o acesso na lista.</p>` : '') +
-      (vis.length ? vis.map(u => { const i = lista.indexOf(u); const pend = u.tem_conta && !u.papel; const sou = u.email === eu;
-        return `<div class="adm-l${pend ? ' pend' : ''}">
-          <div class="nm2"><input data-nome="${i}" maxlength="80" value="${esc(u.nome || '')}" placeholder="${esc(u.email.split('@')[0])}" aria-label="Nome de ${esc(u.email)}">${pend ? '<span class="pill warn">aguardando liberação</span>' : ''}${sou ? '<span class="pill ok">você</span>' : ''}</div>
-          ${u.cargo === 'encarregado' ? `<select disabled aria-label="Acesso de ${esc(u.email)}" title="Encarregados usam só o painel de pendências. Para mudar, troque o cargo."><option>Só pendências</option></select>`
-            : `<select data-acesso="${i}" aria-label="Acesso de ${esc(u.email)}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`}
-          <small>${esc(u.email)} · ${u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) + (u.ultimo_acesso ? ' · último acesso em ' + fmtDia(u.ultimo_acesso) : ' · ainda não entrou') : 'liberado, mas ainda não criou a conta'}</small>
-          ${temCargos && u.papel ? `<div class="cg"><label>Cargo nas pendências <select data-cargo="${i}">${CARGOS.map(([v, t]) => `<option value="${v}" ${(u.cargo || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-            ${u.cargo === 'encarregado' ? `<div class="dsc" role="group" aria-label="Disciplinas de ${esc(u.email)}">${DISC.map(d => { const on = (u.disciplinas || []).includes(d.valor); const g = grupoDe(d.valor); const ok = on || !(u.disciplinas || []).length || (u.disciplinas || []).every(x => grupoDe(x) === g);
-              return `<button type="button" data-disc="${i}" data-v="${esc(d.valor)}" aria-pressed="${on}" ${ok ? '' : 'disabled title="Não é complementar às disciplinas já escolhidas"'}>${esc(d.valor)}</button>` }).join('')}</div>` : ''}</div>` : ''}
-        </div>`; }).join('') : '<p class="muted" style="margin:0">Ninguém encontrado com essa busca.</p>');
-    $('adList').querySelectorAll('[data-acesso]').forEach(sel => sel.onchange = async () => {
-      const u = lista[+sel.dataset.acesso]; const v = sel.value; const antes = acessoDe(u);
-      sel.disabled = true; $('adMsg').className = 'msg'; $('adMsg').textContent = 'Salvando…';
-      try {
-        await NV.administracao.definir(u.email, v === 'admin' ? 'editor' : v, v === 'admin');
-        u.papel = v === 'nenhum' ? null : (v === 'admin' ? 'editor' : v); u.admin = v === 'admin';
-        $('adMsg').className = 'msg ok'; $('adMsg').textContent = (u.nome || u.email) + ': ' + ACESSOS.find(a => a[0] === v)[1].toLowerCase() + '.';
-        if (!u.tem_conta && v === 'nenhum') lista.splice(lista.indexOf(u), 1);
-        desenhar();
-      } catch (e) { sel.value = antes; sel.disabled = false; $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); }
-    });
-    const salvarCargo = async (u, cargo, ds) => {
-      $('adMsg').className = 'msg'; $('adMsg').textContent = 'Salvando…';
-      try {
-        await NV.administracao.definirCargo(u.email, cargo, ds);
-        u.cargo = cargo; u.disciplinas = cargo === 'encarregado' ? ds : [];
-        if (cargo === 'encarregado') { u.papel = 'leitor'; u.admin = false; }
-        $('adMsg').className = 'msg ok'; $('adMsg').textContent = (u.nome || u.email) + ': ' + (CARGOS.find(c => c[0] === (cargo || ''))[1]).toLowerCase() + (ds.length ? ' · ' + ds.join(', ') : '') + '.';
-      } catch (e) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar o cargo: ' + msgErro(e); }
-      desenhar();
-    };
-    $('adList').querySelectorAll('[data-cargo]').forEach(sel => sel.onchange = () => {
-      const u = lista[+sel.dataset.cargo]; const v = sel.value || null;
-      if (v === 'encarregado') {
-        // encarregado precisa de ao menos uma disciplina: a escolha é feita logo abaixo
-        u.cargo = 'encarregado'; u.disciplinas = []; desenhar();
-        $('adMsg').className = 'msg'; $('adMsg').textContent = 'Escolha as disciplinas de ' + (u.nome || u.email) + ' (só as complementares).';
-        return;
-      }
-      salvarCargo(u, v, []);
-    });
-    $('adList').querySelectorAll('[data-disc]').forEach(b => b.onclick = () => {
-      const u = lista[+b.dataset.disc]; const v = b.dataset.v; const ds = (u.disciplinas || []).slice();
-      const i = ds.indexOf(v); if (i >= 0) ds.splice(i, 1); else ds.push(v);
-      if (!ds.length) { u.disciplinas = []; desenhar(); $('adMsg').className = 'msg err'; $('adMsg').textContent = 'O encarregado precisa de ao menos uma disciplina.'; return; }
-      salvarCargo(u, 'encarregado', ds);
-    });
-    $('adList').querySelectorAll('[data-nome]').forEach(inp => inp.onchange = async () => {
-      const u = lista[+inp.dataset.nome]; const n = inp.value.trim();
-      try { await NV.pessoas.salvarNome(u.email, n); u.nome = n; $('adMsg').className = 'msg ok'; $('adMsg').textContent = 'Nome salvo.'; }
-      catch (e) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível salvar o nome: ' + msgErro(e); }
-    });
-  };
-  $('ovlB').innerHTML = `${temCargos ? '<p class="muted" style="margin:0"><b>Cargo nas pendências</b>: <b>Engenharia</b> abre, vê e fecha todas (exceto as de segurança); <b>Segurança</b> abre, vê e fecha só as de segurança; <b>Encarregado</b> vê só as das suas disciplinas, marca como corrigida e não entra nos mapas.</p>' : ''}<p class="muted" style="margin:0"><b>Só visualizar</b>: vê as obras e os mapas. <b>Editar</b>: cria e altera obras, modelos e mapas. <b>Administrador</b>: edita e também libera e muda o acesso das pessoas. <b>Sem acesso</b>: a conta existe, mas não vê nenhum dado.</p>
-    <input class="search" id="adBusca" type="search" placeholder="Buscar por nome ou e-mail…" aria-label="Buscar pessoa" style="max-width:none">
-    <div class="adm" id="adList"></div>
-    <div class="fld"><label for="adEmail">Liberar um e-mail antes de a pessoa criar a conta</label>
-      <div class="adm-add"><input id="adEmail" type="email" placeholder="colega@empresa.com" autocomplete="off"><select id="adPapel">${ACESSOS.filter(a => a[0] !== 'nenhum').map(([v, t]) => `<option value="${v}" ${v === 'editor' ? 'selected' : ''}>${t}</option>`).join('')}</select><button class="btn" id="adAdd" type="button">Liberar</button></div></div>
-    <p class="muted" style="margin:0">Para convidar alguém novo, envie o convite pelo Supabase (<b>Authentication → Users → Invite user</b>). Quando a pessoa criar a conta, ela aparece aqui como “aguardando liberação”, a menos que o e-mail já tenha sido liberado acima.</p>`;
-  $('ovlF').innerHTML = '<span class="msg" id="adMsg"></span><button class="btn ghost" id="adC">Fechar</button>';
-  $('adC').onclick = fecharAdmin;
-  $('adBusca').oninput = ev => { filtroAd = ev.target.value; desenhar(); };
-  $('adAdd').onclick = async () => {
-    const e = $('adEmail').value.trim().toLowerCase(), v = $('adPapel').value;
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Escreva um e-mail válido.'; return; }
-    $('adAdd').disabled = true;
-    try {
-      await NV.administracao.definir(e, v === 'admin' ? 'editor' : v, v === 'admin');
-      lista = await NV.administracao.listar(); $('adEmail').value = '';
-      $('adMsg').className = 'msg ok'; $('adMsg').textContent = e + ' liberado.'; desenhar();
-    } catch (err) { $('adMsg').className = 'msg err'; $('adMsg').textContent = 'Não foi possível liberar: ' + msgErro(err); }
-    $('adAdd').disabled = false;
-  };
-  desenhar();
-}
-function fecharAdmin() { $('ovl').querySelector('.sheet').classList.remove('larga'); closeSheet(); contarPendentes(); if (NV) redesenhar(); }
-
 function formExcluir(f, o) {
   if (!o) return;
   openSheet('Excluir obra', `<p style="margin:0">Isto apaga <b>${esc(o.nome)}</b> para todas as pessoas, em <b>todas as ferramentas</b>: o modelo IFC, as áreas, os símbolos, as revisões e as imagens.</p>
@@ -711,8 +608,8 @@ async function cargaStart(f) {
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bEquipe'; b.textContent = 'Equipe'; b.title = 'Nomes das pessoas da equipe';
     b.onclick = formEquipe; $('modeChip').after(b);
     if (NV.admin) {
-      const a = document.createElement('button'); a.className = 'hbtn'; a.id = 'bAdmin'; a.textContent = 'Administração'; a.title = 'Liberar pessoas e definir quem visualiza, edita ou administra';
-      a.onclick = formAdmin; b.after(a); contarPendentes();
+      const a = document.createElement('a'); a.className = 'hbtn'; a.id = 'bAdmin'; a.href = 'admin.html'; a.textContent = 'Administração'; a.title = 'Pessoas, acessos, cargos, convites e atividade';
+      b.after(a); contarPendentes();
     }
   }
   if (!NV) { telaFerramentas(); return; }
