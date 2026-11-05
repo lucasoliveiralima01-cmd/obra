@@ -1,0 +1,20 @@
+{
+  "name": "Ferramentas da Obra",
+  "short_name": "Obra",
+  "description": "Mapa de Risco, Mapa de Concretagem e Pendências de obra.",
+  "lang": "pt-BR",
+  "id": "./index.html",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#22425c",
+  "theme_color": "#22425c",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icone-512-mask.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Pendências de obra", "short_name": "Pendências", "url": "./index.html?ferramenta=pendencias", "icons": [{ "src": "icone-192.png", "sizes": "192x192" }] }
+  ]
+}

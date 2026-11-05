@@ -6,6 +6,7 @@
 <meta name="description" content="Pendências de obra: registro com fotos, correção, aprovação, histórico e relatórios.">
 <meta name="theme-color" content="#22425c">
 <title>Pendências de obra</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%2322425c'/%3E%3Crect x='9' y='7' width='22' height='27' rx='3' fill='%239fc3d6'/%3E%3Crect x='15' y='5' width='10' height='5' rx='1.5' fill='%23ffffff'/%3E%3Cpath d='M14 18l3 3 6-6' stroke='%2323804a' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3Cpath d='M14 27h12' stroke='%23d9701c' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -176,6 +177,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
   <div class="hctl">
     <span class="modechip" id="modeChip">Carregando…</span>
     <a class="hbtn" id="bObras" href="index.html?ferramenta=pendencias">← Obras</a>
+    <button class="hbtn" id="bAvisos" type="button" title="Receber avisos neste aparelho">🔔 Avisos</button>
     <button class="hbtn" id="bPdf" type="button">Relatório PDF</button>
     <button class="hbtn" id="bListas" type="button" hidden>Listas</button>
   </div>
@@ -192,6 +194,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'pendencias';</script>
 <script src="nuvem.js"></script>
@@ -738,12 +741,72 @@ function formListas() {
   };
 }
 
+/* ---------------- avisos (notificações neste aparelho) ---------------- */
+const VAPID = (window.MAPA_CONFIG || {}).vapidPublica || '';
+const b64u8 = s => { const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function registroSW() { if (!('serviceWorker' in navigator)) return null; try { return await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 4000))]); } catch (e) { return null; } }
+async function estadoAvisos() {
+  if (!VAPID || !('Notification' in window) || !('PushManager' in window)) return { st: 'sem', reg: null };
+  const reg = await registroSW(); if (!reg) return { st: 'sem', reg: null };
+  const sub = await reg.pushManager.getSubscription().catch(() => null);
+  return { st: sub ? 'ativo' : Notification.permission === 'denied' ? 'negado' : 'inativo', reg, sub };
+}
+async function marcarAvisos() { const e = await estadoAvisos(); $('bAvisos').textContent = e.st === 'ativo' ? '🔔 Avisos ligados' : '🔔 Avisos'; }
+async function formAvisos() {
+  const ios = window.AppObra && AppObra.ehIOS, inst = window.AppObra && AppObra.instalado();
+  openSheet('Avisos neste aparelho', '<p class="muted" style="margin:0">Verificando…</p>', '<button class="btn ghost" id="avC" type="button">Fechar</button>');
+  $('avC').onclick = closeSheet;
+  const e = await estadoAvisos();
+  const oque = cargo() === 'encarregado' ? 'quando houver pendência nova ou reprovada nas suas disciplinas, e um aviso diário das vencidas.'
+    : cargo() === 'engenharia' ? 'quando uma pendência for marcada como corrigida, e um resumo diário (com as vencidas) às 8h.'
+    : cargo() === 'seguranca' ? 'quando uma pendência de segurança for marcada como corrigida, e um aviso diário das vencidas de segurança.'
+    : 'conforme o seu cargo nas pendências (peça ao administrador para definir o seu cargo).';
+  let corpo = `<p style="margin:0">Você recebe um aviso ${oque}</p>`;
+  if (ios && !inst) corpo += `<div class="aviso">No iPhone, os avisos só funcionam com o app na Tela de Início: no Safari, toque em <b>Compartilhar</b> (o quadrado com a seta) → <b>Adicionar à Tela de Início</b>. Depois abra o painel pelo ícone novo e ative os avisos aqui.</div>`;
+  else if (e.st === 'sem') corpo += '<div class="aviso">Este navegador não aceita avisos. No Android e no computador, use o Chrome ou o Edge.</div>';
+  else if (e.st === 'negado') corpo += '<div class="aviso">Os avisos estão bloqueados para este site. Libere nas configurações do navegador (ícone de cadeado ao lado do endereço → Notificações → Permitir) e volte aqui.</div>';
+  else corpo += `<p style="margin:0"><b>Situação:</b> ${e.st === 'ativo' ? '<span class="pill st-fechada">ligados neste aparelho</span>' : '<span class="pill st-aberta">desligados neste aparelho</span>'}</p>`;
+  if (!inst && !ios) corpo += '<p class="muted" style="margin:0">Dica: instale o painel como app (botão “Instalar app” no topo, ou menu do navegador → Instalar) para abrir direto pelo ícone.</p>';
+  $('ovlB').innerHTML = corpo;
+  const pode = e.st === 'ativo' || e.st === 'inativo';
+  $('ovlF').innerHTML = `<span class="msg" id="avMsg"></span><button class="btn ghost" id="avC" type="button">Fechar</button>${pode && e.st === 'ativo' ? '<button class="btn ghost" id="avOff" type="button">Desligar</button><button class="btn" id="avTeste" type="button">Enviar teste</button>' : ''}${pode && e.st === 'inativo' ? '<button class="btn" id="avOn" type="button">Ligar avisos</button>' : ''}`;
+  $('avC').onclick = closeSheet;
+  const msg = (t, ok) => { $('avMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('avMsg').textContent = t; };
+  if ($('avOn')) $('avOn').onclick = async () => {
+    $('avOn').disabled = true;
+    try {
+      const perm = await Notification.requestPermission(); if (perm !== 'granted') { msg('Permissão não concedida.'); $('avOn').disabled = false; return; }
+      const sub = await e.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(VAPID) });
+      const j = sub.toJSON();
+      const { error } = await sb.rpc('push_registrar', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent });
+      if (error) { await sub.unsubscribe().catch(() => {}); throw error; }
+      await marcarAvisos(); formAvisos(); toast('Avisos ligados neste aparelho.');
+    } catch (err) { msg('Não foi possível ligar: ' + (err.message || err)); $('avOn').disabled = false; }
+  };
+  if ($('avOff')) $('avOff').onclick = async () => {
+    try { if (e.sub) { await sb.rpc('push_remover', { p_endpoint: e.sub.endpoint }); await e.sub.unsubscribe(); } await marcarAvisos(); formAvisos(); toast('Avisos desligados neste aparelho.'); }
+    catch (err) { msg('Não foi possível desligar: ' + (err.message || err)); }
+  };
+  if ($('avTeste')) $('avTeste').onclick = async () => {
+    $('avTeste').disabled = true; msg('Enviando…', true);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const C = window.MAPA_CONFIG || {}; const base = String(C.supabaseUrl || '').replace(/\/+$/, '').replace(/\/(rest|auth|storage)\/v1$/i, '');
+      const r = await fetch(base + '/functions/v1/notificar', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + (session && session.access_token) },
+        body: JSON.stringify({ tipo: 'teste', site: location.href.replace(/[^/]*$/, '') + 'pendencias.html?obra=' + encodeURIComponent(OBRA) }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.erro || ('a função respondeu ' + r.status + (r.status === 404 ? ' (a Edge Function "notificar" ainda não foi criada)' : '')));
+      msg(j.enviados ? 'Teste enviado. O aviso deve chegar em alguns segundos.' : 'A função respondeu, mas nenhum aparelho seu está inscrito.', !!j.enviados);
+    } catch (err) { msg('Falhou: ' + (err.message || err)); }
+    $('avTeste').disabled = false;
+  };
+}
+
 /* ======================= início ======================= */
 (async function () {
   NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
   if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">As pendências são compartilhadas pela equipe e precisam do Supabase configurado no config.js.</p></div>'; $('modeChip').textContent = 'Modo local'; return; }
   sb = NV.cliente; OBRA = NV.obraId;
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
   await carregarFila();
   let ok = false;
   if (navigator.onLine && !NV.offline) {
@@ -759,10 +822,14 @@ function formListas() {
   $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Pendências';
   if (NV.admin) { $('bListas').hidden = false; $('bListas').onclick = formListas; }
   $('bPdf').onclick = formRelatorio;
+  $('bAvisos').onclick = formAvisos; marcarAvisos();
   $('fab').onclick = () => formPend(null);
   if (!NV.cargo && !NV.admin) toast('Você ainda não tem cargo nas pendências. Peça ao administrador para definir o seu cargo.', 7000);
   render();
   sincronizar();
+  // veio de um aviso: abre a pendência direto
+  const pAviso = new URLSearchParams(location.search).get('p');
+  if (pAviso) { if (itens().some(x => x.id === pAviso)) detalhe(pAviso); else toast('Esta pendência não está mais disponível para você.'); history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA)); }
   // ao vivo: quando alguém muda uma pendência, a lista atualiza
   try { sb.channel('pend-' + OBRA)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pendencias', filter: 'obra=eq.' + OBRA }, recarregar)

@@ -50,6 +50,7 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 2. `atualizacao-perfis.sql`
 3. `atualizacao-admin.sql` (troque `SEU_EMAIL@exemplo.com`, no fim, pelo seu e-mail antes de rodar)
 4. `atualizacao-pendencias.sql` (módulo de pendências; instalações novas também rodam este, depois do `supabase.sql`)
+5. `atualizacao-push.sql` (avisos; veja "App instalável e avisos")
 
 Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
 
@@ -90,6 +91,26 @@ Confira as aspas e as vírgulas. Se o arquivo tiver um erro de digitação, o si
 3. Em um ou dois minutos o link aparece no topo da página de Pages. Abra e entre com o seu e-mail e a sua senha.
 
 > No plano gratuito do GitHub, o Pages exige repositório público. Isso expõe só o código. Os dados das obras ficam no Supabase, protegidos pelo login.
+
+## App instalável e avisos (notificações)
+
+O site pode ser instalado como app: no Chrome ou no Edge aparece o botão **Instalar app** no topo (ou use o menu do navegador → Instalar). No iPhone: Safari → **Compartilhar** → **Adicionar à Tela de Início**. No iPhone, os avisos só funcionam com o app instalado assim.
+
+Cada pessoa liga os avisos no próprio aparelho pelo botão **🔔 Avisos** do painel de Pendências. Quem recebe o quê:
+
+- **Nova pendência** → encarregados da disciplina responsável.
+- **Marcada como corrigida** → Engenharia (ou Segurança, nas de segurança).
+- **Reprovada ou reaberta** → encarregados da disciplina, com o motivo.
+- **Todo dia às 8h** → vencidas para a disciplina (e para a Segurança, nas de segurança) e um resumo para a Engenharia.
+
+Configuração (uma vez, no Supabase):
+
+1. **SQL Editor**: rode o `atualizacao-push.sql` e depois a linha `update public.push_config ...` do arquivo `segredos-push.txt` (gerado no seu computador, fora do GitHub).
+2. **Edge Functions → Deploy a new function → Via Editor**: nome `notificar`, cole o conteúdo de `supabase/functions/notificar/index.ts` e publique. Nos detalhes da função, desligue **Verify JWT** (a função confere o acesso sozinha).
+3. **Edge Functions → Secrets**: crie `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_SUBJECT` e `AVISO_SEGREDO` com os valores do `segredos-push.txt`.
+4. No painel de Pendências: **🔔 Avisos → Ligar avisos → Enviar teste**.
+
+A chave pública das notificações fica no `config.js` (`vapidPublica`); a privada, só nos segredos do Supabase. Se gerar chaves novas, quem já tinha ligado os avisos precisa ligar de novo.
 
 ## Dar acesso a outras pessoas
 

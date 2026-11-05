@@ -24,5 +24,9 @@ window.MAPA_CONFIG = {
   permitirCadastro: false,
 
   // Nome do bucket de arquivos criado pelo supabase.sql.
-  bucket: 'arquivos'
+  bucket: 'arquivos',
+
+  // Chave pública das notificações (VAPID). Pode ficar pública; a chave
+  // privada fica só nos segredos da Edge Function no Supabase.
+  vapidPublica: 'BHBLeUhhg0FiaFKZRMfidZKoBfxi1fvPIXzs4XV03hMmHBi1WCV0EKXr4vWfH-IAd4B7wpMr0VGp2QLmmzAzfmo'
 };
