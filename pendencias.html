@@ -158,6 +158,19 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 .hist small{color:var(--muted)}
 .hist .cm{display:block;background:var(--bg);border-radius:6px;padding:5px 8px;margin-top:3px}
 .acts{display:flex;flex-wrap:wrap;gap:6px}
+.pl{display:grid;gap:6px}
+.pl-sc{max-height:min(60vh,520px);overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff;-webkit-overflow-scrolling:touch}
+.pl-in{position:relative;min-width:100%}
+.pl-in img{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.pl-in.marca{cursor:crosshair}
+.pl-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pin{position:absolute;width:22px;height:22px;margin:-22px 0 0 -11px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--c,#c23b2f);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.45);cursor:pointer}
+.pin b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg);font:700 .62rem var(--f-mono);color:#fff;white-space:nowrap}
+.pin[data-pin]:hover{z-index:2;filter:brightness(1.15)}
+.legst{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.82rem;color:var(--muted)}
+.legst i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.com{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end}
+.com textarea{min-height:44px}
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
 .viewer img{max-width:100%;max-height:100%;object-fit:contain}
 .prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.prog i{display:block;height:100%;width:0;background:var(--accent)}
@@ -228,6 +241,7 @@ let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
 let L = { problema: [], disciplina: [], comodo: [], servico: [], local: [] };   // listas
 let CFG = { pavimentos: [] };                                                    // pavimentos e unidades
 let PEND = [];        // pendências do servidor (com fotos e eventos)
+let PLANTAS = {};     // pavimento -> planta (imagem gerada pelo Mapa de Risco a partir do IFC)
 let FILA = [];        // operações aguardando envio (deste aparelho)
 let TAB = 'lista';
 const F = { st: new Set(['aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, q: '' };
@@ -294,6 +308,7 @@ function itens() {
     if (op.op === 'editar') Object.assign(p, op.campos);
     if (op.op === 'criar' || op.op === 'fotos') for (const f of op.fotos || []) p.fotos.push({ fid: f.fid, tipo: f.tipo, local: true });
     if (op.op === 'status') { p.eventos.push({ em: op.em, por: NV.usuario.email, acao: 'status', de: p.status, para: op.para, comentario: op.comentario, local: true }); p.status = op.para; }
+    if (op.op === 'comentario') p.eventos.push({ em: op.em, por: NV.usuario.email, acao: 'comentario', comentario: op.texto, local: true });
     if (op.op === 'excluir') m.delete(op.id);
   }
   return [...m.values()];
@@ -303,23 +318,33 @@ let SEQ = Date.now();
 async function enfileirar(op) { op.k = op.k || uuid(); op.seq = ++SEQ; op.em = op.em || new Date().toISOString(); await idbPut('fila', op.k, op); await carregarFila(); render(); sincronizar(); }
 
 async function carregarServidor() {
-  const [lp, lc, lo, lpend] = await Promise.all([
+  const [lp, lc, lo, lpend, lpl] = await Promise.all([
     sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
     sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle(),
     NV.obras.obter(OBRA),
-    sb.from('pendencias').select('*, pendencia_fotos(*), pendencia_eventos(*)').eq('obra', OBRA).order('numero', { ascending: false })
+    sb.from('pendencias').select('*, pendencia_fotos(*), pendencia_eventos(*)').eq('obra', OBRA).order('numero', { ascending: false }),
+    sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA)
   ]);
   for (const r of [lp, lc, lpend]) if (r.error) throw r.error;
+  PLANTAS = {}; if (!lpl.error) for (const x of lpl.data || []) PLANTAS[x.pavimento] = x;
   if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
   L = { problema: [], disciplina: [], comodo: [], servico: [], local: [] };
   for (const x of lp.data || []) (L[x.tipo] || (L[x.tipo] = [])).push(x);
   CFG = { pavimentos: (lc.data && lc.data.pavimentos && lc.data.pavimentos.length) ? lc.data.pavimentos : PAV_PADRAO };
   OBRA_NOME = lo.nome; PEND = lpend.data || [];
-  await idbPut('cache', OBRA, { L, CFG, PEND, OBRA_NOME, em: new Date().toISOString() });
+  await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, OBRA_NOME, em: new Date().toISOString() });
 }
 async function carregarCache() {
   const c = await idbGet('cache', OBRA); if (!c) return false;
-  L = c.L; CFG = c.CFG; PEND = c.PEND; OBRA_NOME = c.OBRA_NOME; return c.em;
+  L = c.L; CFG = c.CFG; PEND = c.PEND; PLANTAS = c.PLANTAS || {}; OBRA_NOME = c.OBRA_NOME; return c.em;
+}
+// imagem da planta: baixa uma vez e guarda no aparelho (funciona sem sinal)
+async function urlPlanta(pl) {
+  if (!pl) return null; const k = 'planta:' + pl.caminho;
+  if (URLS.has(k)) return URLS.get(k);
+  let b = await idbGet('blobs', k);
+  if (!b && navigator.onLine) { try { const { data, error } = await sb.storage.from('arquivos').download(pl.caminho); if (!error && data) { b = data; await idbPut('blobs', k, b); } } catch (e) {} }
+  if (!b) return null; const u = URL.createObjectURL(b); URLS.set(k, u); return u;
 }
 
 /* ======================= envio da fila ======================= */
@@ -343,10 +368,16 @@ async function executar(op) {
   } else if (op.op === 'fotos') await enviarFotos(op);
   else if (op.op === 'editar') { const { error } = await sb.from('pendencias').update(op.campos).eq('id', op.id); if (error) throw error; }
   else if (op.op === 'status') { const { error } = await sb.rpc('pendencia_mudar', { p_id: op.id, p_para: op.para, p_comentario: op.comentario || null }); if (error) throw error; }
+  else if (op.op === 'comentario') { const { error } = await sb.rpc('pendencia_comentar', { p_id: op.id, p_texto: op.texto }); if (error) throw error; }
   else if (op.op === 'excluir') {
-    const p = PEND.find(x => x.id === op.id);
-    const { error } = await sb.from('pendencias').delete().eq('id', op.id); if (error) throw error;
-    const cam = ((p && p.pendencia_fotos) || []).map(f => f.caminho); if (cam.length) sb.storage.from('arquivos').remove(cam).catch(() => {});
+    // vai para a lixeira (30 dias); sem a lixeira no banco, apaga de vez como antes
+    const { error } = await sb.rpc('pendencia_excluir', { p_id: op.id });
+    if (error && !/pendencia_excluir|function|schema cache/i.test(error.message || '')) throw error;
+    if (error) {
+      const p = PEND.find(x => x.id === op.id);
+      const { error: e2 } = await sb.from('pendencias').delete().eq('id', op.id); if (e2) throw e2;
+      const cam = ((p && p.pendencia_fotos) || []).map(f => f.caminho); if (cam.length) sb.storage.from('arquivos').remove(cam).catch(() => {});
+    }
   }
 }
 async function sincronizar() {
@@ -388,12 +419,13 @@ function render() {
   const m = $('main');
   const its = itens();
   const nf = its.filter(p => p._fila).length;
-  m.innerHTML = `<div class="tabs"><button class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Lista</button><button class="tab" data-tab="resumo" aria-pressed="${TAB === 'resumo'}">Resumo</button><span class="sp"></span>
+  const temPlantas = Object.keys(PLANTAS).length > 0; if (TAB === 'planta' && !temPlantas) TAB = 'lista';
+  m.innerHTML = `<div class="tabs"><button class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Lista</button>${temPlantas ? `<button class="tab" data-tab="planta" aria-pressed="${TAB === 'planta'}">Planta</button>` : ''}<button class="tab" data-tab="resumo" aria-pressed="${TAB === 'resumo'}">Resumo</button><span class="sp"></span>
     ${!navigator.onLine ? '<span class="aviso" style="padding:4px 10px">Sem sinal: o que você registrar fica guardado neste aparelho e é enviado quando a conexão voltar.</span>' : ''}</div>
     ${FILA.some(o => o.erro) ? `<div class="aviso">Algumas alterações não foram aceitas pelo banco. Abra a pendência marcada com “erro ao enviar” para ver o motivo.</div>` : ''}
     <div id="tabBody"></div>`;
   m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
-  if (TAB === 'resumo') renderResumo(its); else renderLista(its);
+  if (TAB === 'resumo') renderResumo(its); else if (TAB === 'planta') renderPlanta(its); else renderLista(its);
   $('fab').hidden = !podeCriar();
 }
 
@@ -448,6 +480,28 @@ function cardHtml(p) {
     </span></button>`;
 }
 
+// as pendências de um pavimento sobre a planta (com os mesmos filtros de status da lista)
+let PAV_PLANTA = '';
+function renderPlanta(its) {
+  const pavs = CFG.pavimentos.map(x => x.nome).filter(n => PLANTAS[n]).concat(Object.keys(PLANTAS).filter(n => !CFG.pavimentos.some(x => x.nome === n)));
+  const cont = n => its.filter(p => p.pavimento === n && F.st.has(p.status)).length;
+  if (!PAV_PLANTA || !PLANTAS[PAV_PLANTA]) PAV_PLANTA = F.pav && PLANTAS[F.pav] ? F.pav : (pavs.find(n => cont(n)) || pavs[0]);
+  const f0 = F.pav; F.pav = ''; const doPav = filtrar(its).filter(p => p.pavimento === PAV_PLANTA); F.pav = f0;
+  const com = doPav.filter(p => p.ponto && p.ponto.pav === PAV_PLANTA), sem = doPav.filter(p => !(p.ponto && p.ponto.pav === PAV_PLANTA));
+  $('tabBody').innerHTML = `<div class="filtros"><div class="frow">
+      <select class="fsel" id="plPav" aria-label="Pavimento">${pavs.map(n => `<option ${n === PAV_PLANTA ? 'selected' : ''} value="${esc(n)}">${esc(n)} (${cont(n)})</option>`).join('')}</select>
+      ${ST_ORD.map(s => `<button class="chip" data-st="${s}" aria-pressed="${F.st.has(s)}">${ST[s]}</button>`).join('')}</div>
+      <div class="legst">${ST_ORD.map(s => `<span><i style="background:${COR_ST[s]}"></i>${ST[s]}</span>`).join('')}</div></div>
+    <div class="box">${plantaBox(PAV_PLANTA, com.map(p => ({ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status], id: p.id, rot: p.numero ? String(p.numero) : '?', tit: (p.numero ? '#' + p.numero + ' · ' : '') + p.tipo + ' · ' + rotLocal(p) })), false)}
+      ${sem.length ? `<p class="muted" style="margin:0">${sem.length} pendência(s) deste pavimento sem local marcado: ${sem.map(p => `<a href="#" data-p="${esc(p.id)}">${p.numero ? '#' + p.numero : 'nova'}</a>`).join(', ')}.</p>` : ''}</div>`;
+  const b = $('tabBody');
+  $('plPav').onchange = e => { PAV_PLANTA = e.target.value; render(); };
+  b.querySelectorAll('[data-st]').forEach(x => x.onclick = () => { const s = x.dataset.st; F.st.has(s) ? F.st.delete(s) : F.st.add(s); render(); });
+  b.querySelectorAll('[data-pin]').forEach(x => { x.onclick = ev => { ev.stopPropagation(); detalhe(x.dataset.pin); }; x.onkeydown = ev => { if (ev.key === 'Enter') detalhe(x.dataset.pin); }; });
+  b.querySelectorAll('a[data-p]').forEach(x => x.onclick = ev => { ev.preventDefault(); detalhe(x.dataset.p); });
+  pintarPlantas(b);
+}
+
 function renderResumo(its) {
   const ab = its.filter(p => p.status !== 'fechada');
   const cont = (arr, k) => { const m = new Map(); for (const p of arr) { const o = m.get(p[k]) || { aberta: 0, em_correcao: 0, corrigida: 0, fechada: 0, venc: 0 }; o[p.status]++; if (vencida(p)) o.venc++; m.set(p[k], o); } return m; };
@@ -461,6 +515,11 @@ function renderResumo(its) {
       ${tile(its.filter(vencida).length, 'Vencidas', 'venc')}${tile(ab.filter(incompleta).length, 'Incompletas', 'inc')}${tile(blq.length, 'Frentes bloqueadas', 'blq')}
     </div>
     <div class="cols"><div class="box"><h3>Por disciplina</h3>${tabela(mD, [...mD.keys()].sort(), 'Disciplina')}</div><div class="box"><h3>Por pavimento</h3>${tabela(mP, ordP, 'Pavimento')}</div></div>
+    <div class="box"><h3>Por quem causou o problema (retrabalho)</h3>${(() => {
+      const m = new Map(); for (const p of its) { const k = String(p.causador || '').trim() || 'Não informado'; const o = m.get(k) || { n: 0, ab: 0, tipos: new Map() }; o.n++; if (p.status !== 'fechada') o.ab++; o.tipos.set(p.tipo, (o.tipos.get(p.tipo) || 0) + 1); m.set(k, o); }
+      const ord = [...m.entries()].sort((a, b) => (a[0] === 'Não informado') - (b[0] === 'Não informado') || b[1].n - a[1].n);
+      return ord.length ? `<table class="t"><thead><tr><th>Quem causou</th><th>Total</th><th>Não fechadas</th><th>Tipos mais comuns</th></tr></thead><tbody>${ord.map(([k, o]) => `<tr><td>${esc(k)}</td><td>${o.n}</td><td>${o.ab || '·'}</td><td style="white-space:normal;text-align:left">${esc([...o.tipos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => t + ' (' + n + ')').join(', '))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin:0">Nada ainda.</p>'; })()}
+      <p class="muted" style="margin:0">Base para o desconto de retrabalho nas medições. Preencha “Responsável pelo problema” nas pendências para este quadro ficar completo.</p></div>
     <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(p.disciplina)} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
@@ -469,6 +528,37 @@ function renderResumo(its) {
     TAB = 'lista'; render();
   });
 }
+
+/* ======================= planta: marcar e mostrar o local ======================= */
+const COR_ST = { aberta: '#c23b2f', em_correcao: '#b86e00', corrigida: '#2f6fb0', fechada: '#23804a' };
+// pins: [{u, v, cor, id, rot}] com u, v de 0 a 1 sobre a imagem
+function plantaBox(pav, pins, marcavel) {
+  const pl = PLANTAS[pav]; if (!pl) return '';
+  // marcavel: true = toque marca o local; 'ficha' = só mostra, já aproximado no alfinete
+  const ficha = marcavel === 'ficha'; if (ficha) marcavel = false;
+  return `<div class="pl" data-pav="${esc(pav)}"><div class="pl-sc"><div class="pl-in${marcavel ? ' marca' : ''}${ficha ? ' ficha' : ''}" style="width:100%">
+      <img alt="Planta do ${esc(pav)}" data-planta="${esc(pav)}" draggable="false">
+      ${pins.map(p => `<span class="pin" style="left:${(p.u * 100).toFixed(3)}%;top:${(p.v * 100).toFixed(3)}%;--c:${p.cor}" ${p.id ? `data-pin="${esc(p.id)}" role="button" tabindex="0"` : ''} title="${esc(p.tit || p.rot || '')}">${p.rot ? `<b>${esc(p.rot)}</b>` : ''}</span>`).join('')}
+    </div></div>
+    <div class="pl-bar"><button type="button" class="btn sm ghost" data-z="-" aria-label="Diminuir">−</button><button type="button" class="btn sm ghost" data-z="+" aria-label="Aumentar">+</button>${marcavel ? '<span class="muted">Toque na planta para marcar o local.</span>' : ''}</div></div>`;
+}
+async function pintarPlantas(raiz) {
+  for (const img of raiz.querySelectorAll('img[data-planta]')) {
+    const u = await urlPlanta(PLANTAS[img.dataset.planta]);
+    if (u) img.src = u; else { const pl = img.closest('.pl'); if (pl) pl.innerHTML = '<p class="muted" style="margin:0">Planta indisponível sem sinal (abra com internet uma vez).</p>'; }
+  }
+  raiz.querySelectorAll('.pl').forEach(pl => { const inn = pl.querySelector('.pl-in'); if (!inn) return;
+    pl.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { const w = parseFloat(inn.style.width) || 100; const sc = pl.querySelector('.pl-sc'); const cx = (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth, cy = (sc.scrollTop + sc.clientHeight / 2) / sc.scrollHeight;
+      inn.style.width = Math.max(100, Math.min(500, w * (b.dataset.z === '+' ? 1.6 : 1 / 1.6))) + '%';
+      requestAnimationFrame(() => { sc.scrollLeft = cx * sc.scrollWidth - sc.clientWidth / 2; sc.scrollTop = cy * sc.scrollHeight - sc.clientHeight / 2; }); });
+    // abre já aproximado no alfinete (ficha)
+    const pin = inn.querySelector('.pin'); if (pin && inn.classList.contains('ficha')) {
+      inn.style.width = '220%'; const img = inn.querySelector('img');
+      const centra = () => { const sc = pl.querySelector('.pl-sc'); sc.scrollLeft = pin.offsetLeft - sc.clientWidth / 2; sc.scrollTop = pin.offsetTop - sc.clientHeight / 2; };
+      if (img.complete) requestAnimationFrame(centra); else img.addEventListener('load', centra, { once: true }); }
+  });
+}
+const uvParaXY = (pl, u, v) => [+(pl.bb[0] + u * (pl.bb[2] - pl.bb[0])).toFixed(3), +(pl.bb[3] - v * (pl.bb[3] - pl.bb[1])).toFixed(3)];
 
 /* ======================= janelas ======================= */
 function openSheet(t, body, foot, form) { delete $('ovl').dataset.det; $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; $('ovl').hidden = false; if (form) $('ovl').dataset.form = '1'; else delete $('ovl').dataset.form; $('ovlB').scrollTop = 0; }
@@ -495,6 +585,9 @@ function formPend(id) {
         <div class="fotos">${(ed ? ed.fotos.filter(x => x.tipo === 'antes') : []).map(x => `<span class="ft"><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden></span>`).join('')}${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto nova" src="${x.url}"><button type="button" data-rm="${i}" aria-label="Remover foto">×</button></span>`).join('')}</div>
         <div class="addft"><label>📷 Tirar foto<input type="file" accept="image/*" capture="environment" id="fCam"></label><label>🖼 Da galeria<input type="file" accept="image/*" multiple id="fGal"></label></div></div>
       <div class="fld"><span class="l">Pavimento <span class="req">*</span></span>${grupo('Pavimento', CFG.pavimentos.map(x => x.nome), f.pavimento, 'pavimento', 'small')}</div>
+      ${f.pavimento && PLANTAS[f.pavimento] ? `<div class="fld" id="plBox"><span class="l">Local na planta (opcional)</span>${plantaBox(f.pavimento, f.ponto && f.ponto.pav === f.pavimento ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
+        ${f.ponto ? '<button type="button" class="btn sm ghost" id="plLimpa" style="justify-self:start">Tirar a marcação</button>' : ''}</div>`
+        : (f.pavimento && !Object.keys(PLANTAS).length && navigator.onLine ? '<p class="muted" style="margin:0">Para marcar o local na planta: alguém com acesso de edição abre o <b>Mapa de Risco</b> desta obra uma vez (as plantas são geradas a partir do modelo IFC).</p>' : '')}
       <div class="fld"><span class="l">Local <span class="req">*</span></span>${grupo('Local', L.local.map(x => x.valor), f.local_tipo, 'local_tipo', 'small')}</div>
       ${ehApto ? `<div class="fld"><span class="l">Apartamento <span class="req">*</span></span>${uns.length ? grupo('Apartamento', uns, f.unidade, 'unidade', 'small') : '<input id="fUn" placeholder="Número do apartamento" value="' + esc(f.unidade || '') + '">'}</div>
         <div class="fld"><span class="l">Cômodo <span class="req">*</span></span>${grupo('Cômodo', L.comodo.map(x => x.valor), f.comodo, 'comodo', 'small')}</div>`
@@ -518,7 +611,7 @@ function formPend(id) {
       B.querySelectorAll('[data-bs]').forEach(s => { f.bloqueios[+s.dataset.bs].servico = s.value; }); B.querySelectorAll('[data-bl]').forEach(s => { f.bloqueios[+s.dataset.bl].local = s.value; }); };
     desenhar.ler = lerTextos;
     B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { lerTextos(); const k = b.dataset.f, v = b.dataset.v;
-      if (k === 'pavimento' && f.pavimento !== v) f.unidade = '';
+      if (k === 'pavimento' && f.pavimento !== v) { f.unidade = ''; if (f.ponto && f.ponto.pav !== v) f.ponto = null; }
       if (k === 'local_tipo' && f.local_tipo !== v) { f.unidade = ''; f.comodo = ''; }
       f[k] = f[k] === v && k !== 'prioridade' ? '' : v;
       if (k === 'prioridade' && !prazoManual) f.prazo = somaDias(hoje(), PRI[v][1]);
@@ -531,6 +624,18 @@ function formPend(id) {
     const addFotos = async files => { lerTextos(); for (const arq of files) { try { const blob = await comprimir(arq); novas.push({ fid: uuid(), blob, url: URL.createObjectURL(blob) }); } catch (e) { toast('Não foi possível ler a foto.'); } } desenhar(); };
     $('fCam').onchange = e => addFotos([...e.target.files]); $('fGal').onchange = e => addFotos([...e.target.files]);
     pintarFotos(B);
+    // planta: toque marca o local (só troca o alfinete, sem redesenhar o formulário)
+    const inn = B.querySelector('#plBox .pl-in');
+    if (inn) {
+      pintarPlantas(B.querySelector('#plBox'));
+      inn.onclick = ev => { const r = inn.getBoundingClientRect(); const u = (ev.clientX - r.left) / r.width, v = (ev.clientY - r.top) / r.height; if (u < 0 || u > 1 || v < 0 || v > 1) return;
+        const pl = PLANTAS[f.pavimento]; const [x, y] = uvParaXY(pl, u, v); f.ponto = { pav: f.pavimento, u: +u.toFixed(4), v: +v.toFixed(4), x, y };
+        let pin = inn.querySelector('.pin'); if (!pin) { pin = document.createElement('span'); pin.className = 'pin'; pin.style.setProperty('--c', '#c23b2f'); inn.appendChild(pin); }
+        pin.style.left = (u * 100) + '%'; pin.style.top = (v * 100) + '%';
+        if (!$('plLimpa')) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm ghost'; b.id = 'plLimpa'; b.style.justifySelf = 'start'; b.textContent = 'Tirar a marcação'; B.querySelector('#plBox').appendChild(b); b.onclick = limpar; } };
+    }
+    const limpar = () => { lerTextos(); f.ponto = null; const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
+    if ($('plLimpa')) $('plLimpa').onclick = limpar;
   };
   openSheet(ed ? 'Editar pendência ' + (ed.numero ? '#' + ed.numero : '') : 'Nova pendência', '', `<span class="msg" id="pMsg"></span><button class="btn ghost" id="pC" type="button">Cancelar</button><button class="btn" id="pOk" type="button">${ed ? 'Salvar' : 'Registrar'}</button>`, true);
   desenhar();
@@ -549,7 +654,8 @@ function formPend(id) {
       tipo: f.tipo, disciplina: f.disciplina, prioridade: f.prioridade, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
       descricao: String(f.descricao || '').trim() || null, causador: String(f.causador || '').trim() || null,
       bloqueios: (f.bloqueios || []).filter(b => b.servico).map(b => ({ servico: b.servico, local: String(b.local || '').trim() })),
-      prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null };
+      prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null,
+      ponto: f.ponto && f.ponto.pav === f.pavimento ? f.ponto : null };
     $('pOk').disabled = true;
     for (const x of novas) await idbPut('blobs', x.fid, x.blob);
     const fotos = novas.map(x => ({ fid: x.fid, tipo: 'antes' }));
@@ -569,6 +675,7 @@ function detalhe(id, mantemRolagem) {
   const fotos = t => p.fotos.filter(x => x.tipo === t);
   const galeria = arr => arr.length ? `<div class="fotos">${arr.map(x => `<span class="ft"><span class="ph muted" style="display:grid;place-items:center;height:100%;font-size:.7rem">${x.local ? 'no aparelho' : 'carregando'}</span><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden style="position:absolute;inset:0"></span>`).join('')}</div>` : '<span class="muted">Nenhuma.</span>';
   const evTxt = e => e.acao === 'criada' ? 'registrou a pendência' : e.acao === 'editada' ? 'editou os dados' : e.acao === 'foto' ? 'anexou foto do ' + e.para
+    : e.acao === 'comentario' ? 'comentou' : e.acao === 'excluida' ? (/restaurada/.test(e.comentario || '') ? 'restaurou da lixeira' : 'mandou para a lixeira')
     : (e.para === 'aberta' && (e.de === 'corrigida' || e.de === 'fechada')) ? (e.de === 'fechada' ? 'reabriu' : 'reprovou a correção') : 'mudou para “' + (ST[e.para] || e.para) + '”';
   const evs = p.eventos.slice().sort((a, b) => String(b.em).localeCompare(String(a.em)));
   const tem = !!cargo();
@@ -582,6 +689,8 @@ function detalhe(id, mantemRolagem) {
       <dt>Prazo</dt><dd>${p.prazo ? fmtD(p.prazo) : '—'}</dd><dt>Descrição</dt><dd>${esc(p.descricao || '—')}</dd><dt>Quem causou</dt><dd>${esc(p.causador || '—')}</dd>
       <dt>Trava</dt><dd>${(p.bloqueios || []).length ? p.bloqueios.map(b => esc(b.servico) + (b.local ? ' (' + esc(b.local) + ')' : '')).join('; ') : '—'}</dd>
       <dt>Observações</dt><dd>${esc(p.observacoes || '—')}</dd><dt>Registrada</dt><dd>${fmtDH(p.criado_em)} por ${esc(nomeDe(p.criado_por))}</dd></dl>
+    ${p.ponto && PLANTAS[p.ponto.pav] ? `<div class="fld"><span class="l">Local na planta · ${esc(p.ponto.pav)}</span>${plantaBox(p.ponto.pav, [{ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status] }], 'ficha')}</div>` : ''}
+    ${tem ? `<div class="fld"><label for="dCom">Comentar (sem mudar o status)</label><div class="com"><textarea id="dCom" rows="2" maxlength="2000" placeholder="Ex.: o material chega quinta; precisa de andaime"></textarea><button class="btn sm" id="dComOk" type="button">Enviar</button></div></div>` : ''}
     <div class="fld"><span class="l">Histórico</span><div class="hist">${evs.map(e => `<div><b>${esc(nomeDe(e.por))}</b> ${esc(evTxt(e))} <small>· ${fmtDH(e.em)}${e.local ? ' · aguardando envio' : ''}</small>${e.comentario ? `<span class="cm">${esc(e.comentario)}</span>` : ''}</div>`).join('')}</div></div>`,
     `<span class="msg" id="dMsg"></span>
      ${pode.excluir ? '<button class="btn sm danger" id="dDel" type="button" style="margin-right:auto">Excluir</button>' : ''}
@@ -592,7 +701,9 @@ function detalhe(id, mantemRolagem) {
      ${pode.fechar ? '<button class="btn sm ok" id="dFec" type="button">Aprovar e fechar</button>' : ''}
      ${pode.reabrir ? '<button class="btn sm ghost" id="dReab" type="button">Reabrir</button>' : ''}`);
   $('ovl').dataset.det = id; if (rol) $('ovlB').scrollTop = rol;
-  pintarFotos($('ovlB'));
+  pintarFotos($('ovlB')); pintarPlantas($('ovlB'));
+  if ($('dComOk')) $('dComOk').onclick = async () => { const t = $('dCom').value.trim(); if (!t) { $('dCom').focus(); return; }
+    $('dComOk').disabled = true; await enfileirar({ op: 'comentario', id, texto: t }); toast('Comentário enviado.'); detalhe(id, true); };
   const B = id2 => $(id2);
   if (op) { B('dRetry').onclick = async () => { delete op.erro; await idbPut('fila', op.k, op); await carregarFila(); sincronizar(); closeSheet(); };
     B('dDescartar').onclick = async () => { if (!confirm('Descartar esta alteração? Ela não será enviada.')) return; const ops = FILA.filter(o => o.id === id && o.seq >= op.seq); for (const o of ops) { for (const f of o.fotos || []) await idbDel('blobs', f.fid); await idbDel('fila', o.k); } await carregarFila(); closeSheet(); }; }
@@ -602,7 +713,7 @@ function detalhe(id, mantemRolagem) {
   if (B('dFec')) B('dFec').onclick = async () => { await enfileirar({ op: 'status', id, para: 'fechada' }); toast('Pendência aprovada e fechada.'); detalhe(id); };
   if (B('dRep')) B('dRep').onclick = () => formComentario(p, 'Reprovar a correção', 'O que ainda está errado? (obrigatório; o encarregado vê este comentário)', 'Reprovar');
   if (B('dReab')) B('dReab').onclick = () => formComentario(p, 'Reabrir a pendência', 'Por que está sendo reaberta? (obrigatório)', 'Reabrir');
-  if (B('dDel')) B('dDel').onclick = async () => { if (!confirm('Excluir a pendência ' + (p.numero ? '#' + p.numero : '') + '? As fotos e o histórico também são apagados.')) return;
+  if (B('dDel')) B('dDel').onclick = async () => { if (!confirm('Excluir a pendência ' + (p.numero ? '#' + p.numero : '') + '?\n\nEla vai para a lixeira e some de vez em 30 dias. Até lá, o administrador pode restaurar.')) return;
     // ainda não foi enviada: basta descartar do aparelho
     const cr = FILA.find(o => o.id === id && o.op === 'criar' && !o.criada);
     if (cr) { for (const o of FILA.filter(o => o.id === id)) { for (const f of o.fotos || []) await idbDel('blobs', f.fid); await idbDel('fila', o.k); } await carregarFila(); }
@@ -672,6 +783,21 @@ async function fotoParaPdf(f) {
   const sc = Math.min(1, 700 / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc);
   cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); return { d: cv.toDataURL('image/jpeg', .78), w: cv.width, h: cv.height };
 }
+// recorte da planta em volta do local marcado, com o alfinete
+async function plantaParaPdf(p) {
+  const pl = p.ponto && PLANTAS[p.ponto.pav]; if (!pl) return null;
+  const u = await urlPlanta(pl); if (!u) return null;
+  const img = new Image(); await new Promise(r => { img.onload = r; img.onerror = r; img.src = u; }); if (!img.naturalWidth) return null;
+  const W = img.naturalWidth, H = img.naturalHeight, lado = Math.max(260, Math.min(W, H) * .45);
+  const cx = p.ponto.u * W, cy = p.ponto.v * H; const x0 = Math.max(0, Math.min(W - lado, cx - lado / 2)), y0 = Math.max(0, Math.min(H - lado * .7, cy - lado * .35));
+  const cw = Math.min(lado, W), ch = Math.min(lado * .7, H);
+  const cv = document.createElement('canvas'); cv.width = 600; cv.height = Math.round(600 * ch / cw); const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, x0, y0, cw, ch, 0, 0, cv.width, cv.height);
+  const px = (cx - x0) / cw * cv.width, py = (cy - y0) / ch * cv.height;
+  g.fillStyle = COR_ST[p.status] || '#c23b2f'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(px, py - 16, 12, 0, Math.PI * 2); g.moveTo(px - 9, py - 8); g.lineTo(px, py); g.lineTo(px + 9, py - 8); g.fill(); g.stroke();
+  g.strokeStyle = '#8a949c'; g.lineWidth = 2; g.strokeRect(1, 1, cv.width - 2, cv.height - 2);
+  return { d: cv.toDataURL('image/jpeg', .85), w: cv.width, h: cv.height, tipo: 'planta' };
+}
 async function gerarPdf(arr, g, stTxt, comFotos, prog) {
   const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true }); const W = 210, H = 297, M = 14;
   const quem = nomeDe(NV.usuario.email), quando = fmtDH(new Date().toISOString());
@@ -696,6 +822,7 @@ async function gerarPdf(arr, g, stTxt, comFotos, prog) {
         ['Descrição', p.descricao || '—'], ['Quem causou', p.causador || '—'], ['Trava', (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') || '—'], ['Observações', p.observacoes || '']].filter(x => x[1]);
       const ls = info.map(([a, b]) => linhas(b, W - 2 * M - 30, 9));
       let fimgs = [];
+      { const pl = await plantaParaPdf(p).catch(() => null); if (pl) fimgs.push(pl); }
       if (comFotos) { const sel = p.fotos.filter(f => f.tipo === 'antes').slice(0, 3).concat(p.fotos.filter(f => f.tipo === 'depois').slice(0, 3));
         for (const f of sel) { const im = await fotoParaPdf(f).catch(() => null); if (im) fimgs.push(Object.assign(im, { tipo: f.tipo })); } }
       const hTxt = 7 + ls.reduce((s, l) => s + l.length * 4, 0); const hFt = fimgs.length ? 46 : 0;
@@ -704,7 +831,7 @@ async function gerarPdf(arr, g, stTxt, comFotos, prog) {
       pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(90, 107, 120); pdf.text('Registrada em ' + fmtDH(p.criado_em) + ' por ' + nomeDe(p.criado_por), W - M, y, { align: 'right' }); pdf.setTextColor(20, 34, 46); y += 5.5;
       info.forEach(([a], i) => { precisa(ls[i].length * 4 + 1); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.text(a + ':', M, y); pdf.setFont('helvetica', 'normal'); pdf.text(ls[i], M + 30, y); y += ls[i].length * 4; });
       if (fimgs.length) { precisa(46); let x = M; const hh = 40;
-        for (const im of fimgs) { const r = im.w / im.h; let w = hh * r, h = hh; if (w > 54) { w = 54; h = 54 / r; } if (x + w > W - M) break; pdf.addImage(im.d, 'JPEG', x, y + 1, w, h); pdf.setFontSize(7.5); pdf.setTextColor(90, 107, 120); pdf.text(im.tipo === 'antes' ? 'Antes' : 'Depois', x, y + hh + 4); pdf.setTextColor(20, 34, 46); x += w + 3; }
+        for (const im of fimgs) { const r = im.w / im.h; let w = hh * r, h = hh; if (w > 54) { w = 54; h = 54 / r; } if (x + w > W - M) break; pdf.addImage(im.d, 'JPEG', x, y + 1, w, h); pdf.setFontSize(7.5); pdf.setTextColor(90, 107, 120); pdf.text(im.tipo === 'antes' ? 'Antes' : im.tipo === 'planta' ? 'Local (' + p.ponto.pav + ')' : 'Depois', x, y + hh + 4); pdf.setTextColor(20, 34, 46); x += w + 3; }
         y += hh + 6; }
       pdf.setDrawColor(211, 220, 227); pdf.line(M, y, W - M, y); y += 5;
     }

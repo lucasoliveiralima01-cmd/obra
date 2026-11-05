@@ -1082,7 +1082,8 @@ const Store={
     const antes=i>=0?S.conc[i]:null; if(i>=0) S.conc[i]=c; else S.conc.push(c);
     if(this.kind==='db'){
       try{ await this.db.doc('concretagens/'+c.id).set(JSON.parse(JSON.stringify(c)),forcar?{forcar:true}:{base});
-        const m=this.minhas[c.id]||(this.minhas[c.id]={velhas:new Set(),ultima:null}); if(base) m.velhas.add(base); if(m.ultima) m.velhas.add(m.ultima); m.ultima=c.atualizado }
+        const m=this.minhas[c.id]||(this.minhas[c.id]={velhas:new Set(),ultima:null}); if(base) m.velhas.add(base); if(m.ultima) m.velhas.add(m.ultima); m.ultima=c.atualizado;
+        try{ avisarReprovados(antes,c) }catch(e){ console.warn('reprovados',e) } }
       catch(e){
         if(e&&e.code==='conflito'){ this.conflito(c,e); return false }
         const j=S.conc.findIndex(x=>x.id===c.id); if(j>=0){ if(antes) S.conc[j]=antes; else S.conc.splice(j,1) }
@@ -1139,6 +1140,31 @@ function idb(){return new Promise((res,rej)=>{let r; try{r=indexedDB.open('pavei
 async function idbPut(k,v){const d=await idb(); return new Promise((res,rej)=>{const t=d.transaction('f','readwrite'); t.objectStore('f').put(v,k); t.oncomplete=res; t.onerror=()=>rej(t.error)})}
 async function idbGet(k){const d=await idb(); return new Promise(res=>{const r=d.transaction('f').objectStore('f').get(k); r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null)})}
 async function idbDel(k){const d=await idb(); return new Promise(res=>{const t=d.transaction('f','readwrite'); t.objectStore('f').delete(k); t.oncomplete=res; t.onerror=res})}
+
+/* ======================= concreto abaixo do fck: aviso e pendência ======================= */
+// compara a versão anterior com a gravada: caminhão que acabou de ficar "reprovado" gera aviso
+function avisarReprovados(antes,c){
+  if(Store.kind!=='db'||!window.Nuvem) return;
+  const novos=[]; for(const t of c.caminhoes||[]){ if(truckStatus(c,t).st!=='bad') continue; const t0=antes&&(antes.caminhoes||[]).find(x=>x.id===t.id); if(t0&&truckStatus(antes,t0).st==='bad') continue; novos.push(t) }
+  if(!novos.length) return;
+  const res=t=>AGES.map(a=>{ const s=ageState(c,t,a); return s&&s.r.length?a+' dias: '+s.r.map(v=>f1(v)).join(' / ')+' MPa':'' }).filter(Boolean).join('; ');
+  const linhas=novos.map(t=>'C'+(t.ordem||'?')+(t.nf?' · NF '+t.nf:'')+' · fck '+(t.fck||'?')+' MPa · '+res(t));
+  const titulo='Concreto abaixo do fck · '+(c.pav||'')+' · '+fmtD(c.data);
+  Nuvem.cliente.rpc('aviso_concreto',{p_obra:Nuvem.obraId,p_titulo:titulo,p_corpo:linhas.join('\n')}).then(()=>{},()=>{});
+  if(Nuvem.cargo!=='engenharia') { toast('Resultado abaixo do fck: a Engenharia foi avisada.',6000); return }
+  openSheet('Concreto abaixo do fck',`<p style="margin-top:0">${novos.length>1?'Estes caminhões ficaram':'Este caminhão ficou'} com resultado abaixo do fck de projeto:</p>
+    <ul style="margin:.2em 0 .8em;padding-left:1.2em;line-height:1.5">${linhas.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>
+    <p class="muted">Quer abrir uma pendência para a Engenharia acompanhar (contraprova, extração, consulta ao projetista)? Ela entra em Pendências de obra com prioridade alta.</p>`,
+    `<button class="btn ghost" id="crN">Agora não</button><button class="btn" id="crS">Abrir pendência</button>`);
+  $('crN').onclick=closeSheet;
+  $('crS').onclick=async()=>{ $('crS').disabled=true;
+    const hoje=new Date(); const prazo=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()+3);
+    const row={id:(crypto.randomUUID?crypto.randomUUID():uid('p-')),obra:Nuvem.obraId,pavimento:c.pav||'—',local_tipo:'Outro',unidade:novos.map(t=>'C'+(t.ordem||'?')).join(', ')+' · '+fmtD(c.data),
+      tipo:'Concreto abaixo do fck',disciplina:'Projeto/Engenharia',prioridade:'alta',seguranca:false,
+      descricao:(c.descricao?c.descricao+'. ':'')+linhas.join('; '),causador:c.fornecedor||null,prazo:iso(prazo),observacoes:'Aberta pelo Mapa de Concretagem.'};
+    const {error}=await Nuvem.cliente.from('pendencias').insert(row);
+    closeSheet(); toast(error?'Não foi possível abrir a pendência: '+error.message:'Pendência aberta em Pendências de obra.',6000) };
+}
 
 /* ======================= regras dos corpos de prova ======================= */
 function ageState(c,t,a){
@@ -2141,7 +2167,7 @@ async function salvarModeloNaObra(f,buf){
   let r=null;
   try{ r=await Nuvem.obras.enviarModelo(S.obra.id,up); const old=S.obra.modelo;
     const modelo={asset:r.id,nome:f.name,bytes:f.size,gz:!!gz,em:new Date().toISOString()};
-    const gravar=async forcar=>{ S.obra=await Nuvem.obras.alterar(S.obra.id,{modelo},forcar?undefined:S.obra.atualizado_em); if(old&&old.asset&&old.asset!==r.id) Nuvem.obras.apagarArquivo(old.asset).catch(()=>{}); toast('Modelo salvo na obra: vale para toda a equipe e todas as ferramentas.') };
+    const gravar=async forcar=>{ S.obra=await Nuvem.obras.trocarModelo(S.obra.id,modelo,forcar?undefined:S.obra.atualizado_em); toast('Modelo salvo na obra: vale para toda a equipe e todas as ferramentas.') };
     try{ await gravar(false) }
     catch(e){ if(e&&e.code!=='conflito') throw e;
       const quem=e.por?Nuvem.pessoas.nome(e.por):'outra pessoa'; if(e.atual) S.obra=e.atual;

@@ -1404,6 +1404,11 @@ function drawOverlay(ctx){
   // escala gráfica
   if(S.res&&window.innerWidth>=640){ const len=niceLen(80/P.s); const lw=len*P.s; ctx.fillStyle=css('--muted'); ctx.strokeStyle=css('--muted'); ctx.lineWidth=1.5; const bx=P.W-lw-16, by=P.H-14;
     ctx.beginPath(); ctx.moveTo(bx,by-4); ctx.lineTo(bx,by); ctx.lineTo(bx+lw,by); ctx.lineTo(bx+lw,by-4); ctx.stroke(); ctx.font='500 11px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(len+' m',bx+lw/2,by-10) }
+  // pendências de segurança abertas neste pavimento (marcadas na planta pelo painel de Pendências)
+  SEGHIT=[]; if(S.res&&!S.rev) for(const p of SEGP){ if(!p.ponto||p.ponto.pav!==S.pav) continue; const s=toS(p.ponto.x-S.res.origin[0],p.ponto.y-S.res.origin[1]);
+    ctx.save(); ctx.translate(s[0],s[1]); ctx.beginPath(); ctx.moveTo(0,-15); ctx.lineTo(13,8); ctx.lineTo(-13,8); ctx.closePath(); ctx.fillStyle='#f3d500'; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='#c23b2f'; ctx.stroke();
+    ctx.fillStyle='#14222e'; ctx.font='700 13px "Titillium Web",sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',0,1);
+    if(p.numero){ ctx.font='600 10px "IBM Plex Mono",monospace'; ctx.fillStyle='#c23b2f'; ctx.fillText('#'+p.numero,0,18) } ctx.restore(); SEGHIT.push({x:s[0],y:s[1],p}) }
   const m=S.mode; if(!m) return;
   if(m.k==='sym'&&m.hover){ const s=toS(m.hover[0],m.hover[1]); ctx.globalAlpha=.6; drawSym(ctx,{t:m.t,rot:m.rot,txt:(SYMBY[m.t]||{}).txt||''},s[0],s[1],Math.max(6,symSize()*P.s/2),css('--ink')); ctx.globalAlpha=1; return }
   if(m.k!=='draw') return; const col=css('--area');
@@ -1490,6 +1495,7 @@ function hoverTip(ev){ const tip=$('tip');
   let t=''; if(h.sym) t=((SYMBY[h.sym.t]||{}).n||'Símbolo')+(h.sym.txt?' · '+h.sym.txt:'')+(edit?' · arraste para mover':''); else if(h.area) t=(h.area.titulo||'Área sem título')+(h.label&&edit?' · arraste para mover o rótulo':''); else if(h.el) t=h.el.label+' · '+tname(h.el.type);
   if(!t){tip.hidden=true; return} tip.textContent=t; tip.style.left=ev.offsetX+'px'; tip.style.top=ev.offsetY+'px'; tip.hidden=false }
 function planTap(x,y,ev){
+  if(!S.mode){ const h=SEGHIT.find(k=>Math.hypot(k.x-x,k.y-2-y)<16); if(h){ abrirSegPend(h.p); return } }
   if(S.mode&&S.mode.k==='sym'){ const p=toM(x,y); placeSym(p[0],p[1]); return }
   if(S.mode&&S.mode.k==='draw'){ const p=toM(x,y); const m=S.mode;
     if(m.pts.length>=3){ const f=toS(m.pts[0][0],m.pts[0][1]); if(Math.hypot(f[0]-x,f[1]-y)<14){ finishArea(m.pts.slice()); return } }
@@ -2233,7 +2239,7 @@ async function importIfcFile(f){ const buf=await f.arrayBuffer(); if(!await open
     let r=null;
     try{ r=await Nuvem.obras.enviarModelo(S.obra.id,gz?new Blob([gz],{type:'application/gzip'}):up); const old=S.obra.modelo;
       const modelo={asset:r.id,nome:f.name,bytes:f.size,gz:!!gz,em:new Date().toISOString()};
-      const gravar=async forcar=>{ S.obra=await Nuvem.obras.alterar(S.obra.id,{modelo},forcar?undefined:S.obra.atualizado_em); if(old&&old.asset&&old.asset!==r.id) Nuvem.obras.apagarArquivo(old.asset).catch(()=>{}); toast('Modelo salvo na obra: vale para toda a equipe e todas as ferramentas.') };
+      const gravar=async forcar=>{ S.obra=await Nuvem.obras.trocarModelo(S.obra.id,modelo,forcar?undefined:S.obra.atualizado_em); toast('Modelo salvo na obra: vale para toda a equipe e todas as ferramentas.') };
       try{ await gravar(false) }
       catch(e){ if(e&&e.code!=='conflito') throw e;
         // outra pessoa mexeu na obra (nome ou modelo) depois que a página abriu
@@ -2330,6 +2336,45 @@ const OLD_EX_SIGS=['1unxzki-8607','1n84udy-10010','1iustdy-8847'];
 async function migrateExample(){ if(S.readOnly) return false; const ea=S.areas.filter(a=>a.exemplo), ey=S.syms.filter(s=>s.exemplo); if(!ea.length) return false;
   if(!OLD_EX_SIGS.includes(hashStr(sigOf(ea,ey)))) return false; await replaceExample(); return true }
 
+/* ======================= pendências: plantas e alertas de segurança ======================= */
+let SEGP=[], SEGHIT=[];
+// pendências de segurança não fechadas desta obra (com o local marcado na planta)
+async function carregarSegPend(){
+  if(Store.kind!=='db'||!window.Nuvem) return;
+  try{ const {data,error}=await Nuvem.cliente.from('pendencias').select('id,numero,status,ponto,tipo,pavimento').eq('obra',Nuvem.obraId).eq('seguranca',true).neq('status','fechada');
+    if(!error){ SEGP=(data||[]).filter(p=>p.ponto&&p.ponto.pav); reqPlan(); if(SEGP.length) toast(SEGP.length+' pendência(s) de segurança aberta(s) marcada(s) na planta (triângulo amarelo).',5000) } }catch(e){}
+}
+function abrirSegPend(p){
+  openSheet('Pendência de segurança'+(p.numero?' #'+p.numero:''),`<p style="margin-top:0"><b>${esc(p.tipo)}</b><br><span class="muted">${esc(p.pavimento)} · ${esc({aberta:'Aberta',em_correcao:'Em correção',corrigida:'Corrigida'}[p.status]||p.status)}</span></p>`,
+    `<button class="btn ghost" id="spC">Fechar</button><a class="btn" style="text-decoration:none" href="pendencias.html?obra=${encodeURIComponent(Nuvem.obraId)}&p=${encodeURIComponent(p.id)}">Abrir nas pendências</a>`);
+  $('spC').onclick=closeSheet;
+}
+// Gera uma imagem da planta de cada pavimento (a partir do IFC) para o painel de Pendências
+// marcar o local. Roda sozinho quando falta planta ou quando o modelo da obra mudou.
+const slugPav=n=>String(n).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'pav';
+async function gerarPlantasSePreciso(forcar){
+  if(Store.kind!=='db'||S.readOnly||!S.res||S.isDemo||!S.obra||!S.obra.modelo||!window.Nuvem) return;
+  const sb=Nuvem.cliente, asset=S.obra.modelo.asset;
+  const {data,error}=await sb.from('pend_plantas').select('pavimento,modelo,caminho').eq('obra',S.obra.id); if(error) return;
+  const sts=S.storeys.filter(st=>st.bb&&isFinite(st.bb[0])&&st.bb[2]>st.bb[0]);
+  if(!forcar&&sts.length&&sts.every(st=>(data||[]).some(r=>r.pavimento===st.name&&r.modelo===asset))) return;
+  toast('Preparando as plantas dos pavimentos para as pendências…',6000);
+  const velhos=(data||[]).map(r=>r.caminho), novos=[], o=S.res.origin;
+  for(const st of sts){ try{
+    const [x0,y0,x1,y1]=st.bb; const mg=1.5; const w=x1-x0+2*mg, h=y1-y0+2*mg; const s=Math.min(2200/w,2200/h); const W=Math.round(w*s), H=Math.round(h*s);
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+    renderStructure(ctx,st,{s,tx:(mg-x0)*s,ty:(y1+mg)*s,D:1},Object.assign({},PAPER,{lw:1.2}),1);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png')); if(!blob) continue;
+    const caminho='pendencias/'+S.obra.id+'/plantas/'+slugPav(st.name)+'-'+Date.now().toString(36)+'.png';
+    const up=await sb.storage.from('arquivos').upload(caminho,blob,{contentType:'image/png'}); if(up.error) throw up.error;
+    const bb=[+(x0-mg+o[0]).toFixed(3),+(y0-mg+o[1]).toFixed(3),+(x1+mg+o[0]).toFixed(3),+(y1+mg+o[1]).toFixed(3)];
+    const r=await sb.from('pend_plantas').upsert({obra:S.obra.id,pavimento:st.name,caminho,bb,w:W,h:H,modelo:asset}); if(r.error) throw r.error;
+    novos.push(caminho);
+  }catch(e){ console.warn('planta',st.name,e) } }
+  const apagar=velhos.filter(c=>!novos.includes(c)); if(apagar.length&&novos.length) sb.storage.from('arquivos').remove(apagar).catch(()=>{});
+  if(novos.length) toast('Plantas prontas: '+novos.length+' pavimento(s) disponíveis para marcar o local das pendências.',5000);
+}
+
 /* ======================= início ======================= */
 (async function boot(){
   renderLegend(); renderChips(); setLoading(true,'Abrindo o painel','Conectando aos dados…',0.02);
@@ -2361,6 +2406,7 @@ async function migrateExample(){ if(S.readOnly) return false; const ea=S.areas.f
   }catch(e){ console.warn(e) }
   if(!ok&&Store.kind!=='db'&&!S.cfg.semExemplo){ try{ ok=await openModel('Modelo de exemplo.ifc',await loadDemo(),true) }catch(e){ console.error(e); toast('Não foi possível abrir o modelo de exemplo neste navegador.') } }
   setLoading(false); if(!ok){ $('empty').hidden=false; setView('3d') }
+  else { carregarSegPend(); setTimeout(()=>gerarPlantasSePreciso().catch(e=>console.warn('plantas',e)),1500) }
   for(const k of Object.keys(S.bgs)) loadBgImage(k);
   renderSide(); renderLegend();
   if(migrated) toast('O exemplo antigo guardado neste navegador foi trocado pela versão corrigida.',6000);

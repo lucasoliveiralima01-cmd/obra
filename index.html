@@ -117,6 +117,17 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .obra a.nm{font:700 1.15rem/1.2 var(--f-disp);color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
 .obra a.nm::after{content:" →";color:var(--accent)}
 .obra a.nm:hover{color:var(--accent)}
+.md{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px}
+.md h2{margin:0;font:700 1.15rem var(--f-disp)}
+.md-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.md-b{display:grid;gap:4px;align-content:start;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px}
+.md-b h3{margin:0 0 2px;font:700 .78rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:6px;align-items:center}
+.md-b h3 b{font-family:var(--f-mono);color:var(--ink)}
+.md-b a{display:grid;gap:1px;text-decoration:none;color:var(--ink);padding:5px 6px;border-radius:6px}
+.md-b a:hover{background:var(--accent-soft)}
+.md-b a span{font:600 .88rem var(--f-body)} .md-b a small{color:var(--muted);font-size:.78rem}
+.vers{display:grid;gap:4px;margin-top:6px}
+.vers div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.86rem;border-top:1px solid var(--line-2);padding-top:5px}
 .obra .rs{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .obra .rs li{display:grid;grid-template-columns:20px auto 1fr;gap:6px;align-items:center;font-size:.84rem;min-width:0}
 .obra .rs li a{font-weight:600;color:var(--ink);text-decoration:none;white-space:nowrap}
@@ -239,14 +250,40 @@ const obraAtual = () => new URLSearchParams(location.search).get('obra');
 function redesenhar() { if (obraAtual()) telaObra(obraAtual()); else desenharLista(); }
 
 /* ---------------- resumo de cada obra (pendências, concretagens, mapa de risco) ---------------- */
-let RESUMO = {};
+let RESUMO = {}, PENDS = [], ROMP = [];
+/* ---------------- "Meu dia": o que é de cada pessoa, em todas as obras ---------------- */
+function meuDiaHtml() {
+  if (!NV) return '';
+  const hoje = hojeIso(), cargo = NV.cargo, nomeObra = id => ((lista || []).find(o => o.id === id) || { nome: id }).nome;
+  const venc = p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje;
+  const rot = p => (p.numero ? '#' + p.numero + ' · ' : '') + [p.pavimento, p.local_tipo === 'Apartamento' && p.unidade ? 'Apto ' + p.unidade : p.local_tipo, p.comodo].filter(Boolean).join(' · ') + ' — ' + p.tipo;
+  const linha = p => `<a href="pendencias.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span>${esc(rot(p))}</span><small>${esc(nomeObra(p.obra))}${venc(p) ? ' · <b class="ruim">vencida</b>' : p.prazo ? ' · prazo ' + fmtD(p.prazo) : ''}</small></a>`;
+  const bloco = (tit, arr, vazio) => `<div class="md-b"><h3>${tit} <b>${arr.length}</b></h3>${arr.length ? arr.slice(0, 6).map(linha).join('') + (arr.length > 6 ? `<small class="muted">e mais ${arr.length - 6}…</small>` : '') : `<small class="muted">${vazio}</small>`}</div>`;
+  const ordem = (a, b) => (+venc(b) - +venc(a)) || ['critica', 'alta', 'media', 'baixa'].indexOf(a.prioridade) - ['critica', 'alta', 'media', 'baixa'].indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9'));
+  const blocos = [];
+  if (cargo === 'encarregado') {
+    blocos.push(bloco('Suas pendências para corrigir', PENDS.filter(p => p.status === 'aberta' || p.status === 'em_correcao').sort(ordem), 'Nenhuma pendência aberta nas suas disciplinas.'));
+    blocos.push(bloco('Aguardando aprovação', PENDS.filter(p => p.status === 'corrigida').sort(ordem), 'Nada aguardando.'));
+  } else if (cargo === 'engenharia' || cargo === 'seguranca') {
+    const minhas = p => cargo === 'seguranca' ? p.seguranca : !p.seguranca;
+    blocos.push(bloco('Corrigidas para você aprovar', PENDS.filter(p => p.status === 'corrigida' && minhas(p)).sort(ordem), 'Nada para aprovar.'));
+    blocos.push(bloco('Vencidas', PENDS.filter(p => venc(p) && (cargo === 'engenharia' || p.seguranca)).sort(ordem), 'Nenhuma vencida.'));
+  }
+  const cps = ROMP.filter(r => r.hoje || r.pendentes);
+  if (cps.length && cargo !== 'encarregado') blocos.push(`<div class="md-b"><h3>Corpos de prova</h3>${cps.map(r => `<a href="concretagem.html?obra=${encodeURIComponent(r.obra)}"><span>${esc(nomeObra(r.obra))}</span><small>${[r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? '<b class="ruim">' + r.pendentes + ' sem resultado</b>' : ''].filter(Boolean).join(' · ')}</small></a>`).join('')}</div>`);
+  if (!blocos.length) return '';
+  return `<section class="md" aria-label="Meu dia"><h2>Meu dia${NV.pessoas ? ' · ' + esc(NV.pessoas.nome(NV.usuario.email)) : ''}</h2><div class="md-g">${blocos.join('')}</div></section>`;
+}
 const hojeIso = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const fmtD = s => { if (!s) return ''; const [y, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
 async function carregarResumo() {
   const R = {}; const g = id => R[id] || (R[id] = {});
   const sb = NV.cliente; const hoje = hojeIso();
+  PENDS = []; ROMP = [];
+  try { const { data, error } = await sb.rpc('rompimentos_resumo'); if (!error) ROMP = data || []; } catch (e) {}
   try {
-    const { data, error } = await sb.from('pendencias').select('obra,status,prazo');
+    const { data, error } = await sb.from('pendencias').select('id,obra,numero,status,prazo,seguranca,disciplina,tipo,pavimento,unidade,local_tipo,comodo,prioridade,criado_por');
+    if (!error) PENDS = data || [];
     if (!error) for (const p of data || []) { const r = g(p.obra); r.pend = r.pend || { abertas: 0, corrigidas: 0, fechadas: 0, venc: 0 };
       if (p.status === 'aberta' || p.status === 'em_correcao') { r.pend.abertas++; if (p.prazo && p.prazo < hoje) r.pend.venc++; }
       else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }
@@ -298,6 +335,7 @@ async function telaObras() {
   $('busca').oninput = ev => { filtro = ev.target.value; desenharLista(); };
   if ($('bNova')) $('bNova').onclick = () => formNova(null);
   await Promise.all([carregar(), carregarResumo()]);
+  const md = meuDiaHtml(); if (md && !$('meuDia')) $('main').insertAdjacentHTML('afterbegin', `<div id="meuDia">${md}</div>`);
   desenharLista();
   cargaStart(null);
 }
@@ -334,10 +372,18 @@ async function telaObra(id) {
   document.title = o.nome + ' · Ferramentas da Obra';
   $('main').innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><span>${esc(o.nome)}</span></nav>
     <section class="hero"><div class="hft">${fotoHtml(o)}</div><div class="hinfo"><h2>${esc(o.nome)}</h2>
-      <p class="muted" style="margin:0">Modelo IFC: ${o.modelo && o.modelo.asset ? esc(o.modelo.nome) : 'nenhum'} · alterada em ${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' por ' + esc(quem(o.atualizado_por)) : ''}</p>${acoesObra(o)}</div></section>
+      <p class="muted" style="margin:0">Modelo IFC: ${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.em ? ' (desde ' + fmtDia(o.modelo.em) + ')' : '') : 'nenhum'} · alterada em ${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' por ' + esc(quem(o.atualizado_por)) : ''}</p>${acoesObra(o)}
+      ${(o.modelos || []).length ? `<details class="vers"><summary class="muted" style="cursor:pointer">Versões anteriores do modelo (${o.modelos.length})</summary>${o.modelos.map((m, i) => `<div><b>${esc(m.nome || 'modelo')}</b><span class="muted">usado até ${fmtDia(m.substituido_em)}${m.substituido_por ? ' · trocado por ' + esc(quem(m.substituido_por)) : ''}</span>${podeEditar() ? `<button class="btn sm ghost" data-volta="${i}" type="button">Voltar para esta versão</button>` : ''}</div>`).join('')}</details>` : ''}</div></section>
     <div class="tools">${fs.map(f => `<a class="tool" href="${f.pagina}?obra=${encodeURIComponent(o.id)}"><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p class="rs1">${resumoDe(o.id, f.id)}</p><p>${esc(f.desc)}</p></div><span class="go">Abrir →</span></a>`).join('')}</div>`;
   pintarFotos($('main')); ligarAcoes($('main'));
+  $('main').querySelectorAll('[data-volta]').forEach(b => b.onclick = async () => {
+    const m = o.modelos[+b.dataset.volta]; if (!m || !confirm('Voltar o modelo da obra para "' + (m.nome || 'modelo') + '"? O modelo atual fica guardado nas versões anteriores.')) return;
+    b.disabled = true; const novo = Object.assign({}, m); delete novo.substituido_em; delete novo.substituido_por; novo.em = new Date().toISOString();
+    try { await NV.obras.trocarModelo(o.id, novo, o.atualizado_em); toast('Modelo trocado. Ele vale para todas as ferramentas.'); await carregar(); redesenhar(); }
+    catch (e) { if (!avisoConflito(e, null)) { toast('Não foi possível: ' + msgErro(e), 6000); b.disabled = false; } }
+  });
 }
+const fmtDia = s => s ? new Date(s).toLocaleDateString('pt-BR') : '';
 /* ---------------- IFC: confere, compacta e envia ---------------- */
 async function lerIfc(arq) {
   const buf = await arq.arrayBuffer();
@@ -451,8 +497,7 @@ function formModelo(f, o) {
     try {
       modelo = await enviarModelo(o.id, arq, prog);
       prog('Salvando…', .9);
-      await NV.obras.alterar(o.id, { modelo }, o.atualizado_em);
-      if (tem) NV.obras.apagarArquivo(o.modelo.asset).catch(() => {});
+      await NV.obras.trocarModelo(o.id, modelo, o.atualizado_em);   // o anterior vai para o histórico
       ocupado(false); closeSheet(); toast('Modelo enviado. Ele vale para todas as ferramentas desta obra.'); await carregar(); redesenhar();
     } catch (e) {
       ocupado(false); $('mOk').disabled = $('mC').disabled = false;
@@ -568,15 +613,15 @@ async function contarPendentes() {
 }
 function formExcluir(f, o) {
   if (!o) return;
-  openSheet('Excluir obra', `<p style="margin:0">Isto apaga <b>${esc(o.nome)}</b> para todas as pessoas, em <b>todas as ferramentas</b>: o modelo IFC, as áreas, os símbolos, as revisões e as imagens.</p>
-    <p class="muted" style="margin:0">Não dá para desfazer. Se quiser guardar uma cópia, exporte as pranchas em PDF antes.</p>
+  openSheet('Excluir obra', `<p style="margin:0">A obra <b>${esc(o.nome)}</b> sai da lista para todas as pessoas, em <b>todas as ferramentas</b> (modelo IFC, mapas, concretagens, pendências e imagens).</p>
+    <p class="muted" style="margin:0">Ela fica 30 dias na lixeira, e o administrador pode restaurá-la em Administração → Dados. Depois disso, é apagada de vez.</p>
     <div class="fld"><label for="xTxt">Para confirmar, digite EXCLUIR</label><input id="xTxt" autocomplete="off" autocapitalize="characters"></div>`,
     `<span class="msg" id="xMsg"></span><button class="btn ghost" id="xC">Cancelar</button><button class="btn danger" id="xOk" disabled>Excluir obra</button>`);
   $('xC').onclick = closeSheet;
   $('xTxt').oninput = () => { $('xOk').disabled = $('xTxt').value.trim().toUpperCase() !== 'EXCLUIR'; };
   $('xOk').onclick = async () => {
     $('xOk').disabled = $('xC').disabled = true; $('xOk').textContent = 'Excluindo…'; ocupado(true);
-    try { await NV.obras.apagar(o.id, FERRAMENTAS.map(x => x.id)); ocupado(false); closeSheet(); toast('Obra excluída.'); if (obraAtual()) { location.href = 'index.html'; return; } await carregar(); redesenhar(); }
+    try { await NV.obras.apagar(o.id, FERRAMENTAS.map(x => x.id)); ocupado(false); closeSheet(); toast('Obra enviada para a lixeira (30 dias).'); if (obraAtual()) { location.href = 'index.html'; return; } await carregar(); redesenhar(); }
     catch (e) { ocupado(false); $('xC').disabled = false; $('xOk').textContent = 'Excluir obra'; $('xMsg').className = 'msg err'; $('xMsg').textContent = 'Não foi possível excluir: ' + msgErro(e); }
   };
 }

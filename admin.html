@@ -95,6 +95,14 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 48px;display:grid;gap:14px
 .ativ div:last-child{border-bottom:0}
 .ativ time{font:500 .78rem var(--f-mono);color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px;align-content:start}
+.box h3{margin:0;font:700 .82rem var(--f-disp);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.uso{display:grid;gap:4px}.uso-t{display:flex;justify-content:space-between;gap:8px;font-size:.88rem}.uso-t span{color:var(--muted)}
+.uso-b{height:10px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden}.uso-b i{display:block;height:100%}
+.lix{display:grid;gap:4px}
+.lix div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;border-top:1px solid var(--line-2);padding-top:6px;font-size:.88rem}
+.lix div .btn,.lix div a.btn{margin-left:auto}
 .vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center}
 @media (max-width:720px){
   .brand::after{display:none}.ttl{border-left:0;padding-left:0}.hctl{margin-left:0;width:100%}
@@ -169,11 +177,11 @@ function render() {
     ['avisos', n(u => u.avisos > 0), 'com avisos ligados']];
   $('main').innerHTML = `
     <div class="tiles">${tiles.map(([k, v, t]) => `<button class="tile ${(k === 'aguardando' || k === 'convite') && v ? 'alerta' : ''}" data-fil="${k}"><b>${v}</b><span>${t}</span></button>`).join('')}</div>
-    <div class="tabs"><button class="tab" data-aba="pessoas" aria-pressed="${ABA === 'pessoas'}">Pessoas</button><button class="tab" data-aba="convidar" aria-pressed="${ABA === 'convidar'}">+ Convidar pessoa</button><button class="tab" data-aba="atividade" aria-pressed="${ABA === 'atividade'}">Atividade</button></div>
+    <div class="tabs"><button class="tab" data-aba="pessoas" aria-pressed="${ABA === 'pessoas'}">Pessoas</button><button class="tab" data-aba="convidar" aria-pressed="${ABA === 'convidar'}">+ Convidar pessoa</button><button class="tab" data-aba="atividade" aria-pressed="${ABA === 'atividade'}">Atividade</button><button class="tab" data-aba="dados" aria-pressed="${ABA === 'dados'}">Dados: backup e lixeira</button></div>
     <div id="corpo"></div>`;
   $('main').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => { ABA = b.dataset.aba; render(); });
   $('main').querySelectorAll('[data-fil]').forEach(b => b.onclick = () => { ABA = 'pessoas'; FILTRO = b.dataset.fil; render(); });
-  if (ABA === 'convidar') telaConvidar(); else if (ABA === 'atividade') telaAtividade(); else telaPessoas();
+  if (ABA === 'convidar') telaConvidar(); else if (ABA === 'atividade') telaAtividade(); else if (ABA === 'dados') telaDados(); else telaPessoas();
 }
 
 const FILTROS = {
@@ -288,9 +296,61 @@ async function telaAtividade() {
   $('corpo').innerHTML = '<p class="muted">Carregando…</p>';
   if (!LOG) { const { data, error } = await sb.from('admin_log').select('*').order('em', { ascending: false }).limit(300);
     if (error) { $('corpo').innerHTML = '<div class="aviso">Para ver a atividade, rode o arquivo <b>atualizacao-admin2.sql</b> no Supabase.</div>'; return; } LOG = data || []; }
-  const ACAO = { acesso: 'mudou o acesso de', cargo: 'mudou o cargo de', convite: 'convidou', senha: 'enviou link de senha para', exclusao: 'excluiu' };
+  const ACAO = { acesso: 'mudou o acesso de', cargo: 'mudou o cargo de', convite: 'convidou', senha: 'enviou link de senha para', exclusao: 'excluiu', lixeira: 'lixeira:', backup: 'backup' };
   $('corpo').innerHTML = LOG.length ? `<div class="ativ">${LOG.map(l => `<div><time>${fmtDH(l.em)}</time><span><b>${esc(nomeDe(l.por))}</b> ${esc(ACAO[l.acao] || l.acao)} <b>${esc(nomeDe(l.alvo))}</b>${l.alvo && nomeDe(l.alvo) !== l.alvo ? ' <span class="muted">(' + esc(l.alvo) + ')</span>' : ''}${l.detalhe ? ' · ' + esc(l.detalhe) : ''}</span></div>`).join('')}</div>`
     : '<div class="vazio muted">Nenhuma atividade registrada ainda. A partir de agora, cada mudança de acesso, cargo, convite e exclusão aparece aqui.</div>';
+}
+
+/* ---------------- dados: espaço usado, backup e lixeira ---------------- */
+const fmtTam = b => !b ? '0 MB' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: b < 1073741824 ? 1 : 2 }) + ' MB';
+function baixar(nome, blob) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); }
+const carregarScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('não foi possível carregar ' + src)); document.head.appendChild(s); });
+async function telaDados() {
+  $('corpo').innerHTML = '<p class="muted">Carregando…</p>';
+  const [uso, lix] = await Promise.all([sb.rpc('admin_uso'), sb.rpc('admin_lixeira')]);
+  if (uso.error && lix.error) { $('corpo').innerHTML = '<div class="aviso">Para ver o espaço usado, o backup e a lixeira, rode o arquivo <b>atualizacao-melhorias.sql</b> no Supabase.</div>'; return; }
+  const u = (uso.data || [])[0] || {};
+  const barra = (v, lim, rot) => { const p = Math.min(100, Math.round(v / lim * 100)); return `<div class="uso"><div class="uso-t"><b>${rot}</b><span>${fmtTam(v)} de ${fmtTam(lim)} (${p}%)</span></div><div class="uso-b"><i style="width:${p}%;background:${p > 85 ? 'var(--bad)' : p > 65 ? 'var(--warn)' : 'var(--ok)'}"></i></div></div>`; };
+  const L = lix.data || [];
+  $('corpo').innerHTML = `<div class="cols2">
+    <section class="box"><h3>Espaço usado (plano gratuito)</h3>
+      ${barra(+u.arquivos_bytes || 0, 1073741824, 'Arquivos')}${barra(+u.banco_bytes || 0, 524288000, 'Banco de dados')}
+      <p class="muted" style="margin:0">${u.arquivos_qtd || 0} arquivo(s): ${u.fotos_qtd || 0} foto(s) de pendência (${fmtTam(+u.fotos_bytes || 0)}), modelos IFC ${fmtTam(+u.modelos_bytes || 0)}. Cada foto ocupa cerca de 200 KB.</p></section>
+    <section class="box"><h3>Backup</h3>
+      <p class="muted" style="margin:0">Uma cópia automática dos dados é feita todo domingo de madrugada e guardada no Supabase (ficam as 8 últimas). Para guardar fora do Supabase, baixe as cópias aqui de vez em quando.</p>
+      <div class="barra"><button class="btn" id="bkDados" type="button">Baixar os dados agora (JSON)</button><button class="btn ghost" id="bkArq" type="button">Baixar todos os arquivos (ZIP)</button></div>
+      <div id="bkMsg" class="msg"></div><div id="bkLista"></div></section></div>
+    <section class="box"><h3>Lixeira (${L.length})</h3>
+      <p class="muted" style="margin:0">Obras e pendências excluídas ficam aqui por 30 dias e depois são apagadas de vez.</p>
+      ${L.length ? `<div class="lix">${L.map((x, i) => { const dias = Math.max(0, 30 - Math.floor((Date.now() - new Date(x.excluida_em)) / 864e5));
+        return `<div><span class="pill ${x.tipo === 'obra' ? 'bad' : 'neu'}">${x.tipo === 'obra' ? 'obra' : 'pendência'}</span><b>${esc(x.titulo)}</b><span class="muted">${x.tipo === 'pendencia' ? esc(x.obra) + ' · ' : ''}excluída em ${fmtDH(x.excluida_em)}${x.excluida_por ? ' por ' + esc(nomeDe(x.excluida_por)) : ''} · some em ${dias} dia(s)</span><button class="btn sm ghost" data-rest="${i}" type="button">Restaurar</button></div>`; }).join('')}</div>` : '<p class="muted" style="margin:0">A lixeira está vazia.</p>'}</section>`;
+  $('corpo').querySelectorAll('[data-rest]').forEach(b => b.onclick = async () => { const x = L[+b.dataset.rest]; b.disabled = true;
+    const { error } = await sb.rpc('admin_restaurar', { p_tipo: x.tipo, p_id: x.id }); if (error) { toast('Não foi possível restaurar: ' + error.message, 6000); b.disabled = false; return; }
+    LOG = null; toast((x.tipo === 'obra' ? 'Obra' : 'Pendência') + ' restaurada.'); telaDados(); });
+  const msg = (t, ok) => { $('bkMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('bkMsg').textContent = t; };
+  $('bkDados').onclick = async () => { $('bkDados').disabled = true; msg('Montando a cópia…', true);
+    try { const j = await funcaoUsuarios('backup'); baixar('backup-obras-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(j, null, 1)], { type: 'application/json' }));
+      msg('Cópia baixada (' + Object.values(j.tabelas || {}).reduce((s, t) => s + t.length, 0) + ' registros; a lista de ' + (j.arquivos || []).length + ' arquivos vai junto).', true); LOG = null; listarBackups(); }
+    catch (e) { msg(e.message); } $('bkDados').disabled = false; };
+  $('bkArq').onclick = async () => { $('bkArq').disabled = true; msg('Listando os arquivos…', true);
+    try {
+      const { arquivos } = await funcaoUsuarios('arquivos'); const tot = arquivos.reduce((s, f) => s + (f.tamanho || 0), 0);
+      if (!confirm('Baixar ' + arquivos.length + ' arquivo(s), cerca de ' + fmtTam(tot) + ', num arquivo ZIP? Pode demorar alguns minutos.')) { msg(''); $('bkArq').disabled = false; return; }
+      if (!window.JSZip) await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+      const zip = new JSZip(); let n = 0;
+      for (const f of arquivos) { n++; msg('Baixando ' + n + ' de ' + arquivos.length + '…', true); try { const r = await fetch(f.url); if (r.ok) zip.file(f.nome, await r.blob()); } catch (e) { console.warn(f.nome, e); } }
+      msg('Compactando…', true); const blob = await zip.generateAsync({ type: 'blob' }, m => msg('Compactando… ' + Math.round(m.percent) + '%', true));
+      baixar('arquivos-obras-' + new Date().toISOString().slice(0, 10) + '.zip', blob); msg('ZIP baixado com ' + n + ' arquivo(s).', true); LOG = null;
+    } catch (e) { msg(e.message); }
+    $('bkArq').disabled = false; };
+  listarBackups();
+}
+async function listarBackups() {
+  const box = $('bkLista'); if (!box) return;
+  try { const { backups } = await funcaoUsuarios('backups');
+    box.innerHTML = backups.length ? '<p class="muted" style="margin:6px 0 2px">Cópias guardadas no Supabase:</p><div class="lix">' + backups.map(b => `<div><b>${esc(b.nome.replace('.json', ''))}</b><span class="muted">${fmtTam(b.tamanho)}</span><a class="btn sm ghost" href="${esc(b.url)}" download="backup-obras-${esc(b.nome)}" style="text-decoration:none">Baixar</a></div>`).join('') + '</div>'
+      : '<p class="muted" style="margin:6px 0 0">Ainda não há cópias automáticas (a primeira sai no próximo domingo, ou ao baixar os dados agora).</p>'; }
+  catch (e) { box.innerHTML = '<p class="muted" style="margin:6px 0 0">' + esc(e.message) + '</p>'; }
 }
 
 async function recarregar() { try { await carregar(); } catch (e) { toast('Não foi possível atualizar a lista: ' + e.message, 6000); } render(); }

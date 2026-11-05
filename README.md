@@ -52,6 +52,13 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 4. `atualizacao-pendencias.sql` (módulo de pendências; instalações novas também rodam este, depois do `supabase.sql`)
 5. `atualizacao-push.sql` (avisos; veja "App instalável e avisos")
 6. `atualizacao-admin2.sql` (página de Administração: atividade, convites e mais informações por pessoa)
+7. `atualizacao-melhorias.sql` (lixeira de 30 dias, comentários, local na planta, versões do modelo, espaço usado, avisos de concreto, backup semanal e limpeza diária). Depois dele, republique as funções `notificar` e `usuarios` com o código novo.
+
+### Backup e lixeira
+
+- **Backup**: todo domingo de madrugada uma cópia dos dados é guardada no Supabase (ficam as 8 últimas). Em **Administração → Dados** dá para baixar os dados (JSON) e todos os arquivos (ZIP) a qualquer momento; guarde essas cópias fora do Supabase de vez em quando.
+- **Lixeira**: obras e pendências excluídas ficam 30 dias em **Administração → Dados** (dá para restaurar) e depois são apagadas de vez, junto com os arquivos.
+- **Local na planta**: as plantas dos pavimentos são geradas sozinhas quando alguém com acesso de edição abre o **Mapa de Risco** da obra (e de novo quando o modelo IFC muda).
 
 Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
 

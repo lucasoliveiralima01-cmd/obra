@@ -204,7 +204,7 @@
   };
 
   /* ---------------- cadastro de obras ---------------- */
-  const OBRA_COLS = 'id,nome,modelo,foto,criado_em,criado_por,atualizado_em,atualizado_por';
+  const OBRA_COLS = 'id,nome,modelo,modelos,foto,criado_em,criado_por,atualizado_em,atualizado_por';
   const obras = {
     async listar() {
       const { data, error } = await sb.from('obras').select(OBRA_COLS).order('nome');
@@ -260,8 +260,25 @@
       if (error) throw erro(error);
       urls.delete(caminho);
     },
-    // apaga a obra, os dados dela em todas as ferramentas e os arquivos
+    // manda a obra para a lixeira (30 dias; o administrador pode restaurar)
     async apagar(id, ferramentas) {
+      const r = await sb.rpc('obra_excluir', { p_id: id });
+      if (!r.error) return;
+      // banco ainda sem lixeira (atualizacao-melhorias.sql não rodado): apaga de vez, como antes
+      if (!/obra_excluir|function|schema cache/i.test(r.error.message || '')) throw erro(r.error);
+      return obras.apagarDeVez(id, ferramentas);
+    },
+    // trocar o modelo guardando o anterior no histórico (até 5 versões)
+    async trocarModelo(id, modelo, base) {
+      const o = await obras.obter(id);
+      const ant = o && o.modelo && o.modelo.asset ? [Object.assign({}, o.modelo, { substituido_em: new Date().toISOString(), substituido_por: email() })] : [];
+      const hist = ant.concat((o && o.modelos) || []).filter(m => m && m.asset && m.asset !== modelo.asset);
+      const sobra = hist.slice(5);
+      const r = await obras.alterar(id, { modelo, modelos: hist.slice(0, 5) }, base);
+      for (const m of sobra) obras.apagarArquivo(m.asset).catch(() => {});
+      return r;
+    },
+    async apagarDeVez(id, ferramentas) {
       const { error: e1 } = await sb.from(T).delete().like('painel', '%:' + id);
       if (e1) throw erro(e1);
       const pastas = ['obras/' + id].concat((ferramentas || []).map(f => f + '/' + id));

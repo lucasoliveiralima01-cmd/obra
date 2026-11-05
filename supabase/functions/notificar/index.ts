@@ -93,6 +93,13 @@ async function evento(ev: Record<string, string>, site: string) {
     para = encarregadosDe(ms, p.disciplina);
     title = 'Pendência ' + num + (ev.de === 'fechada' ? ' reaberta' : ' reprovada') + obra;
     if (ev.comentario) body += '\nMotivo: ' + ev.comentario;
+  } else if (ev.acao === 'comentario') {
+    // comentário do encarregado vai para quem fecha; de quem fecha (ou outro), para os encarregados
+    const quem = ms.find(m => low(m.email) === low(ev.por));
+    const fecha = doCargo(ms, p.seguranca ? 'seguranca' : 'engenharia');
+    para = quem && quem.cargo === 'encarregado' ? fecha : encarregadosDe(ms, p.disciplina).concat(fecha);
+    title = 'Comentário na pendência ' + num + obra;
+    body = rotulo(p) + '\n' + (ev.comentario || '');
   } else return { enviados: 0, motivo: 'evento sem aviso' };
   para = para.filter(e => e !== low(ev.por));   // quem fez não recebe o próprio aviso
   return { enviados: await enviar(para, { title, body, url, tag: 'pend-' + p.id }) };
@@ -101,13 +108,23 @@ async function evento(ev: Record<string, string>, site: string) {
 // todo dia: vencidas para a disciplina e para quem fecha; resumo para a Engenharia
 async function diario(site: string) {
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-  const { data, error } = await sb.from('pendencias').select('id,obra,numero,status,disciplina,prioridade,prazo,seguranca');
+  const { data, error } = await sb.from('pendencias').select('id,obra,numero,status,disciplina,prioridade,prazo,seguranca').is('excluida_em', null);
   if (error) throw error;
   const ps = data || [];
   const { data: obras } = await sb.from('obras').select('id,nome');
   const nomeObra = (id: string) => ((obras || []).find(o => o.id === id) || { nome: id }).nome;
   const ms = await membros();
   let enviados = 0;
+  // corpos de prova que rompem hoje ou estão sem resultado → Engenharia
+  try {
+    const { data: rs } = await sb.rpc('rompimentos_resumo');
+    for (const r of rs || []) {
+      if (!r.hoje && !r.pendentes) continue;
+      enviados += await enviar(doCargo(ms, 'engenharia'), { title: 'Corpos de prova · ' + nomeObra(r.obra),
+        body: [r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? r.pendentes + ' sem resultado lançado' : ''].filter(Boolean).join(' · '),
+        url: site + 'concretagem.html?obra=' + encodeURIComponent(r.obra), tag: 'cp-' + r.obra });
+    }
+  } catch (e) { console.warn('rompimentos', e); }
   for (const obra of [...new Set(ps.map(p => p.obra))]) {
     const da = ps.filter(p => p.obra === obra);
     const venc = da.filter(p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje);
@@ -151,6 +168,13 @@ Deno.serve(async (req) => {
     if ((req.headers.get('x-aviso-segredo') || '').trim() !== env('AVISO_SEGREDO')) return resp({ erro: 'não autorizado' }, 401);
     if (corpo.tipo === 'evento') return resp(await evento(corpo.evento || {}, site));
     if (corpo.tipo === 'diario') return resp(await diario(site));
+    // concreto abaixo do fck (avisado pelo Mapa de Concretagem) → Engenharia
+    if (corpo.tipo === 'concreto') {
+      const ms = await membros();
+      const para = doCargo(ms, 'engenharia').filter(e => e !== low(corpo.por));
+      return resp({ enviados: await enviar(para, { title: String(corpo.titulo || 'Concreto abaixo do fck'), body: String(corpo.corpo || ''),
+        url: site + 'concretagem.html?obra=' + encodeURIComponent(String(corpo.obra || '')), tag: 'concreto-' + corpo.obra }) });
+    }
     return resp({ erro: 'tipo desconhecido' }, 400);
   } catch (e) {
     console.error(e);
