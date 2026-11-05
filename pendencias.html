@@ -797,7 +797,9 @@ async function formAvisos() {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.erro || ('a função respondeu ' + r.status + (r.status === 404 ? ' (a Edge Function "notificar" ainda não foi criada)' : '')));
       msg(j.enviados ? 'Teste enviado. O aviso deve chegar em alguns segundos.' : 'A função respondeu, mas nenhum aparelho seu está inscrito.', !!j.enviados);
-    } catch (err) { msg('Falhou: ' + (err.message || err)); }
+    } catch (err) { msg(/Failed to fetch|NetworkError|Load failed/i.test(String(err.message || err)) && navigator.onLine
+        ? 'A função "notificar" não respondeu: ela pode estar com erro ao iniciar. Veja os segredos e os Logs da função no Supabase.'
+        : 'Falhou: ' + (err.message || err)); }
     $('avTeste').disabled = false;
   };
 }

@@ -13,8 +13,24 @@
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
-const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@exemplo.com', Deno.env.get('VAPID_PUBLIC')!, Deno.env.get('VAPID_PRIVATE')!);
+const env = (k: string) => (Deno.env.get(k) || '').trim();
+const sb = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
+// as chaves são conferidas a cada chamada: se faltar algum segredo, a função responde dizendo qual
+// (em vez de cair ao iniciar)
+let vapidOk = false;
+function configurar(): string | null {
+  const falta = ['VAPID_PUBLIC', 'VAPID_PRIVATE', 'AVISO_SEGREDO'].filter(k => !env(k));
+  if (falta.length) return 'Faltam os segredos da função: ' + falta.join(', ') + ' (Edge Functions > Secrets).';
+  if (!vapidOk) {
+    try {
+      let sub = env('VAPID_SUBJECT') || 'mailto:admin@exemplo.com';
+      if (!/^(mailto:|https:)/.test(sub)) sub = 'mailto:' + sub;
+      webpush.setVapidDetails(sub, env('VAPID_PUBLIC'), env('VAPID_PRIVATE'));
+      vapidOk = true;
+    } catch (e) { return 'Chaves VAPID inválidas: ' + (e as Error).message; }
+  }
+  return null;
+}
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const resp = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
@@ -120,6 +136,8 @@ async function diario(site: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   try {
+    const falha = configurar();
+    if (falha) return resp({ erro: falha }, 500);
     const corpo = await req.json().catch(() => ({}));
     const site = String(corpo.site || Deno.env.get('SITE_URL') || '');
     // aviso de teste, pedido pelo próprio site: confere o login e manda só para a pessoa
@@ -130,7 +148,7 @@ Deno.serve(async (req) => {
       const n = await enviar([user.email], { title: 'Avisos ativados', body: 'Este aparelho vai receber os avisos das pendências.', url: site || '/', tag: 'teste' });
       return resp({ enviados: n });
     }
-    if (req.headers.get('x-aviso-segredo') !== Deno.env.get('AVISO_SEGREDO')) return resp({ erro: 'não autorizado' }, 401);
+    if ((req.headers.get('x-aviso-segredo') || '').trim() !== env('AVISO_SEGREDO')) return resp({ erro: 'não autorizado' }, 401);
     if (corpo.tipo === 'evento') return resp(await evento(corpo.evento || {}, site));
     if (corpo.tipo === 'diario') return resp(await diario(site));
     return resp({ erro: 'tipo desconhecido' }, 400);
