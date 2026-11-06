@@ -5,7 +5,8 @@
    (IFCReader), mas só sobra uma imagem leve de cada fachada:
    - img:  desenho da fachada (cores por tipo de elemento, contornos);
    - mask: mapa do que é parede (1) e do que é abertura (2), para descontar
-           janelas e portas da área marcada;
+           janelas e portas da área marcada, e o recuo de cada ponto (para
+           uma área ficar presa a um pano só);
    - níveis dos pavimentos, para as linhas de referência.
    As 4 fachadas seguem os eixos principais das paredes do prédio.
    ===================================================================== */
@@ -45,7 +46,22 @@
     }
     let best = 0, bv = -1;
     for (let i = 0; i < 90; i++) { const v = H[(i + 89) % 90] * 0.5 + H[i] + H[(i + 1) % 90] * 0.5; if (v > bv) { bv = v; best = i; } }
-    return (best + 0.5) * Math.PI / 180;
+    // refina: média (ponderada pela área) dos ângulos perto do pico, para a parede ficar bem de frente
+    const c0 = best + 0.5; let s = 0, w = 0;
+    for (const e of els) {
+      if (!/WALL/.test(e.type)) continue;
+      const p = e.pos;
+      for (let i = 0; i < p.length; i += 9) {
+        const ux = p[i + 3] - p[i], uy = p[i + 4] - p[i + 1], uz = p[i + 5] - p[i + 2];
+        const vx = p[i + 6] - p[i], vy = p[i + 7] - p[i + 1], vz = p[i + 8] - p[i + 2];
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        const a2 = Math.hypot(nx, ny, nz); if (a2 < 1e-9 || Math.abs(nz) / a2 > 0.2) continue;
+        let g = Math.atan2(ny, nx) * 180 / Math.PI; g = ((g % 90) + 90) % 90;
+        let dg = g - c0; if (dg > 45) dg -= 90; if (dg < -45) dg += 90;
+        if (Math.abs(dg) <= 1.5) { s += dg * a2; w += a2; }
+      }
+    }
+    return (c0 + (w ? s / w : 0)) * Math.PI / 180;
   }
 
   async function gerar(res, opts) {
@@ -160,8 +176,10 @@
         }
         if (borda) f *= 0.42;
         D[q] = Math.round(base[0] * f); D[q + 1] = Math.round(base[1] * f); D[q + 2] = Math.round(base[2] * f); D[q + 3] = 255;
-        // máscara: vermelho = classe (1 parede, 2 abertura, 3 laje/viga/pilar)
-        M[q] = c * 60; M[q + 1] = 0; M[q + 2] = 0; M[q + 3] = 255;
+        // máscara: vermelho = classe (1 parede, 2 abertura, 3 laje/viga/pilar);
+        // verde + azul = recuo em cm em relação ao ponto mais à frente (separa os panos em planos diferentes)
+        const rc = Math.max(0, Math.min(65535, Math.round((dF - dep[o]) * 100)));
+        M[q] = c * 60; M[q + 1] = rc >> 8; M[q + 2] = rc & 255; M[q + 3] = 255;
         if (c === 2) aAbert++; else aParede++;
       }
       ctx.putImageData(im, 0, 0); mctx.putImageData(mim, 0, 0);
@@ -173,7 +191,7 @@
       vistas.push({
         k, az: Math.round(az) % 360, nome: 'Fachada ' + rumo(az),
         u0: +(u0 + bx0 * px).toFixed(3), z1: +(z1 - by0 * px).toFixed(3), px: +px.toFixed(5), W: W2, H: H2,
-        img, mask, previa: cv,
+        img, mask, previa: cv, prof: 1,
         areaParede: +(aParede * px * px).toFixed(1), areaAbertura: +(aAbert * px * px).toFixed(1)
       });
       await sleep(0);

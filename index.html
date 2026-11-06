@@ -75,7 +75,7 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .btn.sm{padding:4px 10px;font-size:.8rem}
 .btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
-.obras{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.obras{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .obra{display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:0 16px 14px;overflow:hidden}
 .obra .ft{display:block;margin:0 -16px 4px;aspect-ratio:16/7;background:linear-gradient(135deg,var(--navy),var(--petrol));position:relative;overflow:hidden;text-decoration:none}
 .obra .ft img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -128,12 +128,16 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .md-b a span{font:600 .88rem var(--f-body)} .md-b a small{color:var(--muted);font-size:.78rem}
 .vers{display:grid;gap:4px;margin-top:6px}
 .vers div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.86rem;border-top:1px solid var(--line-2);padding-top:5px}
-.obra .rs{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.obra .rs li{display:grid;grid-template-columns:20px auto 1fr;gap:6px;align-items:center;font-size:.84rem;min-width:0}
-.obra .rs li a{font-weight:600;color:var(--ink);text-decoration:none;white-space:nowrap}
-.obra .rs li a:hover{color:var(--accent);text-decoration:underline}
-.obra .rs li>span:last-child{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
-.ic2{width:20px;height:20px;display:grid;place-items:center}.ic2 svg{width:18px;height:18px}
+/* ferramentas da obra: ícones como apps de celular */
+.apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin:2px -6px}
+.app{display:grid;justify-items:center;gap:5px;padding:6px 2px;border-radius:12px;color:var(--ink);text-decoration:none;min-width:0}
+.app:hover,.app:focus-visible{background:var(--accent-soft)}
+.app .ap-ic{position:relative;width:54px;height:54px;border-radius:15px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);box-shadow:0 2px 6px rgba(10,30,45,.1)}
+.app .ap-ic svg{width:32px;height:32px}
+.app:hover .ap-ic{border-color:var(--accent)}
+.app .ap-nm{font:600 .74rem/1.15 var(--f-body);letter-spacing:-.01em;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .badge{position:absolute;top:-6px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--accent);color:#fff;font:700 .72rem/20px var(--f-body);text-align:center;border:2px solid var(--panel)}
+.app .badge.ruim{background:var(--bad)}
 .ruim{color:var(--bad)}
 .tool .rs1{margin:4px 0 0;font:600 .9rem var(--f-body);color:var(--ink)}
 .hero{display:grid;grid-template-columns:minmax(180px,320px) 1fr;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
@@ -208,18 +212,18 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 /* Ferramentas disponíveis. Para incluir uma nova: crie a página (ex.: concretagem.html,
    com window.NUVEM_FERRAMENTA='concretagem') e preencha "pagina" aqui. */
 const FERRAMENTAS = [
-  { id: 'risco', nome: 'Mapa de Risco', pagina: 'risco.html',
+  { id: 'risco', nome: 'Mapa de Risco', curto: 'Riscos', pagina: 'risco.html',
     desc: 'Áreas de risco por grupo e intensidade (NR-5), símbolos de sinalização, revisões e pranchas em PDF sobre o modelo da obra.',
     icone: '<svg viewBox="0 0 30 30"><circle cx="9" cy="10" r="5" fill="#5cb531"/><circle cx="21" cy="10" r="5" fill="#e3141b"/><circle cx="15" cy="21" r="6.5" fill="#1736e0"/></svg>' },
-  { id: 'concretagem', nome: 'Mapa de Concretagem', pagina: 'concretagem.html',
+  { id: 'concretagem', nome: 'Mapa de Concretagem', curto: 'Concretagens', pagina: 'concretagem.html',
     desc: 'Concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, sobre o mesmo modelo IFC da obra.',
     icone: '<svg viewBox="0 0 30 30"><rect x="3" y="18" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="6" y="10" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="9" y="3" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
-  { id: 'fachada', nome: 'Mapa de Fachadas', pagina: 'fachadas.html', soOnline: true,
-    desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
-    icone: '<svg viewBox="0 0 30 30"><rect x="7" y="3" width="16" height="24" rx="1.5" fill="#e9e5dc" stroke="#8d979f" stroke-width=".8"/><rect x="7" y="3" width="16" height="8" fill="#2f9a59"/><rect x="7" y="11" width="16" height="7" fill="#e39b1c"/><rect x="10" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="20" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="20" width="3.5" height="3" fill="#9fc3d6"/></svg>' },
-  { id: 'pendencias', nome: 'Pendências de obra', pagina: 'pendencias.html', soOnline: true,
+  { id: 'pendencias', nome: 'Pendências de obra', curto: 'Pendências', pagina: 'pendencias.html', soOnline: true,
     desc: 'Registro de pendências e retrabalhos com fotos, responsável pela correção, prazos, bloqueios de frentes, histórico e relatórios em PDF. Funciona sem sinal.',
-    icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' }
+    icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' },
+  { id: 'fachada', nome: 'Mapa de Fachadas', curto: 'Fachadas', pagina: 'fachadas.html', soOnline: true,
+    desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
+    icone: '<svg viewBox="0 0 30 30"><rect x="7" y="3" width="16" height="24" rx="1.5" fill="#e9e5dc" stroke="#8d979f" stroke-width=".8"/><rect x="7" y="3" width="16" height="8" fill="#2f9a59"/><rect x="7" y="11" width="16" height="7" fill="#e39b1c"/><rect x="10" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="20" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="20" width="3.5" height="3" fill="#9fc3d6"/></svg>' }
 ];
 // encarregados usam só o painel de pendências
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(NV && NV.cargo === 'encarregado' && f.id !== 'pendencias') && !(f.soOnline && !NV));
@@ -315,6 +319,12 @@ function resumoDe(id, fid) {
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }
+// selo no ícone (como notificação de app): pendências abertas, em vermelho se alguma venceu
+function seloDe(id, fid) {
+  const r = RESUMO[id] || {};
+  if (fid === 'pendencias' && r.pend && r.pend.abertas) return `<span class="badge${r.pend.venc ? ' ruim' : ''}" aria-label="${r.pend.abertas} abertas">${r.pend.abertas > 99 ? '99+' : r.pend.abertas}</span>`;
+  return '';
+}
 const fotoHtml = o => o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" style="${fotoEstilo(o.foto)}" hidden>` : `<span>${esc(iniciais(o.nome))}</span>`;
 const pintarFotos = box => box.querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; img.hidden = false; }).catch(() => {}));
 const acoesObra = o => podeEditar() ? `<div class="acts"><button class="btn sm ghost" data-ren="${esc(o.id)}">Renomear</button><button class="btn sm ghost" data-fot="${esc(o.id)}">Foto</button><button class="btn sm ghost" data-mod="${esc(o.id)}">${o.modelo && o.modelo.asset ? 'Trocar modelo' : 'Enviar modelo'}</button><button class="btn sm danger" data-del="${esc(o.id)}">Excluir</button></div>` : '';
@@ -337,7 +347,7 @@ function telaFerramentas() {
 /* ---------------- tela 1: as obras ---------------- */
 async function telaObras() {
   document.title = 'Ferramentas da Obra';
-  $('main').innerHTML = `<div class="head"><div><h2>Obras</h2><p>Escolha a obra para abrir as ferramentas${ferramentasComPagina().length > 1 ? ': ' + ferramentasComPagina().map(f => f.nome.toLowerCase()).join(', ') : ''}.</p></div></div>
+  $('main').innerHTML = `<div class="head"><div><h2>Obras</h2><p>Escolha a obra para abrir uma ferramenta.</p></div></div>
     <div class="bar"><input class="search" id="busca" type="search" placeholder="Buscar obra…" aria-label="Buscar obra" value="${esc(filtro)}">
       ${podeEditar() ? '<button class="btn" id="bNova">+ Nova obra</button>' : ''}</div>
     <div id="lista"><p class="muted">Carregando obras…</p></div>`;
@@ -364,7 +374,7 @@ function desenharLista() {
   box.innerHTML = '<div class="obras">' + vis.map(o => `<article class="obra">
       <a class="ft" href="${destinoObra(o.id)}" tabindex="-1" aria-hidden="true">${fotoHtml(o)}</a>
       <a class="nm" href="${destinoObra(o.id)}">${esc(o.nome)}</a>
-      <ul class="rs">${fs.map(f => `<li><span class="ic2">${f.icone}</span><a href="${f.pagina}?obra=${encodeURIComponent(o.id)}" title="Abrir ${esc(f.nome)}">${esc(f.nome)}</a><span>${resumoDe(o.id, f.id)}</span></li>`).join('')}</ul>
+      <nav class="apps" aria-label="Ferramentas de ${esc(o.nome)}">${fs.map(f => `<a class="app" href="${f.pagina}?obra=${encodeURIComponent(o.id)}" title="${esc(f.nome)}: ${esc(resumoDe(o.id, f.id).replace(/<[^>]+>/g, ''))}"><span class="ap-ic">${f.icone}${seloDe(o.id, f.id)}</span><span class="ap-nm">${esc(f.curto || f.nome)}</span></a>`).join('')}</nav>
       <dl><dt>Modelo IFC</dt><dd>${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.bytes ? ' <span class="muted">(' + fmtMB(o.modelo.bytes) + ')</span>' : '') : '<span class="pill warn">sem modelo</span>'}</dd></dl>
       ${acoesObra(o)}
     </article>`).join('') + '</div>';
