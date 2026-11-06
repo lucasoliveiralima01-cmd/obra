@@ -14,6 +14,7 @@
   const FERR = [
     { id: 'risco', nome: 'Risco', pag: 'risco.html' },
     { id: 'concretagem', nome: 'Concretagem', pag: 'concretagem.html' },
+    { id: 'fachada', nome: 'Fachadas', pag: 'fachadas.html' },
     { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html' }
   ];
 

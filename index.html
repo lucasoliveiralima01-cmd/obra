@@ -214,6 +214,9 @@ const FERRAMENTAS = [
   { id: 'concretagem', nome: 'Mapa de Concretagem', pagina: 'concretagem.html',
     desc: 'Concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, sobre o mesmo modelo IFC da obra.',
     icone: '<svg viewBox="0 0 30 30"><rect x="3" y="18" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="6" y="10" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="9" y="3" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
+  { id: 'fachada', nome: 'Mapa de Fachadas', pagina: 'fachadas.html', soOnline: true,
+    desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
+    icone: '<svg viewBox="0 0 30 30"><rect x="7" y="3" width="16" height="24" rx="1.5" fill="#e9e5dc" stroke="#8d979f" stroke-width=".8"/><rect x="7" y="3" width="16" height="8" fill="#2f9a59"/><rect x="7" y="11" width="16" height="7" fill="#e39b1c"/><rect x="10" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="20" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="20" width="3.5" height="3" fill="#9fc3d6"/></svg>' },
   { id: 'pendencias', nome: 'Pendências de obra', pagina: 'pendencias.html', soOnline: true,
     desc: 'Registro de pendências e retrabalhos com fotos, responsável pela correção, prazos, bloqueios de frentes, histórico e relatórios em PDF. Funciona sem sinal.',
     icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' }
@@ -293,9 +296,10 @@ async function carregarResumo() {
       else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }
   } catch (e) {}
   if (NV.cargo !== 'encarregado') try {
-    const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas']);
+    const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas', 'aplicacoes']);
     if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
       if (fe === 'concretagem' && x.colecao === 'concretagens') { r.conc = r.conc || { n: 0, ultima: '' }; r.conc.n++; if (x.data && x.data > r.conc.ultima) r.conc.ultima = x.data; }
+      if (fe === 'fachada' && x.colecao === 'aplicacoes') { r.fach = r.fach || { n: 0, ultima: '' }; r.fach.n++; if (x.data && x.data > r.fach.ultima) r.fach.ultima = x.data; }
       if (fe === 'risco' && x.colecao === 'areas') { r.risco = r.risco || { areas: 0 }; r.risco.areas++; }
       if (fe === 'risco' && x.colecao === 'revisoes') { r.risco = r.risco || { areas: 0 }; if (!r.risco.revData || (x.data || '') > r.risco.revData) { r.risco.revData = x.data || ''; r.risco.rev = x.rev; } } }
   } catch (e) {}
@@ -307,6 +311,7 @@ function resumoDe(id, fid) {
   if (fid === 'pendencias') { const p = r.pend; if (!p) return 'Nenhuma pendência';
     return [p.abertas ? p.abertas + ' aberta' + (p.abertas > 1 ? 's' : '') : 'Nenhuma aberta', p.venc ? `<b class="ruim">${p.venc} vencida${p.venc > 1 ? 's' : ''}</b>` : '', p.corrigidas ? p.corrigidas + ' para aprovar' : ''].filter(Boolean).join(' · '); }
   if (fid === 'concretagem') { const c = r.conc; return c ? c.n + ' concretage' + (c.n > 1 ? 'ns' : 'm') + (c.ultima ? ' · última em ' + fmtD(c.ultima) : '') : 'Nenhuma concretagem'; }
+  if (fid === 'fachada') { const c = r.fach; return c ? c.n + ' área' + (c.n > 1 ? 's' : '') + ' aplicada' + (c.n > 1 ? 's' : '') + (c.ultima ? ' · última em ' + fmtD(c.ultima) : '') : 'Nenhuma aplicação'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }

@@ -114,6 +114,40 @@ async function evento(ev: Record<string, string>, site: string) {
   return { enviados: await enviar(para, { title, body, url, tag: 'pend-' + p.id }) };
 }
 
+// Mapa de Fachadas: aplicações cuja cura termina hoje, agrupadas por fachada e camada
+const somaDias = (d: string, n: number) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+async function fachadasLiberadas(hoje: string, site: string, nomeObra: (id: string) => string, para: string[]): Promise<number> {
+  if (!para.length) return 0;
+  const { data, error } = await sb.from('registros').select('painel,colecao,id,dados').like('painel', 'fachada:%').in('colecao', ['config', 'camadas', 'aplicacoes']);
+  if (error) throw error;
+  const porObra = new Map<string, { fach: Record<string, string>; cam: Record<string, { nome: string; cura: number; ordem: number }>; apl: Record<string, unknown>[] }>();
+  for (const r of data || []) {
+    const obra = String(r.painel).split(':')[1]; if (!obra) continue;
+    const o = porObra.get(obra) || { fach: {}, cam: {}, apl: [] }; porObra.set(obra, o);
+    const d = r.dados || {};
+    if (r.colecao === 'config' && Array.isArray(d.fachadas)) for (const f of d.fachadas) o.fach[f.id] = f.nome;
+    if (r.colecao === 'camadas') o.cam[d.id || r.id] = { nome: d.nome, cura: +d.cura || 0, ordem: +d.ordem || 0 };
+    if (r.colecao === 'aplicacoes') o.apl.push(d);
+  }
+  let n = 0;
+  for (const [obra, o] of porObra) {
+    const ord = Object.entries(o.cam).sort((a, b) => a[1].ordem - b[1].ordem);
+    const grupos = new Map<string, { area: number; qtd: number }>();
+    for (const a of o.apl) {
+      const c = o.cam[String(a.camada)]; if (!c || !c.cura || !/^\d{4}-\d{2}-\d{2}$/.test(String(a.data))) continue;
+      if (somaDias(String(a.data), c.cura) !== hoje) continue;
+      const i = ord.findIndex(x => x[0] === a.camada); const prox = i >= 0 && ord[i + 1] ? ord[i + 1][1].nome : '';
+      const k = (o.fach[String(a.fachada)] || 'Fachada') + ': ' + c.nome + (prox ? ' liberado para ' + prox : ' concluído');
+      const g = grupos.get(k) || { area: 0, qtd: 0 }; g.area += +(a.area as number) || 0; g.qtd++; grupos.set(k, g);
+    }
+    if (!grupos.size) continue;
+    const linhas = [...grupos].map(([k, g]) => k + ' (' + g.qtd + ' área' + (g.qtd > 1 ? 's' : '') + ', ' + Math.round(g.area) + ' m²)');
+    n += await enviar(para, { title: 'Fachada liberada hoje · ' + nomeObra(obra), body: linhas.join('\n'),
+      url: site + 'fachadas.html?obra=' + encodeURIComponent(obra), tag: 'fachada-lib-' + obra });
+  }
+  return n;
+}
+
 // todo dia: vencidas para a disciplina e para quem fecha; resumo para a Engenharia
 async function diario(site: string) {
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -140,6 +174,8 @@ async function diario(site: string) {
         url: site + 'concretagem.html?obra=' + encodeURIComponent(r.obra), tag: 'cp-' + r.obra });
     }
   } catch (e) { console.warn('rompimentos', e); }
+  // fachadas: áreas cuja cura termina hoje (liberadas para a próxima camada) → Engenharia
+  try { enviados += await fachadasLiberadas(hoje, site, nomeObra, doCargo(ms, 'engenharia')); } catch (e) { console.warn('fachadas', e); }
   for (const obra of [...new Set(ps.map(p => p.obra))]) {
     const da = ps.filter(p => p.obra === obra);
     const venc = da.filter(p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje);
@@ -197,6 +233,13 @@ Deno.serve(async (req) => {
       const para = doCargo(ms, 'engenharia').filter(e => e !== low(corpo.por));
       return resp({ enviados: await enviar(para, { title: String(corpo.titulo || 'Concreto abaixo do fck'), body: String(corpo.corpo || ''),
         url: site + 'concretagem.html?obra=' + encodeURIComponent(String(corpo.obra || '')), tag: 'concreto-' + corpo.obra }) });
+    }
+    // quebra de cura (avisada pelo Mapa de Fachadas) → Engenharia
+    if (corpo.tipo === 'fachada') {
+      const ms = await membros();
+      const para = doCargo(ms, 'engenharia').filter(e => e !== low(corpo.por));
+      return resp({ enviados: await enviar(para, { title: String(corpo.titulo || 'Quebra de cura na fachada'), body: String(corpo.corpo || ''),
+        url: site + 'fachadas.html?obra=' + encodeURIComponent(String(corpo.obra || '')), tag: 'fachada-' + corpo.obra }) });
     }
     return resp({ erro: 'tipo desconhecido' }, 400);
   } catch (e) {

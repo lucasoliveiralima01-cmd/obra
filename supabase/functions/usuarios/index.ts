@@ -92,7 +92,7 @@ async function limpeza() {
   const { data: os } = await sb.from('obras').select('id').lt('excluida_em', limite);
   for (const o of os || []) {
     await sb.from('registros').delete().like('painel', '%:' + o.id);
-    for (const pasta of ['obras/' + o.id, 'risco/' + o.id, 'concretagem/' + o.id, 'pendencias/' + o.id]) {
+    for (const pasta of ['obras/' + o.id, 'risco/' + o.id, 'concretagem/' + o.id, 'fachada/' + o.id, 'pendencias/' + o.id]) {
       try { await apagarArquivos((await listarTudo(pasta)).map(f => f.name)); } catch (e) { console.warn(pasta, e); }
     }
     await sb.from('obras').delete().eq('id', o.id); obras++;

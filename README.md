@@ -5,6 +5,8 @@ Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC
 - **Mapa de Risco** (NR-5): áreas com riscos por grupo e intensidade, símbolos de sinalização, hachuras, revisões e exportação das pranchas em PDF/PNG.
 - **Mapa de Concretagem**: concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, revisões por pavimento e pranchas em PDF/PNG (com quadro de concretagens), além da exportação em Excel.
 
+- **Mapa de Fachadas**: as 4 fachadas geradas do IFC da arquitetura (o IFC é lido no computador de quem importa; só imagens leves das fachadas vão para a nuvem). Camadas livres (chapisco, reboco, textura, pinturas…) com material e tempo de cura; cada aplicação é desenhada sobre a fachada com a data. O painel mostra o que está liberado, o que está em cura e quanto falta, as quebras de cura (camada seguinte aplicada antes do prazo) e as áreas prontas para a próxima etapa, com a área sem janelas e portas. Exporta imagem e planilha (CSV).
+
 - **Pendências de obra**: registro de pendências e retrabalhos com fotos (antes e depois), responsável pela correção, prioridade e prazo, serviços travados, fluxo aberta → em correção → corrigida → fechada, histórico, resumo e relatórios em PDF. Funciona sem sinal: o que é registrado fica no aparelho e sobe sozinho quando a conexão volta.
 
 Cargos nas pendências (definidos em **Administração**):
@@ -34,6 +36,8 @@ Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse ca
 | `risco.html` | Mapa de Risco |
 | `concretagem.html` | Mapa de Concretagem |
 | `pendencias.html` | Pendências de obra |
+| `fachadas.html` | Mapa de Fachadas |
+| `ifc-leitor.js`, `fachada-gerar.js` | Leem o IFC da arquitetura e geram as imagens das fachadas (só carregam na hora de gerar) |
 | `sw.js` | Guarda as páginas no aparelho para as pendências abrirem sem sinal |
 | `start.js`, `start-concretagem.js` | Dados da obra Start (modelo IFC, mapa de risco e concretagens) |
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
@@ -57,6 +61,8 @@ Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta 
 9. `atualizacao-listas.sql` (listas próprias de cada obra a partir do padrão da empresa, e renomear itens atualizando as pendências já registradas). Tudo isso é editado na página **Listas e regras** (Pendências → ⋯ → Listas e regras, só administradores).
 10. `atualizacao-locais.sql` (locais de cada pavimento da Start, com Elevador e Fachada pedindo o lado; responsáveis pela correção por cargo, como Pedreiro e Eletricista, com "Próprio ou Terceiro"; altura das plantas do IFC para ligar os pavimentos pela ordem)
 11. `atualizacao-funcionarios.sql` (funcionários de cada obra com um ou mais cargos, em Listas e regras → Funcionários; na pendência, escolher quem vai corrigir, e o aviso vai só para essa pessoa; um usuário pode ter cargos de grupos diferentes). Depois dele, republique a função `notificar` com o código novo.
+
+12. `atualizacao-fachadas.sql` (Mapa de Fachadas: aviso de quebra de cura para a Engenharia). Depois dele, republique as funções `notificar` (aviso de quebra de cura e aviso diário das áreas liberadas) e `usuarios` (apaga também as imagens das fachadas quando uma obra é excluída de vez).
 
 ### Backup e lixeira
 
