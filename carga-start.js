@@ -28,7 +28,8 @@
 
   // true se esta pessoa pode e precisa rodar a carga
   async function precisa(NV) {
-    if (!NV || NV.papel !== 'editor') return false;
+    // só quem cria obras (Engenharia e administradores)
+    if (!NV || !(NV.perfil ? ['admin', 'engenharia'].includes(NV.perfil) : NV.papel === 'editor')) return false;
     try { return !(await marca(NV).get()).exists; } catch (e) { console.warn('carga Start', e); return false; }
   }
 

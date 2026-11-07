@@ -10,23 +10,17 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%2322425c'/%3E%3Crect x='9' y='7' width='22' height='27' rx='3' fill='%239fc3d6'/%3E%3Crect x='15' y='5' width='10' height='5' rx='1.5' fill='%23ffffff'/%3E%3Cpath d='M14 18l3 3 6-6' stroke='%2323804a' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3Cpath d='M14 27h12' stroke='%23d9701c' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style>
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
 :root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2; --info:#2f6fb0; --info-soft:#dde9f6;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
-  --r:10px; color-scheme:light;
+  --info:#2f6fb0; --info-soft:#dde9f6;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; --info:#7fb2e6; --info-soft:#17304a; color-scheme:dark}}
+  --info:#7fb2e6; --info-soft:#17304a; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; --info:#7fb2e6; --info-soft:#17304a; color-scheme:dark}
+  --info:#7fb2e6; --info-soft:#17304a; color-scheme:dark}
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{min-height:100%}
@@ -57,6 +51,8 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .tabs .sp{flex:1}
 .aviso{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:.9rem}
+.aviso.info{background:var(--accent-soft);color:var(--ink)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
 .muted{color:var(--muted);font-size:.88rem}
 .btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
 .btn.ghost{background:none;color:var(--accent)}
@@ -88,7 +84,7 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .cb .loc{font:600 .95rem var(--f-body);overflow-wrap:anywhere}
 .cb .sub{font-size:.84rem;color:var(--muted);overflow-wrap:anywhere}
 .pill{font:600 .7rem var(--f-body);padding:1px 8px;border-radius:10px;white-space:nowrap;border:1px solid transparent}
-.st-aberta{background:var(--bad-soft);color:var(--bad)} .st-em_correcao{background:var(--warn-soft);color:var(--warn)}
+.st-avaliacao{background:var(--accent-soft);color:var(--accent)} .st-aberta{background:var(--bad-soft);color:var(--bad)} .st-em_correcao{background:var(--warn-soft);color:var(--warn)}
 .st-corrigida{background:var(--info-soft);color:var(--info)} .st-fechada{background:var(--ok-soft);color:var(--ok)}
 .p-critica{border-color:var(--bad);color:var(--bad)} .p-alta{border-color:var(--warn);color:var(--warn)} .p-media{border-color:var(--line);color:var(--muted)} .p-baixa{border-color:var(--line-2);color:var(--muted)}
 .tag{font:600 .68rem var(--f-body);padding:1px 7px;border-radius:10px;background:var(--bg);color:var(--muted);border:1px dashed var(--line)}
@@ -231,8 +227,10 @@ const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xx
 const clone = o => JSON.parse(JSON.stringify(o));
 const semRede = e => !navigator.onLine || /Failed to fetch|NetworkError|network|fetch|Load failed|conex/i.test(String((e && (e.message || e.error_description)) || e));
 
-const ST = { aberta: 'Aberta', em_correcao: 'Em correção', corrigida: 'Corrigida', fechada: 'Fechada' };
-const ST_ORD = ['aberta', 'em_correcao', 'corrigida', 'fechada'];
+const ST = { avaliacao: 'Em avaliação', aberta: 'Aberta', em_correcao: 'Em correção', corrigida: 'Corrigida', fechada: 'Fechada' };
+const ST_ORD = ['avaliacao', 'aberta', 'em_correcao', 'corrigida', 'fechada'];
+// sem ofício escolhido (sugestão de quem é de campo ou pendência que a Segurança ainda vai avaliar)
+const A_DEFINIR = 'A definir';
 const PRI = { critica: ['Crítica', 1], alta: ['Alta', 3], media: ['Média', 7], baixa: ['Baixa', 15] };
 const PRI_ORD = ['critica', 'alta', 'media', 'baixa'];
 const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', 'Pavimento 05', 'Pavimento 06', 'Pavimento 07', 'Pavimento 08', 'Pavimento 09', 'Pavimento 10', 'Pavimento 11', 'Cobertura'].map(n => ({ nome: n, unidades: [] }));
@@ -246,24 +244,33 @@ let PLANTAS = {};     // pavimento -> planta (imagem gerada pelo Mapa de Risco a
 let FILA = [];        // operações aguardando envio (deste aparelho)
 let FUNC = [];        // funcionários da obra (Listas e regras → Funcionários)
 let TAB = 'lista';
-const F = { st: new Set(['aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, q: '' };
+const F = { st: new Set(['avaliacao', 'aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: false, q: '' };
 const euEmail = () => String((NV && NV.usuario && NV.usuario.email) || '').toLowerCase();
 const minha = p => String(p.criado_por || '').toLowerCase() === euEmail();
 // funcionários que podem corrigir num cargo; e se a pendência foi escolhida para mim
 const funcsDe = cargo => FUNC.filter(f => f.ativo !== false && (f.cargos || []).includes(cargo));
 const paraMim = p => !!p.responsavel && FUNC.some(f => f.id === p.responsavel && String(f.email || '').toLowerCase() === euEmail());
+// quem é de campo: as escolhidas para ele, as do ofício sem ninguém escolhido e as sugestões dele
+const doMeu = p => minha(p) || !p.responsavel || paraMim(p);
 
 /* ======================= quem pode o quê (o banco confere de novo) ======================= */
 const cargo = () => NV && NV.cargo;
-const podeCriar = () => cargo() === 'engenharia' || cargo() === 'seguranca';
+// perfil: admin | engenharia | seguranca | campo | consulta
+const perfil = () => !NV ? '' : NV.perfil || ({ engenharia: 'engenharia', seguranca: 'seguranca', encarregado: 'campo' }[NV.cargo]) || (NV.admin ? 'admin' : 'consulta');
+const engenharia = () => ['admin', 'engenharia'].includes(perfil());
+// quem é de campo registra como sugestão (a Engenharia avalia); Consulta só vê
+const podeCriar = () => ['admin', 'engenharia', 'seguranca', 'campo'].includes(perfil());
+const sugere = () => perfil() === 'campo';
+const quemAvalia = p => p.seguranca ? 'a Segurança do Trabalho' : 'a Engenharia';
 const ehSegTipo = t => { const e = (L.problema.find(x => x.valor === t) || {}).extra || {}; return e.seguranca === true || e.disciplina === 'Segurança'; };
 // listas e regras: as da obra (ou o padrão da empresa). Itens desativados não aparecem no formulário.
 const LO = window.ListasObra;
 const ativos = t => LO.ativos(L[t]).map(x => x.valor);
 const prazoDe = k => ((CFG.regras || {}).prazos || LO.PRAZOS)[k];
 const obrig = k => !!((CFG.regras || {}).obrigatorios || {})[k];
-const editor = p => cargo() === 'engenharia' || (cargo() === 'seguranca' && p.seguranca);
-const fecha = p => p.seguranca ? cargo() === 'seguranca' : cargo() === 'engenharia';
+const editor = p => engenharia() || (perfil() === 'seguranca' && p.seguranca);
+// avalia, fecha e reprova: Segurança nas de segurança, Engenharia nas outras (administrador: todas)
+const fecha = p => perfil() === 'admin' || (p.seguranca ? perfil() === 'seguranca' : perfil() === 'engenharia');
 const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
 
 /* ======================= IndexedDB: fila, fotos e cópia para usar sem sinal ======================= */
@@ -336,11 +343,12 @@ function itens() {
   const m = new Map(PEND.map(p => [p.id, Object.assign(clone(p), { fotos: (p.pendencia_fotos || []).map(f => ({ id: f.id, tipo: f.tipo, caminho: f.caminho, em: f.criado_em })), eventos: (p.pendencia_eventos || []).slice() })]));
   for (const op of FILA) {
     let p = m.get(op.id);
-    if (op.op === 'criar' && !p) { p = Object.assign(clone(op.row), { numero: null, status: 'aberta', criado_por: NV.usuario.email, criado_em: op.em, fotos: [], eventos: [{ em: op.em, por: NV.usuario.email, acao: 'criada', para: 'aberta' }] }); m.set(op.id, p); }
+    if (op.op === 'criar' && !p) { const st = op.row.status === 'avaliacao' ? 'avaliacao' : 'aberta'; p = Object.assign(clone(op.row), { numero: null, status: st, criado_por: NV.usuario.email, criado_em: op.em, fotos: [], eventos: [{ em: op.em, por: NV.usuario.email, acao: 'criada', para: st }] }); m.set(op.id, p); }
     if (!p) continue;
     p._fila = true; if (op.erro) p._erro = op.erro;
     if (op.op === 'editar') Object.assign(p, op.campos);
     if (op.op === 'criar' || op.op === 'fotos') for (const f of op.fotos || []) p.fotos.push({ fid: f.fid, tipo: f.tipo, local: true });
+    if (op.op === 'status' && op.para === 'recusada') { m.delete(op.id); continue; }
     if (op.op === 'status') { p.eventos.push({ em: op.em, por: NV.usuario.email, acao: 'status', de: p.status, para: op.para, comentario: op.comentario, local: true }); p.status = op.para; }
     if (op.op === 'comentario') p.eventos.push({ em: op.em, por: NV.usuario.email, acao: 'comentario', comentario: op.texto, local: true });
     if (op.op === 'excluir') m.delete(op.id);
@@ -402,7 +410,7 @@ async function enviarFotos(op) {
     if (b) { const u = URLS.get(f.fid); URLS.delete(f.fid); if (u) URLS.set(caminho, u); await idbDel('blobs', f.fid); }
   }
 }
-// banco ainda sem as colunas novas (falta rodar atualizacao-locais.sql / atualizacao-funcionarios.sql): envia sem elas
+// banco ainda sem as colunas novas (falta rodar banco.sql): envia sem elas
 const semEquipe = e => /equipe|responsavel/i.test((e && e.message) || '');
 const tiraNovas = (r, e) => { const m = (e && e.message) || ''; if (/responsavel/i.test(m)) { delete r.responsavel; delete r.responsavel_nome; } if (/equipe/i.test(m)) delete r.equipe; };
 async function executar(op) {
@@ -479,7 +487,7 @@ function render() {
 
 function filtrar(its) {
   const q = F.q.trim().toLowerCase();
-  return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.resp || (F.resp === '-' ? !p.responsavel_nome : p.responsavel_nome === F.resp)) && (!F.paraMim || paraMim(p)) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
+  return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.resp || (F.resp === '-' ? !p.responsavel_nome : p.responsavel_nome === F.resp)) && (!F.paraMim || paraMim(p)) && (!F.meu || doMeu(p)) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
     && (!F.blq || (p.bloqueios || []).length) && (!F.inc || incompleta(p)) && (!F.venc || vencida(p)) && (!F.fila || p._fila) && (!F.minhas || minha(p))
     && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, p.responsavel_nome, EQUIPE[p.equipe] || '', p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => ST_ORD.indexOf(a.status) - ST_ORD.indexOf(b.status) || (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || (b.numero || 1e9) - (a.numero || 1e9));
@@ -494,13 +502,14 @@ function renderLista(its) {
       <div class="frow">${ST_ORD.map(s => `<button class="chip" data-st="${s}" aria-pressed="${F.st.has(s)}">${ST[s]}<b>${cnt(s)}</b></button>`).join('')}</div>
       <div class="frow">
         <select class="fsel" id="fPav" aria-label="Pavimento">${opcoes(pavs, F.pav, 'Todos os pavimentos')}</select>
-        <select class="fsel" id="fDisc" aria-label="Disciplina">${opcoes(usados('disciplina').sort(), F.disc, 'Todas as disciplinas')}</select>
+        <select class="fsel" id="fDisc" aria-label="Ofício de quem corrige">${opcoes(usados('disciplina').sort(), F.disc, 'Todos os ofícios')}</select>
         ${usados('responsavel_nome').length ? `<select class="fsel" id="fResp" aria-label="Quem vai corrigir"><option value="">Todos os funcionários</option>${usados('responsavel_nome').sort().map(v => `<option ${v === F.resp ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option value="-" ${F.resp === '-' ? 'selected' : ''}>Sem funcionário escolhido</option></select>` : ''}
         <select class="fsel" id="fTipo" aria-label="Tipo de problema">${opcoes(usados('tipo').sort(), F.tipo, 'Todos os tipos')}</select>
         <select class="fsel" id="fPri" aria-label="Prioridade"><option value="">Todas as prioridades</option>${PRI_ORD.map(k => `<option value="${k}" ${F.pri === k ? 'selected' : ''}>${PRI[k][0]}</option>`).join('')}</select>
       </div>
       <div class="frow">
-        ${podeCriar() ? `<button class="chip" data-tg="minhas" aria-pressed="${F.minhas}">Registradas por mim<b>${its.filter(minha).length}</b></button>` : ''}
+        ${sugere() ? `<button class="chip" data-tg="meu" aria-pressed="${F.meu}">Só as minhas<b>${its.filter(p => doMeu(p) && p.status !== 'fechada').length}</b></button>` : ''}
+        ${podeCriar() ? `<button class="chip" data-tg="minhas" aria-pressed="${F.minhas}">${sugere() ? 'Sugeridas por mim' : 'Registradas por mim'}<b>${its.filter(minha).length}</b></button>` : ''}
         ${its.some(paraMim) ? `<button class="chip" data-tg="paraMim" aria-pressed="${F.paraMim}">Escolhidas para mim<b>${its.filter(p => paraMim(p) && p.status !== 'fechada').length}</b></button>` : ''}
         <button class="chip" data-tg="blq" aria-pressed="${F.blq}">Com bloqueios</button>
         <button class="chip" data-tg="venc" aria-pressed="${F.venc}">Vencidas<b>${its.filter(vencida).length}</b></button>
@@ -508,7 +517,7 @@ function renderLista(its) {
         ${FILA.length ? `<button class="chip" data-tg="fila" aria-pressed="${F.fila}">Aguardando envio<b>${its.filter(p => p._fila).length}</b></button>` : ''}
         <input class="busca" id="fQ" type="search" placeholder="Buscar: nº, apto, descrição…" value="${esc(F.q)}" aria-label="Buscar">
       </div></div>
-    ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude os filtros acima.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências da sua disciplina, elas aparecem aqui.'}</p></div>`}`;
+    ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude os filtros acima.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências do seu ofício, elas aparecem aqui.'}</p></div>`}`;
   const b = $('tabBody');
   b.querySelectorAll('[data-st]').forEach(x => x.onclick = () => { const s = x.dataset.st; F.st.has(s) ? F.st.delete(s) : F.st.add(s); render(); });
   b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { F[x.dataset.tg] = !F[x.dataset.tg]; render(); });
@@ -557,7 +566,7 @@ function renderPlanta(its) {
 
 function renderResumo(its) {
   const ab = its.filter(p => p.status !== 'fechada');
-  const cont = (arr, k) => { const m = new Map(); for (const p of arr) { const o = m.get(p[k]) || { aberta: 0, em_correcao: 0, corrigida: 0, fechada: 0, venc: 0 }; o[p.status]++; if (vencida(p)) o.venc++; m.set(p[k], o); } return m; };
+  const cont = (arr, k) => { const m = new Map(); for (const p of arr) { const o = m.get(p[k]) || { avaliacao: 0, aberta: 0, em_correcao: 0, corrigida: 0, fechada: 0, venc: 0 }; o[p.status]++; if (vencida(p)) o.venc++; m.set(p[k], o); } return m; };
   const tabela = (m, ordem, titulo) => `<table class="t"><thead><tr><th>${titulo}</th>${ST_ORD.map(s => `<th>${ST[s]}</th>`).join('')}<th>Vencidas</th></tr></thead><tbody>${ordem.filter(k => m.has(k)).map(k => { const o = m.get(k); return `<tr><td>${esc(k)}</td>${ST_ORD.map(s => `<td>${o[s] || '·'}</td>`).join('')}<td>${o.venc ? `<b style="color:var(--bad)">${o.venc}</b>` : '·'}</td></tr>`; }).join('') || `<tr><td colspan="6" class="muted">Nada ainda.</td></tr>`}</tbody></table>`;
   const mD = cont(its, 'disciplina'), mP = cont(its, 'pavimento');
   const ordP = CFG.pavimentos.map(x => x.nome).concat([...mP.keys()].filter(k => !CFG.pavimentos.some(x => x.nome === k)));
@@ -567,7 +576,7 @@ function renderResumo(its) {
       ${ST_ORD.map(s => tile(its.filter(p => p.status === s).length, ST[s], 'st:' + s)).join('')}
       ${tile(its.filter(vencida).length, 'Vencidas', 'venc')}${tile(ab.filter(incompleta).length, 'Incompletas', 'inc')}${tile(blq.length, 'Frentes bloqueadas', 'blq')}
     </div>
-    <div class="cols"><div class="box"><h3>Por disciplina</h3>${tabela(mD, [...mD.keys()].sort(), 'Disciplina')}</div><div class="box"><h3>Por pavimento</h3>${tabela(mP, ordP, 'Pavimento')}</div></div>
+    <div class="cols"><div class="box"><h3>Por ofício de quem corrige</h3>${tabela(mD, [...mD.keys()].sort(), 'Ofício')}</div><div class="box"><h3>Por pavimento</h3>${tabela(mP, ordP, 'Pavimento')}</div></div>
     <div class="box"><h3>Por quem causou o problema (retrabalho)</h3>${(() => {
       const m = new Map(); for (const p of its) { const k = String(p.causador || '').trim() || 'Não informado'; const o = m.get(k) || { n: 0, ab: 0, tipos: new Map() }; o.n++; if (p.status !== 'fechada') o.ab++; o.tipos.set(p.tipo, (o.tipos.get(p.tipo) || 0) + 1); m.set(k, o); }
       const ord = [...m.entries()].sort((a, b) => (a[0] === 'Não informado') - (b[0] === 'Não informado') || b[1].n - a[1].n);
@@ -576,14 +585,14 @@ function renderResumo(its) {
     <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(rotResp(p))} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
-    const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, resp: '', pav: '', disc: '', tipo: '', pri: '', q: '' });
-    if (r.startsWith('st:')) F.st = new Set([r.slice(3)]); else { F.st = new Set(['aberta', 'em_correcao', 'corrigida']); F[r] = true; }
+    const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: false, resp: '', pav: '', disc: '', tipo: '', pri: '', q: '' });
+    if (r.startsWith('st:')) F.st = new Set([r.slice(3)]); else { F.st = new Set(['avaliacao', 'aberta', 'em_correcao', 'corrigida']); F[r] = true; }
     TAB = 'lista'; render();
   });
 }
 
 /* ======================= planta: marcar e mostrar o local ======================= */
-const COR_ST = { aberta: '#c23b2f', em_correcao: '#b86e00', corrigida: '#2f6fb0', fechada: '#23804a' };
+const COR_ST = { avaliacao: '#6a5acd', aberta: '#c23b2f', em_correcao: '#b86e00', corrigida: '#2f6fb0', fechada: '#23804a' };
 // pins: [{u, v, cor, id, rot}] com u, v de 0 a 1 sobre a imagem
 // pav: nome da planta do IFC (plantaDe(pavimento))
 function plantaBox(pav, pins, marcavel) {
@@ -621,12 +630,24 @@ $('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem sa
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
 
 /* ---------------- registro rápido / edição ---------------- */
-function formPend(id) {
+// encaminhar: quem avalia abre a pendência "em avaliação" para escolher quem corrige e encaminhar
+function formPend(id, encaminhar) {
   const ed = id ? itens().find(p => p.id === id) : null;
   if (ed && !editor(ed)) return;
-  const tiposOk = LO.ativos(L.problema).filter(t => cargo() === 'engenharia' || (cargo() === 'seguranca' && ehSegTipo(t.valor)));
+  // a Segurança vê os tipos de segurança (se a lista tiver algum); os outros perfis veem todos
+  const segTipos = LO.ativos(L.problema).filter(t => ehSegTipo(t.valor));
+  const tiposOk = perfil() === 'seguranca' && segTipos.length ? segTipos : LO.ativos(L.problema);
   const f = ed ? clone(ed) : { pavimento: '', local_tipo: '', unidade: '', comodo: '', tipo: tiposOk.length === 1 ? tiposOk[0].valor : '', disciplina: '', equipe: '', prioridade: '', descricao: '', causador: '', bloqueios: [], prazo: '', observacoes: '' };
   if (!ed && f.tipo) f.disciplina = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina || '';
+  if (f.disciplina === A_DEFINIR) f.disciplina = '';
+  // de segurança do trabalho? (a Segurança registra sempre como de segurança)
+  f.seg = ed ? !!ed.seguranca : perfil() === 'seguranca' || ehSegTipo(f.tipo);
+  // como o formulário funciona:
+  //   'sugestao': quem é de campo sugere (a Engenharia avalia; ofício opcional)
+  //   'seg': a Engenharia registra uma de segurança e manda para a Segurança avaliar (sem ofício)
+  //   'enc': quem avalia escolhe quem corrige e encaminha; 'aval': edição de uma em avaliação; '': normal
+  const modo = () => encaminhar ? 'enc' : !ed && sugere() ? 'sugestao' : !ed && engenharia() && f.seg ? 'seg' : ed && ed.status === 'avaliacao' ? 'aval' : '';
+  const BOTAO = { sugestao: 'Enviar sugestão', seg: 'Encaminhar para a Segurança', enc: 'Encaminhar para correção' };
   // quem vai corrigir: '' = não escolhido, '*' = todos do cargo, ou o id do funcionário
   f.responsavel = ed ? (ed.responsavel || '*') : '';
   // trocou o cargo: a pessoa escolhida precisa ter o novo cargo
@@ -654,13 +675,16 @@ function formPend(id) {
         : f.local_tipo === 'Outro' ? `<div class="fld"><label for="fUn2">Qual local? <span class="req">*</span></label><input id="fUn2" placeholder="Ex.: casa de máquinas, guarita" value="${esc(f.unidade || '')}"></div>`
         : (f.local_tipo ? `<div class="fld"><label for="fUn2">Detalhe do local (opcional)</label><input id="fUn2" placeholder="Ex.: perto do elevador, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
       <div class="fld"><label for="fTipo2">Tipo de problema <span class="req">*</span></label><select id="fTipo2"><option value="">Escolha…</option>${tiposOk.map(t => `<option ${t.valor === f.tipo ? 'selected' : ''}>${esc(t.valor)}</option>`).join('')}</select></div>
-      <div class="fld"><span class="l">Responsável pela correção <span class="req">*</span></span>${grupo('Disciplina', comAtual(ativos('disciplina'), f.disciplina), f.disciplina, 'disciplina', 'small')}</div>
-      ${f.disciplina ? (() => { const fs = funcsDe(f.disciplina).map(x => x.id); if (f.responsavel && f.responsavel !== '*' && !fs.includes(f.responsavel)) fs.push(f.responsavel);
+      ${engenharia() ? `<label class="chk"><input type="checkbox" id="fSeg" ${f.seg ? 'checked' : ''}> É de segurança do trabalho</label>
+        ${f.seg ? `<p class="muted" style="margin:-6px 0 0">${!ed ? 'Vai para a <b>Segurança do Trabalho</b> avaliar e escolher quem corrige.' : 'Quem avalia e dá a baixa final é a Segurança do Trabalho.'}</p>` : ''}` : ''}
+      ${modo() === 'sugestao' ? '<p class="muted" style="margin:0">Sua sugestão vai para a <b>Engenharia</b> avaliar. Se ela aprovar, a pendência é aberta e encaminhada para quem corrige.</p>' : ''}
+      ${modo() === 'seg' ? '' : `<div class="fld"><span class="l">Ofício de quem corrige ${['sugestao', 'aval'].includes(modo()) ? '<span class="muted" style="text-transform:none;letter-spacing:0">(se souber)</span>' : '<span class="req">*</span>'}</span>${grupo('Ofício', comAtual(ativos('disciplina'), f.disciplina), f.disciplina, 'disciplina', 'small')}</div>`}
+      ${f.disciplina && modo() !== 'seg' && modo() !== 'sugestao' ? (() => { const fs = funcsDe(f.disciplina).map(x => x.id); if (f.responsavel && f.responsavel !== '*' && !fs.includes(f.responsavel)) fs.push(f.responsavel);
         return fs.length ? `<div class="fld"><span class="l">Quem vai corrigir <span class="req">*</span> <span class="muted" style="text-transform:none;letter-spacing:0">(o aviso vai só para quem você escolher)</span></span>
           <div class="opts small" role="group" aria-label="Quem vai corrigir">${fs.map(id => { const fu = FUNC.find(x => x.id === id) || {}; return `<button type="button" class="opt" data-f="responsavel" data-v="${esc(id)}" aria-pressed="${f.responsavel === id}">${esc(nomeFunc(id))}${fu.equipe ? ' · ' + EQUIPE[fu.equipe] : ''}</button>`; }).join('')}
             <button type="button" class="opt" data-f="responsavel" data-v="*" aria-pressed="${f.responsavel === '*'}">Todos de ${esc(f.disciplina)}</button></div></div>`
-          : `<p class="muted" style="margin:0">Nenhum funcionário de <b>${esc(f.disciplina)}</b> cadastrado nesta obra: o aviso vai para todos que têm esse cargo no sistema.${NV && NV.admin ? ' Cadastre em <b>Listas e regras → Funcionários</b>.' : ''}</p>`; })() : ''}
-      ${f.disciplina ? `<div class="fld"><span class="l">${esc(f.disciplina)}${f.responsavel && f.responsavel !== '*' ? ' (' + esc(nomeFunc(f.responsavel)) + ')' : ''} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
+          : `<p class="muted" style="margin:0">Ninguém de <b>${esc(f.disciplina)}</b> cadastrado nesta obra: o aviso vai para todos desse ofício no sistema.${NV && NV.admin ? ' Cadastre em <b>Administração</b> (quem usa o sistema) ou em <b>Listas e regras → Funcionários</b> (quem não usa).' : ''}</p>`; })() : ''}
+      ${f.disciplina && modo() !== 'seg' && modo() !== 'sugestao' ? `<div class="fld"><span class="l">${esc(f.disciplina)}${f.responsavel && f.responsavel !== '*' ? ' (' + esc(nomeFunc(f.responsavel)) + ')' : ''} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
       <div class="fld"><span class="l">Prioridade <span class="req">*</span></span>${grupo('Prioridade', PRI_ORD, f.prioridade, 'prioridade')}</div>
       <details class="mais" ${ed || incompleta(f) === false ? 'open' : ''}><summary>${['descricao', 'causador', 'prazo', 'observacoes', 'bloqueios'].some(obrig) ? 'Mais detalhes (esta obra exige alguns: ' + [['descricao', 'descrição'], ['causador', 'quem causou'], ['prazo', 'prazo'], ['observacoes', 'observações'], ['bloqueios', 'serviço travado']].filter(x => obrig(x[0])).map(x => x[1]).join(', ') + ')' : 'Mais detalhes (opcional; sem eles a pendência fica INCOMPLETA)'}</summary>
         <div class="fld"><label for="fDesc">Descrição</label><textarea id="fDesc" placeholder="O que está errado e o que precisa ser feito">${esc(f.descricao || '')}</textarea></div>
@@ -688,7 +712,11 @@ function formPend(id) {
       // a equipe vem do cadastro do funcionário (dá para trocar)
       if (k === 'responsavel' && f.responsavel && f.responsavel !== '*') { const fu = FUNC.find(x => x.id === f.responsavel); if (fu && fu.equipe) f.equipe = fu.equipe; }
       const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; });
-    $('fTipo2').onchange = e => { lerTextos(); f.tipo = e.target.value; const s = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina; if (s) { f.disciplina = s; confereResp(); } const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
+    $('fTipo2').onchange = e => { lerTextos(); f.tipo = e.target.value; const s = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina; if (s) { f.disciplina = s; confereResp(); }
+      if (!ed && engenharia()) f.seg = ehSegTipo(f.tipo);
+      const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
+    if ($('fSeg')) $('fSeg').onchange = e => { lerTextos(); f.seg = e.target.checked; const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
+    if ($('pOk')) $('pOk').textContent = BOTAO[modo()] || (ed ? 'Salvar' : 'Registrar');
     $('fPrazo').oninput = () => { prazoManual = true; };
     $('blqAdd').onclick = () => { lerTextos(); f.bloqueios.push({ servico: '', local: f.local_tipo === 'Apartamento' && f.unidade ? 'Apto ' + f.unidade : '' }); desenhar(); B.querySelector('details.mais').open = true; };
     B.querySelectorAll('[data-brm]').forEach(b => b.onclick = () => { lerTextos(); f.bloqueios.splice(+b.dataset.brm, 1); desenhar(); B.querySelector('details.mais').open = true; });
@@ -709,7 +737,8 @@ function formPend(id) {
     const limpar = () => { lerTextos(); f.ponto = null; const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
     if ($('plLimpa')) $('plLimpa').onclick = limpar;
   };
-  openSheet(ed ? 'Editar pendência ' + (ed.numero ? '#' + ed.numero : '') : 'Nova pendência', '', `<span class="msg" id="pMsg"></span><button class="btn ghost" id="pC" type="button">Cancelar</button><button class="btn" id="pOk" type="button">${ed ? 'Salvar' : 'Registrar'}</button>`, true);
+  const titulo = encaminhar ? 'Encaminhar ' + (ed.numero ? '#' + ed.numero : 'pendência') + ' para correção' : ed ? 'Editar pendência ' + (ed.numero ? '#' + ed.numero : '') : sugere() ? 'Sugerir pendência' : 'Nova pendência';
+  openSheet(titulo, '', `<span class="msg" id="pMsg"></span><button class="btn ghost" id="pC" type="button">Cancelar</button><button class="btn" id="pOk" type="button">${BOTAO[modo()] || (ed ? 'Salvar' : 'Registrar')}</button>`, true);
   desenhar();
   $('pC').onclick = () => { if (novas.length && !confirm('Descartar as fotos tiradas?')) return; novas.forEach(x => URL.revokeObjectURL(x.url)); closeSheet(); };
   $('pOk').onclick = async () => {
@@ -721,17 +750,24 @@ function formPend(id) {
     if (f.local_tipo === 'Apartamento' && !f.comodo) falta.push('cômodo');
     if (opcoesDo(f.local_tipo).length && !f.unidade) falta.push(f.local_tipo.toLowerCase() + ' (qual)');
     if (f.local_tipo === 'Outro' && !String(f.unidade || '').trim()) falta.push('qual local');
-    if (!f.tipo) falta.push('tipo de problema'); if (!f.disciplina) falta.push('responsável pela correção'); else if (!f.responsavel && funcsDe(f.disciplina).length) falta.push('quem vai corrigir'); else if (!f.equipe) falta.push('equipe (próprio ou terceiro)'); if (!f.prioridade) falta.push('prioridade');
-    // campos que esta obra exige (Listas e regras → Regras)
+    const m = modo();
+    if (!f.tipo) falta.push('tipo de problema');
+    // sugestão, encaminhada para a Segurança e edição de uma em avaliação: o ofício pode ficar para depois
+    if (!['sugestao', 'seg', 'aval'].includes(m)) { if (!f.disciplina) falta.push('ofício de quem corrige'); else if (!f.responsavel && funcsDe(f.disciplina).length) falta.push('quem vai corrigir'); else if (!f.equipe) falta.push('equipe (próprio ou terceiro)'); }
+    if (!f.prioridade) falta.push('prioridade');
+    // campos que esta obra exige (Listas e regras → Regras); na sugestão de quem é de campo, não
+    if (m !== 'sugestao') {
     if (obrig('descricao') && !String(f.descricao || '').trim()) falta.push('descrição'); if (obrig('causador') && !String(f.causador || '').trim()) falta.push('responsável pelo problema');
     if (obrig('prazo') && !f.prazo) falta.push('prazo'); if (obrig('observacoes') && !String(f.observacoes || '').trim()) falta.push('observações');
     if (obrig('ponto') && plantaDe(f.pavimento) && !(f.ponto && f.ponto.pav === plantaDe(f.pavimento))) falta.push('local na planta');
     if (obrig('bloqueios') && !(f.bloqueios || []).some(b => b.servico)) falta.push('serviço travado');
+    }
     if (falta.length) { if ($('ovlB').querySelector('details.mais')) $('ovlB').querySelector('details.mais').open = true; $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
     const row = { pavimento: f.pavimento, local_tipo: f.local_tipo, unidade: String(f.unidade || '').trim() || null, comodo: f.local_tipo === 'Apartamento' ? f.comodo : null,
       // de segurança: tipo de problema de segurança, ou registrada/editada pela Segurança
-      tipo: f.tipo, disciplina: f.disciplina, equipe: f.equipe || null, prioridade: f.prioridade,
-      responsavel: f.responsavel && f.responsavel !== '*' ? f.responsavel : null, responsavel_nome: f.responsavel && f.responsavel !== '*' ? nomeFunc(f.responsavel) : null, seguranca: ehSegTipo(f.tipo) || cargo() === 'seguranca',
+      tipo: f.tipo, disciplina: m === 'seg' || !f.disciplina ? A_DEFINIR : f.disciplina, equipe: m === 'seg' || m === 'sugestao' ? null : f.equipe || null, prioridade: f.prioridade,
+      responsavel: m !== 'seg' && m !== 'sugestao' && f.responsavel && f.responsavel !== '*' ? f.responsavel : null, responsavel_nome: m !== 'seg' && m !== 'sugestao' && f.responsavel && f.responsavel !== '*' ? nomeFunc(f.responsavel) : null,
+      seguranca: perfil() === 'seguranca' ? true : engenharia() ? !!f.seg : ehSegTipo(f.tipo),
       descricao: String(f.descricao || '').trim() || null, causador: String(f.causador || '').trim() || null,
       bloqueios: (f.bloqueios || []).filter(b => b.servico).map(b => ({ servico: b.servico, local: String(b.local || '').trim() })),
       prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null,
@@ -740,10 +776,14 @@ function formPend(id) {
     for (const x of novas) await idbPut('blobs', x.fid, x.blob);
     const fotos = novas.map(x => ({ fid: x.fid, tipo: 'antes' }));
     novas.forEach(x => URLS.set(x.fid, x.url));
-    if (ed) { await enfileirar({ op: 'editar', id: ed.id, campos: row }); if (fotos.length) await enfileirar({ op: 'fotos', id: ed.id, fotos }); }
+    // sugestão de quem é de campo e pendência mandada para a Segurança nascem "em avaliação"
+    if (!ed && (m === 'sugestao' || m === 'seg')) row.status = 'avaliacao';
+    if (ed) { await enfileirar({ op: 'editar', id: ed.id, campos: row }); if (fotos.length) await enfileirar({ op: 'fotos', id: ed.id, fotos }); if (m === 'enc') await enfileirar({ op: 'status', id: ed.id, para: 'aberta' }); }
     else await enfileirar({ op: 'criar', id: uuid(), row, fotos });
     delete $('ovl').dataset.form; closeSheet();
-    toast(ed ? 'Alterações salvas.' : navigator.onLine ? 'Pendência registrada.' : 'Pendência guardada neste aparelho. Ela é enviada quando o sinal voltar.', 5000);
+    const off = navigator.onLine ? '' : ' Fica guardada neste aparelho e é enviada quando o sinal voltar.';
+    toast(m === 'enc' ? 'Encaminhada para correção.' : ed ? 'Alterações salvas.' : m === 'sugestao' ? 'Sugestão enviada. A Engenharia vai avaliar.' + off
+      : m === 'seg' ? 'Encaminhada para a Segurança do Trabalho avaliar.' + off : navigator.onLine ? 'Pendência registrada.' : 'Pendência guardada neste aparelho. Ela é enviada quando o sinal voltar.', 5000);
   };
 }
 
@@ -754,14 +794,19 @@ function detalhe(id, mantemRolagem) {
   const op = FILA.find(o => o.id === id && o.erro);
   const fotos = t => p.fotos.filter(x => x.tipo === t);
   const galeria = arr => arr.length ? `<div class="fotos">${arr.map(x => `<span class="ft"><span class="ph muted" style="display:grid;place-items:center;height:100%;font-size:.7rem">${x.local ? 'no aparelho' : 'carregando'}</span><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden style="position:absolute;inset:0"></span>`).join('')}</div>` : '<span class="muted">Nenhuma.</span>';
-  const evTxt = e => e.acao === 'criada' ? 'registrou a pendência' : e.acao === 'editada' ? 'editou os dados' : e.acao === 'foto' ? 'anexou foto do ' + e.para
+  const evTxt = e => e.acao === 'criada' ? (e.para === 'avaliacao' ? (p.seguranca ? 'registrou e mandou para a Segurança avaliar' : 'sugeriu a pendência') : 'registrou a pendência')
+    : e.acao === 'status' && e.de === 'avaliacao' && e.para === 'aberta' ? 'aprovou e encaminhou para correção'
+    : e.acao === 'status' && e.para === 'recusada' ? 'não aprovou' : e.acao === 'editada' ? 'editou os dados' : e.acao === 'foto' ? 'anexou foto do ' + e.para
     : e.acao === 'comentario' ? 'comentou' : e.acao === 'excluida' ? (/restaurada/.test(e.comentario || '') ? 'restaurou da lixeira' : 'mandou para a lixeira')
     : (e.para === 'aberta' && (e.de === 'corrigida' || e.de === 'fechada')) ? (e.de === 'fechada' ? 'reabriu' : 'reprovou a correção') : 'mudou para “' + (ST[e.para] || e.para) + '”';
   const evs = p.eventos.slice().sort((a, b) => String(b.em).localeCompare(String(a.em)));
-  const tem = !!cargo();
-  const pode = { iniciar: tem && p.status === 'aberta', corrigir: tem && (p.status === 'aberta' || p.status === 'em_correcao'), fechar: p.status === 'corrigida' && fecha(p), reprovar: p.status === 'corrigida' && fecha(p), reabrir: p.status === 'fechada' && fecha(p), editar: editor(p) && p.status !== 'fechada', excluir: editor(p) };
+  const tem = podeCriar();   // todos menos Consulta
+  const aval = p.status === 'avaliacao';
+  const pode = { iniciar: tem && p.status === 'aberta', corrigir: tem && (p.status === 'aberta' || p.status === 'em_correcao'), fechar: p.status === 'corrigida' && fecha(p), reprovar: p.status === 'corrigida' && fecha(p), reabrir: p.status === 'fechada' && fecha(p),
+    encaminhar: aval && fecha(p), recusar: aval && fecha(p), editar: editor(p) && p.status !== 'fechada' && !(aval && fecha(p)), excluir: editor(p) && !aval };
   openSheet((p.numero ? 'Pendência #' + p.numero : 'Pendência (nº pendente)'), `
     <div class="acts"><span class="pill st-${p.status}">${ST[p.status]}</span><span class="pill p-${p.prioridade}">${PRI[p.prioridade][0]}</span>${p.seguranca ? '<span class="tag">segurança</span>' : ''}${vencida(p) ? '<span class="tag venc">vencida</span>' : ''}${incompleta(p) && p.status !== 'fechada' ? '<span class="tag inc">INCOMPLETA</span>' : ''}${p._fila ? '<span class="tag fila">aguardando envio</span>' : ''}</div>
+    ${aval ? `<div class="aviso info">${fecha(p) ? (p.seguranca ? 'Pendência de segurança para você avaliar.' : 'Sugestão para você avaliar.') + ' Escolha quem corrige e encaminhe, ou não aprove.' : 'Aguardando ' + quemAvalia(p) + ' avaliar.'}</div>` : ''}
     ${op ? `<div class="aviso">Não foi enviado: ${esc(op.erro)}<div class="acts" style="margin-top:6px"><button class="btn sm" id="dRetry" type="button">Tentar de novo</button><button class="btn sm danger" id="dDescartar" type="button">Descartar esta alteração</button></div></div>` : ''}
     <div class="fld"><span class="l">Antes</span>${galeria(fotos('antes'))}</div>
     ${fotos('depois').length || p.status !== 'aberta' ? `<div class="fld"><span class="l">Depois</span>${galeria(fotos('depois'))}</div>` : ''}
@@ -779,7 +824,9 @@ function detalhe(id, mantemRolagem) {
      ${pode.corrigir ? '<button class="btn sm" id="dCor" type="button">Marcar como corrigida</button>' : ''}
      ${pode.reprovar ? '<button class="btn sm danger" id="dRep" type="button">Reprovar</button>' : ''}
      ${pode.fechar ? '<button class="btn sm ok" id="dFec" type="button">Aprovar e fechar</button>' : ''}
-     ${pode.reabrir ? '<button class="btn sm ghost" id="dReab" type="button">Reabrir</button>' : ''}`);
+     ${pode.reabrir ? '<button class="btn sm ghost" id="dReab" type="button">Reabrir</button>' : ''}
+     ${pode.recusar ? '<button class="btn sm danger" id="dRec" type="button">Não aprovar</button>' : ''}
+     ${pode.encaminhar ? '<button class="btn sm ok" id="dEnc" type="button">Encaminhar para correção</button>' : ''}`);
   $('ovl').dataset.det = id; if (rol) $('ovlB').scrollTop = rol;
   pintarFotos($('ovlB')); pintarPlantas($('ovlB'));
   if ($('dComOk')) $('dComOk').onclick = async () => { const t = $('dCom').value.trim(); if (!t) { $('dCom').focus(); return; }
@@ -793,6 +840,8 @@ function detalhe(id, mantemRolagem) {
   if (B('dFec')) B('dFec').onclick = async () => { await enfileirar({ op: 'status', id, para: 'fechada' }); toast('Pendência aprovada e fechada.'); detalhe(id); };
   if (B('dRep')) B('dRep').onclick = () => formComentario(p, 'Reprovar a correção', 'O que ainda está errado? (obrigatório; o encarregado vê este comentário)', 'Reprovar');
   if (B('dReab')) B('dReab').onclick = () => formComentario(p, 'Reabrir a pendência', 'Por que está sendo reaberta? (obrigatório)', 'Reabrir');
+  if (B('dEnc')) B('dEnc').onclick = () => formPend(id, true);
+  if (B('dRec')) B('dRec').onclick = () => formComentario(p, 'Não aprovar', 'Por que não vai virar pendência? (obrigatório; quem registrou vê este motivo)', 'Não aprovar', 'recusada');
   if (B('dDel')) B('dDel').onclick = async () => { if (!confirm('Excluir a pendência ' + (p.numero ? '#' + p.numero : '') + '?\n\nEla vai para a lixeira e some de vez em 30 dias. Até lá, o administrador pode restaurar.')) return;
     // ainda não foi enviada: basta descartar do aparelho
     const cr = FILA.find(o => o.id === id && o.op === 'criar' && !o.criada);
@@ -825,24 +874,26 @@ function formCorrigida(p) {
     delete $('ovl').dataset.form; toast('Marcada como corrigida. ' + (p.seguranca ? 'A Segurança' : 'A Engenharia') + ' vai conferir.', 5000); detalhe(p.id);
   };
 }
-function formComentario(p, titulo, rotulo, botao) {
+function formComentario(p, titulo, rotulo, botao, para) {
   openSheet(titulo, `<p style="margin:0"><b>${p.numero ? '#' + p.numero : 'Pendência'}</b> · ${esc(rotLocal(p))}</p><div class="fld"><label for="rCom">${esc(rotulo)}</label><textarea id="rCom"></textarea></div>`,
     `<span class="msg" id="rMsg"></span><button class="btn ghost" id="rC" type="button">Voltar</button><button class="btn danger" id="rOk" type="button">${esc(botao)}</button>`, true);
   $('rCom').focus();
   $('rC').onclick = () => { delete $('ovl').dataset.form; detalhe(p.id); };
   $('rOk').onclick = async () => { const c = $('rCom').value.trim(); if (!c) { $('rMsg').className = 'msg err'; $('rMsg').textContent = 'Escreva o motivo.'; return; }
-    await enfileirar({ op: 'status', id: p.id, para: 'aberta', comentario: c }); delete $('ovl').dataset.form; toast(botao === 'Reprovar' ? 'Correção reprovada. A pendência voltou para “aberta”.' : 'Pendência reaberta.', 5000); detalhe(p.id); };
+    await enfileirar({ op: 'status', id: p.id, para: para || 'aberta', comentario: c }); delete $('ovl').dataset.form;
+    if (para === 'recusada') { toast('Não aprovada. Ela sai da lista e fica 30 dias na lixeira.', 5000); closeSheet(); return; }
+    toast(botao === 'Reprovar' ? 'Correção reprovada. A pendência voltou para “aberta”.' : 'Pendência reaberta.', 5000); detalhe(p.id); };
 }
 
 /* ---------------- relatório em PDF ---------------- */
-const GRUPOS = { disciplina: 'Responsável pela correção', tipo: 'Tipo de problema', pavimento: 'Pavimento' };
-const FSTATUS = { nfechadas: ['Não fechadas', p => p.status !== 'fechada'], abertas: ['Abertas e em correção', p => p.status === 'aberta' || p.status === 'em_correcao'], corrigidas: ['Corrigidas (aguardando aprovação)', p => p.status === 'corrigida'], fechadas: ['Fechadas', p => p.status === 'fechada'], todas: ['Todas', () => true] };
+const GRUPOS = { disciplina: 'Ofício de quem corrige', tipo: 'Tipo de problema', pavimento: 'Pavimento' };
+const FSTATUS = { nfechadas: ['Não fechadas', p => p.status !== 'fechada'], avaliacao: ['Em avaliação', p => p.status === 'avaliacao'], abertas: ['Abertas e em correção', p => p.status === 'aberta' || p.status === 'em_correcao'], corrigidas: ['Corrigidas (aguardando aprovação)', p => p.status === 'corrigida'], fechadas: ['Fechadas', p => p.status === 'fechada'], todas: ['Todas', () => true] };
 function formRelatorio() {
   if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
   openSheet('Relatório em PDF', `<div class="fld"><label for="rgG">Agrupar por</label><select id="rgG">${Object.entries(GRUPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
     <div class="fld"><label for="rgS">Status</label><select id="rgS">${Object.entries(FSTATUS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div>
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgF" checked> Incluir as fotos (antes e depois)</label>
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgL"> Usar também os filtros da lista (pavimento, disciplina, tipo, prioridade, busca)</label>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgL"> Usar também os filtros da lista (pavimento, ofício, tipo, prioridade, busca)</label>
     <div id="rgP" hidden><div class="muted" id="rgPT"></div><div class="prog"><i id="rgPB"></i></div></div>`,
     '<span class="msg" id="rgM"></span><button class="btn ghost" id="rgC" type="button">Fechar</button><button class="btn" id="rgOk" type="button">Gerar PDF</button>');
   $('rgC').onclick = closeSheet;
@@ -936,10 +987,11 @@ async function formAvisos() {
   openSheet('Avisos neste aparelho', '<p class="muted" style="margin:0">Verificando…</p>', '<button class="btn ghost" id="avC" type="button">Fechar</button>');
   $('avC').onclick = closeSheet;
   const e = await estadoAvisos();
-  const oque = cargo() === 'encarregado' ? 'quando houver pendência nova ou reprovada nas suas disciplinas, e um aviso diário das vencidas.'
-    : cargo() === 'engenharia' ? 'quando uma pendência for marcada como corrigida, e um resumo diário (com as vencidas) às 8h.'
-    : cargo() === 'seguranca' ? 'quando uma pendência de segurança for marcada como corrigida, e um aviso diário das vencidas de segurança.'
-    : 'conforme o seu cargo nas pendências (peça ao administrador para definir o seu cargo).';
+  const pf = perfil();
+  const oque = pf === 'campo' ? 'quando houver pendência nova ou reprovada nos seus ofícios, quando a Engenharia avaliar a sua sugestão, e um aviso diário das vencidas.'
+    : pf === 'engenharia' || pf === 'admin' ? 'quando chegar uma sugestão para avaliar, quando uma pendência for marcada como corrigida, e um resumo diário (com as vencidas) às 8h.'
+    : pf === 'seguranca' ? 'quando a Engenharia mandar uma pendência de segurança para você avaliar, quando uma de segurança for marcada como corrigida, e um aviso diário das vencidas de segurança.'
+    : 'de pendências só nos perfis que trabalham nelas (o seu perfil é Consulta).';
   let corpo = `<p style="margin:0">Você recebe um aviso ${oque}</p>`;
   if (ios && !inst) corpo += `<div class="aviso">No iPhone, os avisos só funcionam com o app na Tela de Início: no Safari, toque em <b>Compartilhar</b> (o quadrado com a seta) → <b>Adicionar à Tela de Início</b>. Depois abra o painel pelo ícone novo e ative os avisos aqui.</div>`;
   else if (e.st === 'sem') corpo += '<div class="aviso">Este navegador não aceita avisos. No Android e no computador, use o Chrome ou o Edge.</div>';
@@ -994,7 +1046,7 @@ async function formAvisos() {
     try { await carregarServidor(); ok = true; }
     catch (e) {
       if (e.naoTem) { $('main').innerHTML = '<div class="vazio"><h3>Obra não encontrada</h3><p class="muted" style="margin:0">Esta obra não existe ou foi excluída.</p><a class="btn" href="index.html?ferramenta=pendencias" style="text-decoration:none">Ver as obras</a></div>'; return; }
-      if (/pend_listas|pendencias|relation|schema cache/i.test(e.message || '')) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>atualizacao-pendencias.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
+      if (/pend_listas|pendencias|relation|schema cache/i.test(e.message || '')) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
       console.warn(e);
     }
   }
@@ -1005,7 +1057,9 @@ async function formAvisos() {
   $('bPdf').onclick = formRelatorio;
   $('bAvisos').onclick = formAvisos; marcarAvisos();
   $('fab').onclick = () => formPend(null);
-  if (!NV.cargo && !NV.admin) toast('Você ainda não tem cargo nas pendências. Peça ao administrador para definir o seu cargo.', 7000);
+  // quem é de campo começa vendo só as suas
+  if (sugere()) F.meu = true;
+  $('fab').textContent = sugere() ? '+ Sugerir pendência' : '+ Nova pendência';
   render();
   sincronizar();
   // veio de um aviso: abre a pendência direto

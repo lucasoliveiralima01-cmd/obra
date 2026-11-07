@@ -5,8 +5,11 @@
    e só usa a cópia guardada quando a conexão falha.
    Os dados (Supabase) não passam por aqui: ficam no IndexedDB da página.
    ===================================================================== */
-const CACHE = 'obra-v9';
-const BASICO = ['./', 'index.html', 'pendencias.html', 'listas-comum.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png',
+// As páginas e scripts do site são sempre conferidos na internet (sem esperar o
+// cache do navegador), então publicar uma versão nova não exige mexer aqui.
+// Só troque o número se mudar a lista BASICO (o que fica guardado para usar sem sinal).
+const CACHE = 'obra-v10';
+const BASICO = ['./', 'index.html', 'pendencias.html', 'estilo.css', 'listas-comum.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
 
@@ -43,7 +46,9 @@ self.addEventListener('fetch', ev => {
   if (/supabase\.co$/.test(u.hostname)) return;          // dados e arquivos: direto, sem cópia
   if (u.origin !== location.origin && !guardar(u)) return;
   if (u.origin === location.origin && !guardar(u)) return;
-  ev.respondWith(fetch(r).then(res => {
+  // do próprio site: confere sempre a versão publicada (resposta 304 é rápida); bibliotecas: normal
+  const busca = u.origin === location.origin ? fetch(r.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(r);
+  ev.respondWith(busca.then(res => {
     if (res && (res.ok || res.type === 'opaque')) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)).catch(() => {}); }
     return res;
   }).catch(() => caches.match(r, { ignoreSearch: u.origin === location.origin }).then(m => m || (r.mode === 'navigate' ? caches.match('pendencias.html') : undefined)).then(m => m || Response.error())));

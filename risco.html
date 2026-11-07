@@ -3,32 +3,26 @@
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style>
 /* Layout: faixa da marca  · palco 3D/planta à esquerda · coluna com a área selecionada, as áreas do pavimento e os pavimentos à direita; no celular tudo empilha.
    As cores dos grupos de risco são fixas (convenção da NR-5) e não mudam com o tema. */
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
 :root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
   --plan-bg:#fbfcfc; --slab:#e8ecee; --beam:#cfd6db; --col:#59646e; --edge:#8d979f;
   --area:#d9701c; --area-ink:#b85a0e; --ring:rgba(20,30,40,.38);
   --canvas-bg:#e3e9ee;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
   --r:8px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
   --plan-bg:#0f1b24; --slab:#22323e; --beam:#33444f; --col:#b9c5ce; --edge:#6c7d8a; --canvas-bg:#0f1a23;
   --area:#f0954a; --area-ink:#f5a965; --ring:rgba(255,255,255,.45);
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
+  color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
   --plan-bg:#0f1b24; --slab:#22323e; --beam:#33444f; --col:#b9c5ce; --edge:#6c7d8a; --canvas-bg:#0f1a23;
   --area:#f0954a; --area-ink:#f5a965; --ring:rgba(255,255,255,.45);
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+  color-scheme:dark}
+
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;margin:0;-webkit-tap-highlight-color:transparent}
@@ -195,6 +189,8 @@ details summary{cursor:pointer;font-size:.8rem;color:var(--muted)}
 .prevbox canvas{max-width:100%;max-height:230px;width:auto;height:auto;box-shadow:0 2px 10px rgba(0,0,0,.18);background:#fff}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:30;max-width:calc(100% - 32px)}
 
+/* no computador a lista de áreas fica ao lado: o "+ Nova área" do painel basta; no celular ela fica embaixo */
+@media (min-width:1001px){#bNewP,.sotela{display:none}}
 @media (max-width:1000px){
   html,body{height:auto}.app{height:auto}
   .main{grid-template-columns:1fr}
@@ -233,7 +229,8 @@ details summary{cursor:pointer;font-size:.8rem;color:var(--muted)}
     <button class="hbtn" id="bIfc" data-menu>Modelo IFC</button><input type="file" id="fIfc" accept=".ifc" hidden>
     <button class="hbtn solid" id="bPdf">Exportar PDF</button>
     <button class="hbtn" id="bImg" data-menu>Exportar imagem</button>
-    <button class="hbtn" id="bReset" data-menu title="Apaga as áreas, símbolos, revisões e imagens do Mapa de Risco">Resetar painel</button>
+    <button class="hbtn" id="bBgM" data-menu title="Coloque uma imagem (layout do canteiro, mapa antigo) por baixo da planta deste pavimento">Imagem de fundo da planta</button>
+    <button class="hbtn" id="bReset" data-menu title="Manda as áreas, símbolos e revisões do Mapa de Risco desta obra para a lixeira (só administradores)">Resetar o mapa</button>
   </div>
 </div></header>
 
@@ -249,7 +246,7 @@ details summary{cursor:pointer;font-size:.8rem;color:var(--muted)}
       <canvas id="c3d" aria-label="Modelo em 3D" hidden></canvas>
       <canvas id="cplan" aria-label="Planta do pavimento"></canvas>
       <div class="ov vbtns" id="vb3d" hidden><button class="ibtn" id="bFit">Enquadrar</button><button class="ibtn" id="bCut" aria-pressed="true" title="Esconde os pavimentos acima do selecionado">Cortar acima</button></div>
-      <div class="ov vbtns" id="vbPlan"><button class="ibtn" id="bPFit">Enquadrar</button><button class="ibtn" id="bNewP">+ Nova área</button><button class="ibtn" id="bSym" title="Extintor, quadro elétrico, saída de emergência, setas e outros">+ Símbolo</button><button class="ibtn" id="bSug" title="Cria áreas de queda de altura nas bordas de laje e aberturas do modelo">Sugerir pelo IFC</button><button class="ibtn" id="bBg" title="Coloque uma imagem (layout do canteiro, mapa antigo) por baixo da planta">Imagem de fundo</button></div>
+      <div class="ov vbtns" id="vbPlan"><button class="ibtn" id="bPFit">Enquadrar</button><button class="ibtn" id="bNewP">+ Nova área</button><button class="ibtn" id="bSym" title="Extintor, quadro elétrico, saída de emergência, setas e outros">+ Símbolo</button><button class="ibtn" id="bSug" title="Cria áreas de queda de altura nas bordas de laje e aberturas do modelo">Sugerir pelo IFC</button><button class="ibtn" id="bBg" hidden title="Coloque uma imagem (layout do canteiro, mapa antigo) por baixo da planta">Imagem de fundo</button><button class="ibtn sotela" id="bVerLista" title="Ir para a lista de áreas">Áreas ↓</button></div>
       <div class="ov legend card-ov" id="legend"></div>
       <div class="ov card-ov revbar" id="revbar" hidden></div>
       <button class="ov ibtn demochip" id="demoChip" hidden title="Modelo de estrutura simplificado usado só como exemplo">Modelo de exemplo</button>
@@ -1026,7 +1023,8 @@ const Store={
     const nv=window.Nuvem||null; if(nv) db=nv.db;
     if(db){
       this.kind='db'; this.db=db; this.assets=nv.assets; this.downloads=null;
-      if(nv.papel==='leitor') S.readOnly=true;
+      // quem só visualiza (perfil Consulta) não vê os botões de edição
+      if(nv.papel==='leitor'){ S.readOnly=true; ['bNew','bNewP','bSym','bSug','bBg','bBgM','bRev'].forEach(id=>{ const b=document.getElementById(id); if(b) b.hidden=true }) }
       // a obra (nome e modelo IFC) vem do cadastro de obras, comum a todas as ferramentas
       try{ S.obra=await nv.obras.obter(nv.obraId) }catch(e){ console.error(e); S.obra=undefined }
       if(!S.obra) return false;
@@ -1743,6 +1741,8 @@ function copyForm(aid){
     closeSheet(); afterDataChange(); toast(ok+' cópia(s) criada(s)'+(skip?'; '+skip+' pavimento(s) já tinham área ocupando todo o lugar':'')+'.',5000) };
 }
 $('bNew').onclick=()=>startDraw(null); $('bNewP').onclick=()=>startDraw(null);
+$('bVerLista').onclick=()=>$('areaCard').scrollIntoView({behavior:'smooth',block:'start'});
+$('bBgM').onclick=()=>{ setView('plan'); $('bBg').click() };
 
 /* ======================= símbolos ======================= */
 $('bSimb').onclick=()=>{
@@ -2285,23 +2285,28 @@ $('bReset').onclick=()=>{
   openSheet('Resetar o painel',`<p style="margin-top:0">Isto apaga <b>tudo</b> do Mapa de Risco${db?' desta obra para todas as pessoas que o usam':' neste navegador'}:</p>
     <ul style="margin:.4em 0 1em;padding-left:1.2em;line-height:1.6">${db?'':`<li>o modelo IFC carregado${S.res?' ('+esc(S.modelName)+')':''};</li>`}<li>${nA} área(s) com ${nR} risco(s), ${S.syms.length} símbolo(s) e ${S.revs.length} revisão(ões) emitida(s);</li><li>${nB} imagem(ns) de fundo, o logo${db?'':', o nome da obra'} e os dados do carimbo.</li></ul>
     ${db?'<p class="muted">O cadastro da obra e o modelo IFC continuam, porque são usados pelas outras ferramentas. Para apagar a obra inteira, use “Excluir” na lista de obras.</p>':''}
-    <p class="muted">Não dá para desfazer. Se quiser guardar uma cópia, exporte as pranchas em PDF antes.</p>
+    <p class="muted">${db?'Tudo vai para a lixeira por 30 dias: dá para restaurar em Administração → Dados.':'Não dá para desfazer. Se quiser guardar uma cópia, exporte as pranchas em PDF antes.'}</p>
     <div class="fg"><div class="fld full"><label for="rsTxt">Para confirmar, digite RESETAR</label><input id="rsTxt" autocomplete="off" autocapitalize="characters"></div></div>`,
     `<button class="btn ghost" id="rsC">Cancelar</button><button class="btn danger" id="rsOk" disabled>Resetar tudo</button>`);
   $('rsTxt').oninput=()=>{ $('rsOk').disabled=$('rsTxt').value.trim().toUpperCase()!=='RESETAR' };
   $('rsC').onclick=closeSheet;
-  $('rsOk').onclick=async()=>{ $('rsOk').disabled=true; $('rsOk').textContent='Apagando…'; await resetAll(); closeSheet(); toast(db?'Mapa de Risco desta obra resetado.':'Painel resetado. Importe o IFC da obra para começar.',5000) };
+  $('rsOk').onclick=async()=>{ $('rsOk').disabled=true; $('rsOk').textContent='Apagando…'; if(await resetAll()===false){ $('rsOk').disabled=false; $('rsOk').textContent='Resetar tudo'; return } closeSheet(); toast(db?'Mapa de Risco desta obra resetado. O conteúdo ficou 30 dias na lixeira.':'Painel resetado. Importe o IFC da obra para começar.',6000) };
 };
 async function resetAll(){
   if(S.mode) endMode(); S.sel=null; S.rev=null;
   const ids=S.areas.map(a=>a.id), bgKeys=Object.keys(S.bgs);
-  if(Store.kind==='db'){
+  // online: o banco guarda uma cópia na lixeira e apaga (só administradores); os arquivos ficam até a lixeira esvaziar
+  const nv=window.Nuvem; let lixeira=false;
+  if(Store.kind==='db'&&nv){ const r=await nv.cliente.rpc('painel_resetar',{p_painel:nv.painel});
+    if(!r.error) lixeira=true;
+    else if(!/painel_resetar|function|schema cache/i.test(r.error.message||'')){ toast('Não foi possível resetar: '+r.error.message,7000); return false } }
+  if(Store.kind==='db'&&!lixeira){
     for(const id of ids){ try{ await Store.db.doc('areas/'+id).delete() }catch(e){} }
     for(const y of S.syms){ try{ await Store.db.doc('simbolos/'+y.id).delete() }catch(e){} }
     for(const r of S.revs){ try{ await Store.db.doc('revisoes/'+r.id).delete() }catch(e){} }
     for(const k of bgKeys){ try{ await Store.db.doc('fundos/'+k).delete() }catch(e){} }
     if(Store.assets){ try{ const l=await Store.assets.list(); for(const a of l.assets){ try{ await Store.assets.delete(a.id) }catch(e){} } }catch(e){} }
-  } else {
+  } else if(Store.kind!=='db'){
     try{ localStorage.removeItem(LSK) }catch(e){}
     await idbDel('ifc').catch(()=>{}); await idbDel('logo').catch(()=>{}); for(const k of bgKeys) await idbDel('bg:'+k).catch(()=>{});
   }
@@ -2394,7 +2399,7 @@ async function gerarPlantasSePreciso(forcar){
     const naoTem=S.obra===null;
     openSheet(naoTem?'Obra não encontrada':'Não foi possível abrir a obra',naoTem
       ?'<p style="margin-top:0">Esta obra não existe ou foi excluída. Volte para a lista e escolha outra.</p>'
-      :'<p style="margin-top:0">Não foi possível ler o cadastro de obras. Se esta é a primeira vez depois da atualização, rode o arquivo <b>atualizacao-obras.sql</b> no Supabase (SQL Editor) e recarregue a página.</p>',
+      :'<p style="margin-top:0">Não foi possível ler o cadastro de obras. Se esta é a primeira vez depois da atualização, rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p>',
       '<button class="btn ghost" onclick="location.reload()">Recarregar</button><a class="btn" href="index.html?ferramenta=risco" style="text-decoration:none">Ver as obras</a>');
     return;
   }

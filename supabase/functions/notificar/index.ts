@@ -37,24 +37,34 @@ const resp = (o: unknown, status = 200) => new Response(JSON.stringify(o), { sta
 const PRI: Record<string, string> = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
 const low = (e: string | null | undefined) => String(e || '').toLowerCase();
 
-type Membro = { email: string; cargo: string | null; disciplinas: string[] | null };
+type Membro = { email: string; perfil?: string | null; cargo: string | null; disciplinas: string[] | null; obras?: string[] | null };
 type Aviso = { title: string; body: string; url: string; tag: string };
 
 async function membros(): Promise<Membro[]> {
-  const { data, error } = await sb.from('membros').select('email,cargo,disciplinas');
-  if (error) throw error;
-  return (data || []) as Membro[];
+  let r = await sb.from('membros').select('email,perfil,cargo,disciplinas,obras');
+  if (r.error) r = await sb.from('membros').select('email,cargo,disciplinas');   // banco ainda sem perfis
+  if (r.error) throw r.error;
+  return (r.data || []) as Membro[];
 }
-const encarregadosDe = (ms: Membro[], disc: string) => ms.filter(m => m.cargo === 'encarregado' && (m.disciplinas || []).includes(disc)).map(m => low(m.email));
-const doCargo = (ms: Membro[], cargo: string) => ms.filter(m => m.cargo === cargo).map(m => low(m.email));
+// perfil (bancos antigos: a partir do cargo)
+const perfilDe = (m: Membro) => m.perfil || (m.cargo === 'encarregado' ? 'campo' : m.cargo || 'consulta');
+// a pessoa tem acesso à obra? (administrador: todas)
+const naObra = (m: Membro, obra: string) => !m.perfil || m.perfil === 'admin' || (m.obras || []).includes(obra);
+const emails = (ms: Membro[]) => ms.map(m => low(m.email));
+// Engenharia (e administradores), Segurança e quem é de campo de um ofício, só da obra
+const engenhariaDe = (ms: Membro[], obra: string) => emails(ms.filter(m => ['engenharia', 'admin'].includes(perfilDe(m)) && naObra(m, obra)));
+const segurancaDe = (ms: Membro[], obra: string) => emails(ms.filter(m => perfilDe(m) === 'seguranca' && naObra(m, obra)));
+const campoDe = (ms: Membro[], disc: string, obra: string) => emails(ms.filter(m => perfilDe(m) === 'campo' && (m.disciplinas || []).includes(disc) && naObra(m, obra)));
+// quem decide (avalia, fecha, reprova): Segurança nas de segurança, Engenharia nas outras
+const decideDe = (ms: Membro[], p: Record<string, unknown>) => p.seguranca ? segurancaDe(ms, String(p.obra)) : engenhariaDe(ms, String(p.obra));
 // quem corrige: o funcionário escolhido na pendência (se ele tem acesso ao sistema);
-// sem ninguém escolhido (ou sem e-mail), todos os encarregados do cargo
+// sem ninguém escolhido (ou sem e-mail), todos de campo daquele ofício na obra
 async function corrigeQuem(ms: Membro[], p: Record<string, unknown>): Promise<string[]> {
   if (p.responsavel) {
     const { data } = await sb.from('pend_funcionarios').select('email').eq('id', p.responsavel).maybeSingle();
     if (data && data.email) return [low(data.email)];
   }
-  return encarregadosDe(ms, String(p.disciplina || ''));
+  return campoDe(ms, String(p.disciplina || ''), String(p.obra || ''));
 }
 
 // envia para todos os aparelhos das pessoas; apaga inscrições que expiraram
@@ -80,7 +90,7 @@ async function enviar(emails: string[], aviso: Aviso): Promise<number> {
 
 const rotulo = (p: Record<string, string | null>) => [p.pavimento, p.local_tipo === 'Apartamento' ? (p.unidade ? 'Apto ' + p.unidade : 'Apartamento') : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo].filter(Boolean).join(' · ');
 
-// um evento do histórico: nova pendência, corrigida, reprovada
+// um evento do histórico: nova pendência, sugestão, corrigida, reprovada, comentário
 async function evento(ev: Record<string, string>, site: string) {
   const { data: p, error } = await sb.from('pendencias').select('*').eq('id', ev.pendencia).maybeSingle();
   if (error) throw error;
@@ -91,11 +101,19 @@ async function evento(ev: Record<string, string>, site: string) {
   const url = site + 'pendencias.html?obra=' + encodeURIComponent(p.obra) + '&p=' + p.id;
   const obra = o && o.nome ? ' · ' + o.nome : '';
   let para: string[] = []; let title = ''; let body = rotulo(p) + ' — ' + p.tipo;
-  if (ev.acao === 'criada') {
+  if (ev.acao === 'criada' && (ev.para === 'avaliacao' || p.status === 'avaliacao')) {
+    // sugestão de quem é de campo (Engenharia avalia) ou pendência de segurança encaminhada (Segurança avalia)
+    para = decideDe(ms, p);
+    title = (p.seguranca ? 'Pendência de segurança para avaliar ' : 'Sugestão de pendência ') + num + obra;
+  } else if (ev.acao === 'criada' || (ev.acao === 'status' && ev.de === 'avaliacao' && ev.para === 'aberta')) {
     para = await corrigeQuem(ms, p);
     title = 'Nova pendência ' + num + ' · ' + (PRI[p.prioridade] || p.prioridade) + obra;
+  } else if (ev.acao === 'status' && ev.para === 'recusada') {
+    para = [low(p.criado_por)];
+    title = 'Sugestão ' + num + ' não aprovada' + obra;
+    if (ev.comentario) body += '\nMotivo: ' + ev.comentario;
   } else if (ev.acao === 'status' && ev.para === 'corrigida') {
-    para = doCargo(ms, p.seguranca ? 'seguranca' : 'engenharia');
+    para = decideDe(ms, p);
     title = 'Pendência ' + num + ' corrigida · conferir' + obra;
     if (ev.comentario) body += '\n' + ev.comentario;
   } else if (ev.acao === 'status' && ev.para === 'aberta' && (ev.de === 'corrigida' || ev.de === 'fechada')) {
@@ -103,10 +121,10 @@ async function evento(ev: Record<string, string>, site: string) {
     title = 'Pendência ' + num + (ev.de === 'fechada' ? ' reaberta' : ' reprovada') + obra;
     if (ev.comentario) body += '\nMotivo: ' + ev.comentario;
   } else if (ev.acao === 'comentario') {
-    // comentário do encarregado vai para quem fecha; de quem fecha (ou outro), para os encarregados
+    // comentário de quem é de campo vai para quem decide; de quem decide (ou outro), para quem corrige também
     const quem = ms.find(m => low(m.email) === low(ev.por));
-    const fecha = doCargo(ms, p.seguranca ? 'seguranca' : 'engenharia');
-    para = quem && quem.cargo === 'encarregado' ? fecha : (await corrigeQuem(ms, p)).concat(fecha);
+    const decide = decideDe(ms, p);
+    para = quem && perfilDe(quem) === 'campo' ? decide.concat(low(p.criado_por)) : (p.status === 'avaliacao' ? [low(p.criado_por)] : await corrigeQuem(ms, p)).concat(decide);
     title = 'Comentário na pendência ' + num + obra;
     body = rotulo(p) + '\n' + (ev.comentario || '');
   } else return { enviados: 0, motivo: 'evento sem aviso' };
@@ -116,8 +134,7 @@ async function evento(ev: Record<string, string>, site: string) {
 
 // Mapa de Fachadas: aplicações cuja cura termina hoje, agrupadas por fachada e camada
 const somaDias = (d: string, n: number) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
-async function fachadasLiberadas(hoje: string, site: string, nomeObra: (id: string) => string, para: string[]): Promise<number> {
-  if (!para.length) return 0;
+async function fachadasLiberadas(hoje: string, site: string, nomeObra: (id: string) => string, paraDe: (obra: string) => string[]): Promise<number> {
   const { data, error } = await sb.from('registros').select('painel,colecao,id,dados').like('painel', 'fachada:%').in('colecao', ['config', 'camadas', 'aplicacoes']);
   if (error) throw error;
   const porObra = new Map<string, { fach: Record<string, string>; cam: Record<string, { nome: string; cura: number; ordem: number }>; apl: Record<string, unknown>[] }>();
@@ -142,13 +159,13 @@ async function fachadasLiberadas(hoje: string, site: string, nomeObra: (id: stri
     }
     if (!grupos.size) continue;
     const linhas = [...grupos].map(([k, g]) => k + ' (' + g.qtd + ' área' + (g.qtd > 1 ? 's' : '') + ', ' + Math.round(g.area) + ' m²)');
-    n += await enviar(para, { title: 'Fachada liberada hoje · ' + nomeObra(obra), body: linhas.join('\n'),
+    n += await enviar(paraDe(obra), { title: 'Fachada liberada hoje · ' + nomeObra(obra), body: linhas.join('\n'),
       url: site + 'fachadas.html?obra=' + encodeURIComponent(obra), tag: 'fachada-lib-' + obra });
   }
   return n;
 }
 
-// todo dia: vencidas para a disciplina e para quem fecha; resumo para a Engenharia
+// todo dia: vencidas para quem corrige e para quem fecha; resumo para a Engenharia (cada um só das suas obras)
 async function diario(site: string) {
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
   // deno-lint-ignore no-explicit-any
@@ -169,13 +186,13 @@ async function diario(site: string) {
     const { data: rs } = await sb.rpc('rompimentos_resumo');
     for (const r of rs || []) {
       if (!r.hoje && !r.pendentes) continue;
-      enviados += await enviar(doCargo(ms, 'engenharia'), { title: 'Corpos de prova · ' + nomeObra(r.obra),
+      enviados += await enviar(engenhariaDe(ms, r.obra), { title: 'Corpos de prova · ' + nomeObra(r.obra),
         body: [r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? r.pendentes + ' sem resultado lançado' : ''].filter(Boolean).join(' · '),
         url: site + 'concretagem.html?obra=' + encodeURIComponent(r.obra), tag: 'cp-' + r.obra });
     }
   } catch (e) { console.warn('rompimentos', e); }
   // fachadas: áreas cuja cura termina hoje (liberadas para a próxima camada) → Engenharia
-  try { enviados += await fachadasLiberadas(hoje, site, nomeObra, doCargo(ms, 'engenharia')); } catch (e) { console.warn('fachadas', e); }
+  try { enviados += await fachadasLiberadas(hoje, site, nomeObra, obra => engenhariaDe(ms, obra)); } catch (e) { console.warn('fachadas', e); }
   for (const obra of [...new Set(ps.map(p => p.obra))]) {
     const da = ps.filter(p => p.obra === obra);
     const venc = da.filter(p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje);
@@ -187,22 +204,23 @@ async function diario(site: string) {
       enviados += await enviar([email], { title: v.length + ' pendência' + (v.length > 1 ? 's vencidas' : ' vencida') + ' para você',
         body: nomeObra(obra) + ': ' + v.map(p => '#' + p.numero).join(', '), url, tag: 'venc-' + obra + '-eu' });
     }
-    // as outras, por disciplina, para os encarregados
+    // as outras, por ofício, para quem é de campo
     const semPessoa = venc.filter(p => !dePessoa(p));
     for (const disc of [...new Set(semPessoa.map(p => p.disciplina))]) {
       const v = semPessoa.filter(p => p.disciplina === disc);
-      enviados += await enviar(encarregadosDe(ms, disc), { title: v.length + ' pendência' + (v.length > 1 ? 's vencidas' : ' vencida') + ' · ' + disc,
+      enviados += await enviar(campoDe(ms, disc, obra), { title: v.length + ' pendência' + (v.length > 1 ? 's vencidas' : ' vencida') + ' · ' + disc,
         body: nomeObra(obra) + ': ' + v.map(p => '#' + p.numero).join(', '), url, tag: 'venc-' + obra + '-' + disc });
     }
     // Segurança: vencidas de segurança
     const vs = venc.filter(p => p.seguranca);
-    if (vs.length) enviados += await enviar(doCargo(ms, 'seguranca'), { title: vs.length + ' pendência(s) de segurança vencida(s)', body: nomeObra(obra) + ': ' + vs.map(p => '#' + p.numero).join(', '), url, tag: 'venc-seg-' + obra });
+    if (vs.length) enviados += await enviar(segurancaDe(ms, obra), { title: vs.length + ' pendência(s) de segurança vencida(s)', body: nomeObra(obra) + ': ' + vs.map(p => '#' + p.numero).join(', '), url, tag: 'venc-seg-' + obra });
     // Engenharia: resumo do dia
     const ab = da.filter(p => p.status === 'aberta').length, ec = da.filter(p => p.status === 'em_correcao').length, co = da.filter(p => p.status === 'corrigida').length;
-    if (ab + ec + co) {
+    const av = da.filter(p => p.status === 'avaliacao' && !p.seguranca).length;
+    if (ab + ec + co + av) {
       const crit = venc.filter(p => p.prioridade === 'critica').length;
-      enviados += await enviar(doCargo(ms, 'engenharia'), { title: 'Resumo das pendências · ' + nomeObra(obra),
-        body: ab + ' aberta(s), ' + ec + ' em correção, ' + co + ' corrigida(s) aguardando aprovação' + (venc.length ? ' · ' + venc.length + ' vencida(s)' + (crit ? ' (' + crit + ' crítica' + (crit > 1 ? 's' : '') + ')' : '') : ''),
+      enviados += await enviar(engenhariaDe(ms, obra), { title: 'Resumo das pendências · ' + nomeObra(obra),
+        body: ab + ' aberta(s), ' + ec + ' em correção, ' + co + ' corrigida(s) aguardando aprovação' + (av ? ', ' + av + ' sugestão(ões) para avaliar' : '') + (venc.length ? ' · ' + venc.length + ' vencida(s)' + (crit ? ' (' + crit + ' crítica' + (crit > 1 ? 's' : '') + ')' : '') : ''),
         url, tag: 'resumo-' + obra });
     }
   }
@@ -230,14 +248,14 @@ Deno.serve(async (req) => {
     // concreto abaixo do fck (avisado pelo Mapa de Concretagem) → Engenharia
     if (corpo.tipo === 'concreto') {
       const ms = await membros();
-      const para = doCargo(ms, 'engenharia').filter(e => e !== low(corpo.por));
+      const para = engenhariaDe(ms, String(corpo.obra || '')).filter(e => e !== low(corpo.por));
       return resp({ enviados: await enviar(para, { title: String(corpo.titulo || 'Concreto abaixo do fck'), body: String(corpo.corpo || ''),
         url: site + 'concretagem.html?obra=' + encodeURIComponent(String(corpo.obra || '')), tag: 'concreto-' + corpo.obra }) });
     }
     // quebra de cura (avisada pelo Mapa de Fachadas) → Engenharia
     if (corpo.tipo === 'fachada') {
       const ms = await membros();
-      const para = doCargo(ms, 'engenharia').filter(e => e !== low(corpo.por));
+      const para = engenhariaDe(ms, String(corpo.obra || '')).filter(e => e !== low(corpo.por));
       return resp({ enviados: await enviar(para, { title: String(corpo.titulo || 'Quebra de cura na fachada'), body: String(corpo.corpo || ''),
         url: site + 'fachadas.html?obra=' + encodeURIComponent(String(corpo.obra || '')), tag: 'fachada-' + corpo.obra }) });
     }

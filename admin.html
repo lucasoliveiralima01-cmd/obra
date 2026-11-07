@@ -3,30 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Administração: pessoas, acessos, cargos, convites e atividade.">
+<meta name="description" content="Administração: pessoas, perfis, obras de cada um, convites e atividade.">
 <meta name="theme-color" content="#22425c">
 <title>Administração · Ferramentas da Obra</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra">
 <link rel="icon" href="icone-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style>
-:root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
-  --r:10px; color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent}
@@ -51,21 +38,30 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 48px;display:grid;gap:14px
 .btn.sm{padding:4px 10px;font-size:.8rem}
 .btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;display:grid;gap:2px;text-align:left;color:inherit}
-.tile:hover{border-color:var(--accent)}
-.tile b{font:700 1.7rem/1 var(--f-disp)} .tile span{font-size:.82rem;color:var(--muted)}
-.tile.alerta{border-color:var(--warn);background:var(--warn-soft)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tab{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:6px 14px;font:600 .9rem var(--f-body);color:var(--muted)}
 .tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .barra{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
 .chip{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 11px;font:600 .82rem var(--f-body);color:var(--muted)}
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip.alerta{border-color:var(--warn);color:var(--warn)}
+a.tab{text-decoration:none;margin-left:auto}
+.lbl{font:600 .68rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hint{margin:0;font-size:.82rem;color:var(--muted)}
+.ruim{color:var(--bad)}
+.seg{display:flex;flex-wrap:wrap;gap:5px}
+.seg button{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 11px;font:600 .85rem var(--f-body);color:var(--muted)}
+.seg button[aria-checked="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg button:disabled{opacity:.55;cursor:default}
+.grupo{display:grid;gap:5px}
+.ovl{position:fixed;inset:0;z-index:80;background:rgba(10,20,30,.5);display:grid;place-items:center;padding:16px}
+.sheet{background:var(--panel);color:var(--ink);border-radius:12px;max-width:440px;width:100%;padding:16px 18px;display:grid;gap:10px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.sheet h3{margin:0;font:700 1.1rem var(--f-disp)}.sheet p{margin:0}
+.sheet-f{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .chip b{font-family:var(--f-mono);font-weight:600;margin-left:4px}
 .busca{flex:1 1 220px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 11px;min-width:0}
 .pessoas{display:grid;gap:10px}
-.p{display:grid;grid-template-columns:44px minmax(0,1fr) 210px;gap:8px 12px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.p{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px 12px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
 .p.pend{border-color:var(--warn);box-shadow:inset 4px 0 0 var(--warn)}
 .av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font:700 1rem var(--f-disp)}
 .pi{display:grid;gap:4px;min-width:0}
@@ -76,10 +72,8 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 48px;display:grid;gap:14px
 .pi .info{font-size:.78rem;color:var(--muted)}
 .pill{font:600 .7rem var(--f-body);padding:1px 8px;border-radius:10px;white-space:nowrap}
 .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neu{background:var(--bg);color:var(--muted)}
-.pc{display:grid;gap:6px}
-.pc label{display:grid;gap:2px;font:600 .68rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.pc select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%;text-transform:none;letter-spacing:0;font:500 .9rem var(--f-body);color:var(--ink)}
-.dsc{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:5px}
+.pc{grid-column:2/-1;display:grid;gap:6px;border-top:1px solid var(--line-2);padding-top:10px}
+.dsc{display:flex;flex-wrap:wrap;gap:5px}
 .dsc button{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font:600 .8rem var(--f-body);color:var(--muted)}
 .dsc button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .dsc button:disabled{opacity:.4;cursor:default}
@@ -106,7 +100,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 48px;display:grid;gap:14px
 .vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center}
 @media (max-width:720px){
   .brand::after{display:none}.ttl{border-left:0;padding-left:0}.hctl{margin-left:0;width:100%}
-  .p{grid-template-columns:40px minmax(0,1fr)}.pc{grid-column:1/-1}.dsc,.pa{grid-column:1/-1}
+  .p{grid-template-columns:40px minmax(0,1fr)}.pc,.pa{grid-column:1/-1}a.tab{margin-left:0}
   .form{grid-template-columns:1fr}.ativ div{grid-template-columns:1fr;gap:2px}
 }
 </style>
@@ -133,22 +127,33 @@ function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = f
 const fmtDia = s => s ? new Date(s).toLocaleDateString('pt-BR') : '';
 const fmtDH = s => { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 const iniciais = n => String(n || '').trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('');
-const ACESSOS = [['nenhum', 'Sem acesso'], ['leitor', 'Só visualizar'], ['editor', 'Editar'], ['admin', 'Administrador']];
-const CARGOS = [['', 'Sem cargo'], ['engenharia', 'Engenharia'], ['seguranca', 'Segurança'], ['encarregado', 'Campo (corrige pendências)']];
-const acessoDe = u => !u.papel ? 'nenhum' : u.admin ? 'admin' : u.papel;
-const rotAcesso = v => (ACESSOS.find(a => a[0] === v) || [, v])[1];
-const rotCargo = v => (CARGOS.find(a => a[0] === (v || '')) || [, v])[1];
+// perfis: um por pessoa; diz o que ela vê e faz em todo o sistema
+const PERFIS = [
+  ['admin', 'Administrador', 'Tudo, em todas as obras, e esta Administração.'],
+  ['engenharia', 'Engenharia', 'Edita Risco, Concretagem e Fachadas. Abre, aprova e fecha pendências.'],
+  ['seguranca', 'Segurança', 'Edita o Mapa de Risco. Registra, avalia e fecha as pendências de segurança.'],
+  ['campo', 'Campo', 'Só Pendências: vê as dos seus ofícios, marca como corrigida e sugere novas.'],
+  ['consulta', 'Consulta', 'Só visualiza os mapas e as pendências, sem alterar nada.']
+];
+const rotPerfil = v => (PERFIS.find(p => p[0] === v) || [, v || 'Sem acesso'])[1];
+const descPerfil = v => (PERFIS.find(p => p[0] === v) || [, , ''])[2];
+const BANCO_ESPERADO = 14;   // versão do banco.sql que esta tela espera
 
-let NV = null, sb = null, LISTA = [], DISC = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '';
-const grupoDe = v => (((DISC.find(d => d.valor === v) || {}).extra) || {}).grupo || v;
+let NV = null, sb = null, LISTA = [], DISC = [], OBRAS = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '', VERSAO = null;
 const nomeDe = e => { const u = LISTA.find(x => x.email === String(e || '').toLowerCase()); return (u && u.nome) || (NV ? NV.pessoas.nome(e) : String(e || '').split('@')[0]); };
+const nomeObra = id => (OBRAS.find(o => o.id === id) || { nome: id }).nome;
 const site = () => location.href.replace(/[^/]*$/, '');
-const aguardando = u => u.tem_conta && !u.papel;
+const perfilDe = u => u.perfil || (u.papel ? (u.admin ? 'admin' : u.cargo === 'encarregado' ? 'campo' : u.cargo || (u.papel === 'editor' ? 'engenharia' : 'consulta')) : '');
+const aguardando = u => u.tem_conta && !perfilDe(u);
 const conviteAberto = u => u.tem_conta && !u.confirmado;
+const semObra = u => perfilDe(u) && perfilDe(u) !== 'admin' && !(u.obras || []).length;
+// rascunho de quem está virando Campo (precisa marcar o ofício antes de salvar)
+const RASC = {};
 
 /* ---------------- chamadas ---------------- */
 async function carregar() {
   try { const r = await sb.from('pend_listas').select('valor,extra,ordem').eq('tipo', 'disciplina').order('ordem'); if (!r.error) DISC = r.data || []; } catch (e) {}
+  try { OBRAS = await NV.obras.listar(); } catch (e) { OBRAS = []; }
   await NV.pessoas.carregar();
   LISTA = await NV.administracao.listar();
 }
@@ -169,120 +174,157 @@ async function linkSenha(email) {
   try { await sb.rpc('admin_registrar', { p_alvo: email, p_acao: 'senha', p_detalhe: 'link para criar/redefinir a senha' }); } catch (e) {}
 }
 
-/* ---------------- tela ---------------- */
-function render() {
-  const n = k => LISTA.filter(k).length;
-  const tiles = [['todos', LISTA.length, 'pessoas'], ['aguardando', n(aguardando), 'aguardando liberação'], ['convite', n(conviteAberto), 'convite não aceito'],
-    ['engenharia', n(u => u.cargo === 'engenharia'), 'Engenharia'], ['seguranca', n(u => u.cargo === 'seguranca'), 'Segurança'], ['encarregado', n(u => u.cargo === 'encarregado'), 'encarregados'],
-    ['avisos', n(u => u.avisos > 0), 'com avisos ligados']];
-  $('main').innerHTML = `
-    <div class="tiles">${tiles.map(([k, v, t]) => `<button class="tile ${(k === 'aguardando' || k === 'convite') && v ? 'alerta' : ''}" data-fil="${k}"><b>${v}</b><span>${t}</span></button>`).join('')}</div>
-    <div class="tabs"><button class="tab" data-aba="pessoas" aria-pressed="${ABA === 'pessoas'}">Pessoas</button><button class="tab" data-aba="convidar" aria-pressed="${ABA === 'convidar'}">+ Convidar pessoa</button><button class="tab" data-aba="atividade" aria-pressed="${ABA === 'atividade'}">Atividade</button><button class="tab" data-aba="dados" aria-pressed="${ABA === 'dados'}">Dados: backup e lixeira</button></div>
-    <div id="corpo"></div>`;
-  $('main').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => { ABA = b.dataset.aba; render(); });
-  $('main').querySelectorAll('[data-fil]').forEach(b => b.onclick = () => { ABA = 'pessoas'; FILTRO = b.dataset.fil; render(); });
-  if (ABA === 'convidar') telaConvidar(); else if (ABA === 'atividade') telaAtividade(); else if (ABA === 'dados') telaDados(); else telaPessoas();
+/* ---------------- confirmação dentro da página ---------------- */
+function confirmar(titulo, texto, botao, perigo) {
+  return new Promise(res => {
+    const d = document.createElement('div'); d.className = 'ovl';
+    d.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cfT"><h3 id="cfT">${esc(titulo)}</h3><p>${texto}</p>
+      <div class="sheet-f"><button class="btn ghost" type="button" data-n>Cancelar</button><button class="btn ${perigo ? 'danger' : ''}" type="button" data-s>${esc(botao)}</button></div></div>`;
+    const fim = v => { d.remove(); document.removeEventListener('keydown', esc_); res(v); };
+    const esc_ = ev => { if (ev.key === 'Escape') fim(false); };
+    d.addEventListener('click', ev => { if (ev.target === d) fim(false); });
+    d.querySelector('[data-n]').onclick = () => fim(false);
+    d.querySelector('[data-s]').onclick = () => fim(true);
+    document.addEventListener('keydown', esc_);
+    document.body.appendChild(d); d.querySelector('[data-s]').focus();
+  });
 }
 
+/* ---------------- tela ---------------- */
+function render() {
+  const velho = VERSAO === null || VERSAO < BANCO_ESPERADO;
+  $('main').innerHTML = `
+    ${velho ? `<div class="aviso"><b>O banco de dados precisa ser atualizado</b>${VERSAO ? ' (versão ' + VERSAO + ' de ' + BANCO_ESPERADO + ')' : ''}. No Supabase, abra <b>SQL Editor → New query</b>, cole o arquivo <b>banco.sql</b> inteiro e clique em <b>Run</b>. Depois recarregue esta página.</div>` : ''}
+    <div class="tabs"><button class="tab" data-aba="pessoas" aria-pressed="${ABA === 'pessoas'}">Pessoas</button><button class="tab" data-aba="convidar" aria-pressed="${ABA === 'convidar'}">+ Convidar pessoa</button><button class="tab" data-aba="atividade" aria-pressed="${ABA === 'atividade'}">Atividade</button><button class="tab" data-aba="dados" aria-pressed="${ABA === 'dados'}">Dados</button><a class="tab" href="listas.html" title="Ofícios, tipos de problema e funcionários sem login">Ofícios e listas →</a></div>
+    <div id="corpo"></div>`;
+  $('main').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => { ABA = b.dataset.aba; render(); });
+  if (ABA === 'convidar') telaConvidar(); else if (ABA === 'atividade') telaAtividade(); else if (ABA === 'dados') telaDados(); else telaPessoas();
+}
 const FILTROS = {
   todos: ['Todos', () => true], aguardando: ['Aguardando liberação', aguardando], convite: ['Convite não aceito', conviteAberto],
-  semacesso: ['Sem acesso', u => !u.papel], leitor: ['Só visualizar', u => u.papel === 'leitor' && u.cargo !== 'encarregado'], editor: ['Editar', u => u.papel === 'editor' && !u.admin],
-  admin: ['Administradores', u => u.admin], engenharia: ['Engenharia', u => u.cargo === 'engenharia'], seguranca: ['Segurança', u => u.cargo === 'seguranca'],
-  encarregado: ['Campo', u => u.cargo === 'encarregado'], semcargo: ['Sem cargo', u => u.papel && !u.cargo], avisos: ['Com avisos', u => u.avisos > 0]
+  admin: ['Administrador', u => perfilDe(u) === 'admin'], engenharia: ['Engenharia', u => perfilDe(u) === 'engenharia'],
+  seguranca: ['Segurança', u => perfilDe(u) === 'seguranca'], campo: ['Campo', u => perfilDe(u) === 'campo'],
+  consulta: ['Consulta', u => perfilDe(u) === 'consulta'], semobra: ['Sem obra', semObra]
 };
 function telaPessoas() {
   const q = BUSCA.trim().toLowerCase();
-  const vis = LISTA.filter(FILTROS[FILTRO][1]).filter(u => !q || (u.email + ' ' + (u.nome || '') + ' ' + (u.disciplinas || []).join(' ')).toLowerCase().includes(q))
+  const vis = LISTA.filter(FILTROS[FILTRO][1]).filter(u => !q || (u.email + ' ' + (u.nome || '') + ' ' + (u.oficios || u.disciplinas || []).join(' ') + ' ' + (u.obras || []).map(nomeObra).join(' ')).toLowerCase().includes(q))
     .sort((a, b) => (+aguardando(b) - +aguardando(a)) || String(a.nome || a.email).localeCompare(String(b.nome || b.email), 'pt-BR'));
-  $('corpo').innerHTML = `<div class="barra">${Object.entries(FILTROS).map(([k, [t, f]]) => `<button class="chip" data-f="${k}" aria-pressed="${FILTRO === k}">${t}<b>${LISTA.filter(f).length}</b></button>`).join('')}</div>
-    <div class="barra"><input class="busca" id="busca" type="search" placeholder="Buscar por nome, e-mail ou disciplina…" value="${esc(BUSCA)}" aria-label="Buscar pessoa"></div>
+  // filtros com zero pessoas ficam escondidos (menos "Todos" e o que está marcado)
+  $('corpo').innerHTML = `<div class="barra">${Object.entries(FILTROS).map(([k, [t, f]]) => { const n = LISTA.filter(f).length; if (!n && k !== 'todos' && k !== FILTRO) return '';
+      return `<button class="chip ${(k === 'aguardando' || k === 'convite' || k === 'semobra') && n ? 'alerta' : ''}" data-f="${k}" aria-pressed="${FILTRO === k}">${t}<b>${n}</b></button>`; }).join('')}</div>
+    <div class="barra"><input class="busca" id="busca" type="search" placeholder="Buscar por nome, e-mail, ofício ou obra…" value="${esc(BUSCA)}" aria-label="Buscar pessoa"></div>
     <div class="pessoas">${vis.length ? vis.map(pessoaHtml).join('') : '<div class="vazio muted">Ninguém com este filtro.</div>'}</div>`;
   const C = $('corpo');
   C.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { FILTRO = b.dataset.f; telaPessoas(); });
   $('busca').oninput = e => { BUSCA = e.target.value; clearTimeout(telaPessoas.t); telaPessoas.t = setTimeout(() => { telaPessoas(); const b = $('busca'); b.focus(); b.setSelectionRange(b.value.length, b.value.length); }, 250); };
   ligarPessoas(C);
 }
+const chipsOficios = (sel, attr) => DISC.map(d => d.valor).concat(sel.filter(x => !DISC.some(d => d.valor === x)))
+  .map(v => `<button type="button" ${attr}="${esc(v)}" aria-pressed="${sel.includes(v)}">${esc(v)}</button>`).join('');
+const chipsObras = (sel, attr) => OBRAS.length ? OBRAS.map(o => `<button type="button" ${attr}="${esc(o.id)}" aria-pressed="${sel.includes(o.id)}">${esc(o.nome)}</button>`).join('')
+  : '<span class="muted">Nenhuma obra cadastrada ainda.</span>';
 function pessoaHtml(u) {
-  const i = LISTA.indexOf(u), sou = u.email === EU, pend = aguardando(u);
+  const i = LISTA.indexOf(u), sou = u.email === EU, pend = aguardando(u), r = RASC[u.email];
+  const pf = r ? r.perfil : perfilDe(u), ofs = r ? r.oficios : (u.oficios || u.disciplinas || []), obs = u.obras || [];
   const badges = [pend ? '<span class="pill warn">aguardando liberação</span>' : '', conviteAberto(u) ? '<span class="pill warn">convite não aceito</span>' : '',
     !u.tem_conta ? '<span class="pill neu">liberado, sem conta ainda</span>' : '', sou ? '<span class="pill ok">você</span>' : '',
-    u.avisos ? `<span class="pill ok" title="Aparelhos com avisos ligados">🔔 ${u.avisos}</span>` : (u.papel ? '<span class="pill neu" title="Nenhum aparelho com avisos ligados">sem avisos</span>' : '')].join('');
+    semObra(u) ? '<span class="pill warn">sem obra</span>' : '',
+    u.avisos ? `<span class="pill ok" title="Aparelhos com avisos ligados">🔔 ${u.avisos}</span>` : ''].join('');
   const info = [u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) : '', u.ultimo_acesso ? 'último acesso em ' + fmtDH(u.ultimo_acesso) : (u.tem_conta ? 'ainda não entrou' : ''), u.pendencias ? u.pendencias + ' pendência(s) registrada(s)' : ''].filter(Boolean).join(' · ');
-  const acesso = u.cargo === 'encarregado' ? `<select disabled title="Encarregados usam só o painel de pendências. Para mudar, troque o cargo."><option>Só pendências</option></select>`
-    : `<select data-acesso="${i}" ${sou ? 'disabled title="Para mudar o seu próprio acesso, peça a outro administrador."' : ''}>${ACESSOS.map(([v, t]) => `<option value="${v}" ${acessoDe(u) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
-  // cargos de quem corrige: pode ter mais de um (ex.: Pedreiro e Impermeabilizador)
-  const dsc = u.cargo === 'encarregado' ? `<div class="dsc" role="group" aria-label="Cargos"><span class="muted" style="width:100%;font-size:.8rem">Cargos (toque para marcar um ou mais):</span>${DISC.concat((u.disciplinas || []).filter(x => !DISC.some(d => d.valor === x)).map(x => ({ valor: x }))).map(d => { const on = (u.disciplinas || []).includes(d.valor);
-      return `<button type="button" data-disc="${i}" data-v="${esc(d.valor)}" aria-pressed="${on}">${esc(d.valor)}</button>`; }).join('')}</div>` : '';
+  const perfis = `<div class="seg" role="radiogroup" aria-label="Perfil de ${esc(u.email)}">${PERFIS.map(([v, t]) => `<button type="button" role="radio" data-perfil="${i}" data-v="${v}" aria-checked="${pf === v}" ${sou ? 'disabled' : ''}>${t}</button>`).join('')}</div>
+    <p class="hint">${pf ? esc(descPerfil(pf)) : 'Escolha o perfil para liberar o acesso.'}${sou ? ' Para mudar o seu próprio perfil, peça a outro administrador.' : ''}</p>`;
+  const oficios = pf === 'campo' ? `<div class="grupo"><span class="lbl">Ofícios${r ? ' <b class="ruim">· marque ao menos um para salvar</b>' : ''}</span><div class="dsc" role="group" aria-label="Ofícios">${chipsOficios(ofs, 'data-of')}</div></div>` : '';
+  const obras = pf && pf !== 'admin' ? `<div class="grupo"><span class="lbl">Obras${obs.length ? ' · ' + obs.length + ' de ' + OBRAS.length : ''}</span><div class="dsc" role="group" aria-label="Obras">${chipsObras(obs, 'data-ob')}</div></div>`
+    : pf === 'admin' ? '<p class="hint">Administrador vê todas as obras.</p>' : '';
   const acoes = [u.tem_conta && !sou ? `<button class="btn sm ghost" data-senha="${i}" type="button">Enviar link de senha</button>` : '',
     (!u.tem_conta || conviteAberto(u)) ? `<button class="btn sm ghost" data-conv="${i}" type="button">${u.tem_conta ? 'Reenviar convite' : 'Enviar convite'}</button>` : '',
+    !sou && perfilDe(u) && u.tem_conta ? `<button class="btn sm ghost" data-bloq="${i}" type="button">Bloquear acesso</button>` : '',
     !sou ? `<button class="btn sm danger" data-exc="${i}" type="button">${u.tem_conta ? 'Excluir conta' : 'Remover'}</button>` : ''].join('');
-  return `<article class="p${pend ? ' pend' : ''}">
+  return `<article class="p${pend ? ' pend' : ''}" data-email="${esc(u.email)}">
     <span class="av" aria-hidden="true">${esc(iniciais(u.nome || u.email))}</span>
     <div class="pi"><div class="nm"><input class="nome" data-nome="${i}" maxlength="80" value="${esc(u.nome || '')}" placeholder="${esc(u.email.split('@')[0])} (sem nome)" aria-label="Nome de ${esc(u.email)}">${badges}</div>
-      <span class="em">${esc(u.email)}</span><span class="info">${esc(info)}</span></div>
-    <div class="pc"><label>Acesso aos mapas ${acesso}</label>
-      ${u.papel ? `<label>Cargo nas pendências <select data-cargo="${i}">${CARGOS.map(([v, t]) => `<option value="${v}" ${(u.cargo || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>` : ''}</div>
-    ${dsc}${acoes ? `<div class="pa">${acoes}</div>` : ''}
+      <span class="em">${esc(u.email)}</span>${info ? `<span class="info">${esc(info)}</span>` : ''}</div>
+    <div class="pc"><span class="lbl">Perfil</span>${perfis}${oficios}${obras}</div>
+    ${acoes ? `<div class="pa">${acoes}</div>` : ''}
   </article>`;
+}
+async function salvarPerfil(u, perfil, oficios, obras, txt) {
+  try { await NV.administracao.definirPerfil(u.email, perfil, oficios, obras); delete RASC[u.email]; LOG = null; await recarregar(); if (txt) toast(txt); }
+  catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); }
 }
 function ligarPessoas(C) {
   const L = i => LISTA[+i];
-  C.querySelectorAll('[data-acesso]').forEach(s => s.onchange = async () => { const u = L(s.dataset.acesso), v = s.value, antes = acessoDe(u); s.disabled = true;
-    try { await NV.administracao.definir(u.email, v === 'admin' ? 'editor' : v, v === 'admin'); toast((u.nome || u.email) + ': ' + rotAcesso(v).toLowerCase() + '.'); LOG = null; await recarregar(); }
-    catch (e) { s.value = antes; s.disabled = false; toast('Não foi possível: ' + e.message, 6000); } });
-  C.querySelectorAll('[data-cargo]').forEach(s => s.onchange = async () => { const u = L(s.dataset.cargo), v = s.value || null;
-    if (v === 'encarregado') { u.cargo = 'encarregado'; u.disciplinas = []; telaPessoas(); toast('Marque os cargos dessa pessoa (um ou mais).'); return; }
-    try { await NV.administracao.definirCargo(u.email, v, []); toast((u.nome || u.email) + ': ' + rotCargo(v).toLowerCase() + '.'); LOG = null; await recarregar(); }
-    catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); } });
-  C.querySelectorAll('[data-disc]').forEach(b => b.onclick = async () => { const u = L(b.dataset.disc), v = b.dataset.v, ds = (u.disciplinas || []).slice(); const k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v);
-    if (!ds.length) { u.disciplinas = []; telaPessoas(); toast('Precisa de ao menos um cargo.'); return; }
-    try { await NV.administracao.definirCargo(u.email, 'encarregado', ds); LOG = null; await recarregar(); toast((u.nome || u.email) + ': ' + ds.join(', ') + '.'); }
-    catch (e) { toast('Não foi possível: ' + e.message, 6000); await recarregar(); } });
+  C.querySelectorAll('[data-perfil]').forEach(b => b.onclick = async () => { const u = L(b.dataset.perfil), v = b.dataset.v, atual = perfilDe(u);
+    if (v === atual && !RASC[u.email]) return;
+    // Campo precisa de ao menos um ofício: espera marcar antes de salvar
+    if (v === 'campo' && !(u.oficios || u.disciplinas || []).length) { RASC[u.email] = { perfil: 'campo', oficios: [] }; telaPessoas(); toast('Marque os ofícios de ' + (u.nome || u.email) + '.'); return; }
+    delete RASC[u.email];
+    if (atual === 'admin' && v !== 'admin' && !(await confirmar('Tirar o administrador?', esc(u.nome || u.email) + ' deixa de ver a Administração e passa a ver só as obras marcadas no cartão.', 'Mudar para ' + rotPerfil(v)))) { telaPessoas(); return; }
+    if (v === 'admin' && !(await confirmar('Tornar administrador?', esc(u.nome || u.email) + ' passa a ver todas as obras e esta Administração, e pode mudar o perfil de qualquer pessoa.', 'Tornar administrador'))) { telaPessoas(); return; }
+    // quem é liberado agora e só existe uma obra já entra nela
+    const obras = !atual && OBRAS.length === 1 ? [OBRAS[0].id] : null;
+    await salvarPerfil(u, v, null, obras, (u.nome || u.email) + ': ' + rotPerfil(v) + '.'); });
+  C.querySelectorAll('[data-of]').forEach(b => b.onclick = async () => { const art = b.closest('[data-email]'); const u = LISTA.find(x => x.email === art.dataset.email), v = b.dataset.of;
+    const r = RASC[u.email]; const ds = (r ? r.oficios : (u.oficios || u.disciplinas || [])).slice(); const k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v);
+    if (!ds.length) { if (r) { r.oficios = []; telaPessoas(); } else toast('Quem é de Campo precisa de ao menos um ofício.'); return; }
+    await salvarPerfil(u, 'campo', ds, null, (u.nome || u.email) + ': ' + ds.join(', ') + '.'); });
+  C.querySelectorAll('[data-ob]').forEach(b => b.onclick = async () => { const art = b.closest('[data-email]'); const u = LISTA.find(x => x.email === art.dataset.email), v = b.dataset.ob;
+    const os = (u.obras || []).slice(); const k = os.indexOf(v); if (k >= 0) os.splice(k, 1); else os.push(v);
+    await salvarPerfil(u, perfilDe(u), null, os, (u.nome || u.email) + (k >= 0 ? ' saiu de ' : ' entrou em ') + nomeObra(v) + '.'); });
   C.querySelectorAll('[data-nome]').forEach(inp => inp.onchange = async () => { const u = L(inp.dataset.nome), n = inp.value.trim();
     try { await NV.pessoas.salvarNome(u.email, n); u.nome = n; toast('Nome salvo.'); } catch (e) { toast('Não foi possível salvar o nome: ' + e.message, 6000); } });
   C.querySelectorAll('[data-senha]').forEach(b => b.onclick = async () => { const u = L(b.dataset.senha);
-    if (!confirm('Enviar para ' + u.email + ' um e-mail com o link para criar ou redefinir a senha?')) return; b.disabled = true;
+    if (!(await confirmar('Enviar link de senha?', 'Vai para <b>' + esc(u.email) + '</b> um e-mail com o link para criar ou redefinir a senha.', 'Enviar'))) return; b.disabled = true;
     try { await linkSenha(u.email); LOG = null; toast('Link enviado para ' + u.email + '.'); } catch (e) { toast('Não foi possível enviar: ' + e.message, 6000); } b.disabled = false; });
   C.querySelectorAll('[data-conv]').forEach(b => b.onclick = async () => { const u = L(b.dataset.conv); b.disabled = true;
     try { const r = await funcaoUsuarios('convidar', u.email); LOG = null; toast(r.existia ? 'A conta já existia: enviei o link para criar a senha.' : 'Convite enviado para ' + u.email + '.', 6000); await recarregar(); }
     catch (e) { toast(e.message, 8000); b.disabled = false; } });
+  C.querySelectorAll('[data-bloq]').forEach(b => b.onclick = async () => { const u = L(b.dataset.bloq);
+    if (!(await confirmar('Bloquear o acesso?', esc(u.nome || u.email) + ' continua com o login, mas deixa de ver qualquer obra até você escolher um perfil de novo. O que a pessoa registrou continua.', 'Bloquear', true))) return;
+    await salvarPerfil(u, 'nenhum', null, null, 'Acesso bloqueado.'); });
   C.querySelectorAll('[data-exc]').forEach(b => b.onclick = async () => { const u = L(b.dataset.exc);
-    const txt = u.tem_conta ? 'Excluir a conta de ' + u.email + '?\n\nA pessoa perde o acesso e o login deixa de existir. As pendências e registros feitos por ela continuam.' : 'Remover a liberação de ' + u.email + '?';
-    if (!confirm(txt)) return; b.disabled = true;
+    const ok = await confirmar(u.tem_conta ? 'Excluir a conta?' : 'Remover a liberação?', u.tem_conta ? 'A conta de <b>' + esc(u.email) + '</b> deixa de existir e a pessoa perde o acesso. As pendências e registros feitos por ela continuam.' : 'O e-mail <b>' + esc(u.email) + '</b> deixa de estar liberado.', u.tem_conta ? 'Excluir conta' : 'Remover', true);
+    if (!ok) return; b.disabled = true;
     try {
-      if (u.tem_conta) await funcaoUsuarios('excluir', u.email); else await NV.administracao.definir(u.email, 'nenhum', false);
+      if (u.tem_conta) await funcaoUsuarios('excluir', u.email); else await NV.administracao.definirPerfil(u.email, 'nenhum');
       LOG = null; toast(u.tem_conta ? 'Conta excluída.' : 'Liberação removida.'); await recarregar();
     } catch (e) { toast((e.semFuncao ? '' : 'Não foi possível: ') + e.message, 8000); b.disabled = false; } });
 }
 
 function telaConvidar() {
+  let pf = 'engenharia', ofs = [], obs = OBRAS.length === 1 ? [OBRAS[0].id] : [];
   $('corpo').innerHTML = `<form class="form" id="fC" autocomplete="off">
-    <p class="muted full" style="margin:0">A pessoa recebe um e-mail para criar a senha e já entra com o acesso e o cargo escolhidos aqui. Se ela já tiver conta, recebe um link para criar/redefinir a senha.</p>
+    <p class="muted full" style="margin:0">A pessoa recebe um e-mail para criar a senha e já entra com o perfil e as obras escolhidos aqui. Se ela já tiver conta, recebe um link para criar ou redefinir a senha.</p>
     <div class="fld"><label for="cEmail">E-mail *</label><input id="cEmail" type="email" required placeholder="colega@empresa.com"></div>
     <div class="fld"><label for="cNome">Nome</label><input id="cNome" maxlength="80" placeholder="Como aparece para a equipe"></div>
-    <div class="fld"><label for="cCargo">Cargo nas pendências</label><select id="cCargo">${CARGOS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
-    <div class="fld" id="cAcBox"><label for="cAcesso">Acesso aos mapas</label><select id="cAcesso">${ACESSOS.filter(a => a[0] !== 'nenhum').map(([v, t]) => `<option value="${v}" ${v === 'editor' ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
-    <div class="fld full" id="cDiscBox" hidden><span class="l">Disciplinas do encarregado (só as complementares)</span><div class="dsc" id="cDisc" style="grid-column:auto"></div></div>
+    <div class="fld full"><span class="l">Perfil</span><div class="seg" id="cPerfil" role="radiogroup" aria-label="Perfil"></div><p class="hint" id="cDesc"></p></div>
+    <div class="fld full" id="cOfBox"><span class="l">Ofícios</span><div class="dsc" id="cOf"></div></div>
+    <div class="fld full" id="cObBox"><span class="l">Obras</span><div class="dsc" id="cOb"></div></div>
     <label class="full" style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="cEnviar" checked> Enviar o convite por e-mail agora</label>
     <div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" id="cOk" type="button">Convidar e liberar</button><span class="msg" id="cMsg"></span></div>
   </form>`;
-  let ds = [];
-  const desenharDisc = () => { const enc = $('cCargo').value === 'encarregado'; $('cDiscBox').hidden = !enc; $('cAcBox').hidden = enc;
-    $('cDisc').innerHTML = DISC.map(d => { const on = ds.includes(d.valor), g = grupoDe(d.valor), ok = on || !ds.length || ds.every(x => grupoDe(x) === g);
-      return `<button type="button" data-v="${esc(d.valor)}" aria-pressed="${on}" ${ok ? '' : 'disabled'}>${esc(d.valor)}</button>`; }).join('');
-    $('cDisc').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const v = b.dataset.v, k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v); desenharDisc(); }); };
-  $('cCargo').onchange = () => { ds = []; desenharDisc(); }; desenharDisc();
+  const desenhar = () => {
+    $('cPerfil').innerHTML = PERFIS.map(([v, t]) => `<button type="button" role="radio" data-v="${v}" aria-checked="${pf === v}">${t}</button>`).join('');
+    $('cDesc').textContent = descPerfil(pf);
+    $('cOfBox').hidden = pf !== 'campo'; $('cObBox').hidden = pf === 'admin';
+    $('cOf').innerHTML = chipsOficios(ofs, 'data-v'); $('cOb').innerHTML = chipsObras(obs, 'data-v');
+    $('cPerfil').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { pf = b.dataset.v; desenhar(); });
+    $('cOf').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const v = b.dataset.v, k = ofs.indexOf(v); if (k >= 0) ofs.splice(k, 1); else ofs.push(v); desenhar(); });
+    $('cOb').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const v = b.dataset.v, k = obs.indexOf(v); if (k >= 0) obs.splice(k, 1); else obs.push(v); desenhar(); });
+  };
+  desenhar();
   $('cOk').onclick = async () => {
     const msg = (t, ok) => { $('cMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('cMsg').textContent = t; };
-    const email = $('cEmail').value.trim().toLowerCase(), nome = $('cNome').value.trim(), cargo = $('cCargo').value || null, ac = $('cAcesso').value;
+    const email = $('cEmail').value.trim().toLowerCase(), nome = $('cNome').value.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg('Escreva um e-mail válido.'); return; }
-    if (cargo === 'encarregado' && !ds.length) { msg('Escolha ao menos uma disciplina.'); return; }
-    if (LISTA.some(u => u.email === email && u.papel) && !confirm(email + ' já tem acesso. Atualizar o acesso e o cargo e reenviar o e-mail?')) return;
+    if (pf === 'campo' && !ofs.length) { msg('Marque ao menos um ofício.'); return; }
+    if (pf !== 'admin' && !obs.length) { msg('Marque ao menos uma obra.'); return; }
+    if (LISTA.some(u => u.email === email && perfilDe(u)) && !(await confirmar('Pessoa já liberada', esc(email) + ' já tem acesso. Atualizar o perfil e as obras e reenviar o e-mail?', 'Atualizar'))) return;
     $('cOk').disabled = true; msg('Liberando…', true);
     try {
-      await NV.administracao.definir(email, cargo === 'encarregado' ? 'leitor' : (ac === 'admin' ? 'editor' : ac), cargo !== 'encarregado' && ac === 'admin');
+      await NV.administracao.definirPerfil(email, pf, pf === 'campo' ? ofs : null, pf === 'admin' ? null : obs);
       if (nome) await NV.pessoas.salvarNome(email, nome);
-      if (cargo) await NV.administracao.definirCargo(email, cargo, cargo === 'encarregado' ? ds : []);
       let aviso = 'Acesso liberado.';
       if ($('cEnviar').checked) {
         try { const r = await funcaoUsuarios('convidar', email); aviso = r.existia ? 'Acesso liberado. A conta já existia: enviei o link para criar/redefinir a senha.' : 'Acesso liberado e convite enviado para ' + email + '.'; }
@@ -296,10 +338,10 @@ function telaConvidar() {
 async function telaAtividade() {
   $('corpo').innerHTML = '<p class="muted">Carregando…</p>';
   if (!LOG) { const { data, error } = await sb.from('admin_log').select('*').order('em', { ascending: false }).limit(300);
-    if (error) { $('corpo').innerHTML = '<div class="aviso">Para ver a atividade, rode o arquivo <b>atualizacao-admin2.sql</b> no Supabase.</div>'; return; } LOG = data || []; }
-  const ACAO = { acesso: 'mudou o acesso de', cargo: 'mudou o cargo de', convite: 'convidou', senha: 'enviou link de senha para', exclusao: 'excluiu', lixeira: 'lixeira:', backup: 'backup' };
+    if (error) { $('corpo').innerHTML = '<div class="aviso">Para ver a atividade, rode o arquivo <b>banco.sql</b> no Supabase.</div>'; return; } LOG = data || []; }
+  const ACAO = { perfil: 'mudou o perfil de', acesso: 'mudou o acesso de', cargo: 'mudou o cargo de', convite: 'convidou', senha: 'enviou link de senha para', exclusao: 'excluiu', lixeira: 'lixeira:', backup: 'backup' };
   $('corpo').innerHTML = LOG.length ? `<div class="ativ">${LOG.map(l => `<div><time>${fmtDH(l.em)}</time><span><b>${esc(nomeDe(l.por))}</b> ${esc(ACAO[l.acao] || l.acao)} <b>${esc(nomeDe(l.alvo))}</b>${l.alvo && nomeDe(l.alvo) !== l.alvo ? ' <span class="muted">(' + esc(l.alvo) + ')</span>' : ''}${l.detalhe ? ' · ' + esc(l.detalhe) : ''}</span></div>`).join('')}</div>`
-    : '<div class="vazio muted">Nenhuma atividade registrada ainda. A partir de agora, cada mudança de acesso, cargo, convite e exclusão aparece aqui.</div>';
+    : '<div class="vazio muted">Nenhuma atividade registrada ainda. A partir de agora, cada mudança de perfil, obras, convite e exclusão aparece aqui.</div>';
 }
 
 /* ---------------- dados: espaço usado, backup e lixeira ---------------- */
@@ -309,7 +351,7 @@ const carregarScript = src => new Promise((res, rej) => { const s = document.cre
 async function telaDados() {
   $('corpo').innerHTML = '<p class="muted">Carregando…</p>';
   const [uso, lix] = await Promise.all([sb.rpc('admin_uso'), sb.rpc('admin_lixeira')]);
-  if (uso.error && lix.error) { $('corpo').innerHTML = '<div class="aviso">Para ver o espaço usado, o backup e a lixeira, rode o arquivo <b>atualizacao-melhorias.sql</b> no Supabase.</div>'; return; }
+  if (uso.error && lix.error) { $('corpo').innerHTML = '<div class="aviso">Para ver o espaço usado, o backup e a lixeira, rode o arquivo <b>banco.sql</b> no Supabase.</div>'; return; }
   const u = (uso.data || [])[0] || {};
   const barra = (v, lim, rot) => { const p = Math.min(100, Math.round(v / lim * 100)); return `<div class="uso"><div class="uso-t"><b>${rot}</b><span>${fmtTam(v)} de ${fmtTam(lim)} (${p}%)</span></div><div class="uso-b"><i style="width:${p}%;background:${p > 85 ? 'var(--bad)' : p > 65 ? 'var(--warn)' : 'var(--ok)'}"></i></div></div>`; };
   const L = lix.data || [];
@@ -322,12 +364,12 @@ async function telaDados() {
       <div class="barra"><button class="btn" id="bkDados" type="button">Baixar os dados agora (JSON)</button><button class="btn ghost" id="bkArq" type="button">Baixar todos os arquivos (ZIP)</button></div>
       <div id="bkMsg" class="msg"></div><div id="bkLista"></div></section></div>
     <section class="box"><h3>Lixeira (${L.length})</h3>
-      <p class="muted" style="margin:0">Obras e pendências excluídas ficam aqui por 30 dias e depois são apagadas de vez.</p>
+      <p class="muted" style="margin:0">Obras e pendências excluídas e mapas resetados ficam aqui por 30 dias e depois são apagados de vez. Restaurar um mapa traz de volta o que foi apagado, sem tirar o que foi feito depois.</p>
       ${L.length ? `<div class="lix">${L.map((x, i) => { const dias = Math.max(0, 30 - Math.floor((Date.now() - new Date(x.excluida_em)) / 864e5));
-        return `<div><span class="pill ${x.tipo === 'obra' ? 'bad' : 'neu'}">${x.tipo === 'obra' ? 'obra' : 'pendência'}</span><b>${esc(x.titulo)}</b><span class="muted">${x.tipo === 'pendencia' ? esc(x.obra) + ' · ' : ''}excluída em ${fmtDH(x.excluida_em)}${x.excluida_por ? ' por ' + esc(nomeDe(x.excluida_por)) : ''} · some em ${dias} dia(s)</span><button class="btn sm ghost" data-rest="${i}" type="button">Restaurar</button></div>`; }).join('')}</div>` : '<p class="muted" style="margin:0">A lixeira está vazia.</p>'}</section>`;
+        return `<div><span class="pill ${x.tipo === 'obra' ? 'bad' : x.tipo === 'painel' ? 'warn' : 'neu'}">${x.tipo === 'obra' ? 'obra' : x.tipo === 'painel' ? 'mapa' : 'pendência'}</span><b>${esc(x.titulo)}</b><span class="muted">${x.tipo !== 'obra' ? esc(nomeObra(x.obra)) + ' · ' : ''}excluída em ${fmtDH(x.excluida_em)}${x.excluida_por ? ' por ' + esc(nomeDe(x.excluida_por)) : ''} · some em ${dias} dia(s)</span><button class="btn sm ghost" data-rest="${i}" type="button">Restaurar</button></div>`; }).join('')}</div>` : '<p class="muted" style="margin:0">A lixeira está vazia.</p>'}</section>`;
   $('corpo').querySelectorAll('[data-rest]').forEach(b => b.onclick = async () => { const x = L[+b.dataset.rest]; b.disabled = true;
     const { error } = await sb.rpc('admin_restaurar', { p_tipo: x.tipo, p_id: x.id }); if (error) { toast('Não foi possível restaurar: ' + error.message, 6000); b.disabled = false; return; }
-    LOG = null; toast((x.tipo === 'obra' ? 'Obra' : 'Pendência') + ' restaurada.'); telaDados(); });
+    LOG = null; toast((x.tipo === 'obra' ? 'Obra restaurada' : x.tipo === 'painel' ? 'Mapa restaurado' : 'Pendência restaurada') + '.'); telaDados(); });
   const msg = (t, ok) => { $('bkMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('bkMsg').textContent = t; };
   $('bkDados').onclick = async () => { $('bkDados').disabled = true; msg('Montando a cópia…', true);
     try { const j = await funcaoUsuarios('backup'); baixar('backup-obras-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(j, null, 1)], { type: 'application/json' }));
@@ -336,7 +378,7 @@ async function telaDados() {
   $('bkArq').onclick = async () => { $('bkArq').disabled = true; msg('Listando os arquivos…', true);
     try {
       const { arquivos } = await funcaoUsuarios('arquivos'); const tot = arquivos.reduce((s, f) => s + (f.tamanho || 0), 0);
-      if (!confirm('Baixar ' + arquivos.length + ' arquivo(s), cerca de ' + fmtTam(tot) + ', num arquivo ZIP? Pode demorar alguns minutos.')) { msg(''); $('bkArq').disabled = false; return; }
+      if (!(await confirmar('Baixar todos os arquivos?', arquivos.length + ' arquivo(s), cerca de ' + fmtTam(tot) + ', num arquivo ZIP. Pode demorar alguns minutos.', 'Baixar ZIP'))) { msg(''); $('bkArq').disabled = false; return; }
       if (!window.JSZip) await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
       const zip = new JSZip(); let n = 0;
       for (const f of arquivos) { n++; msg('Baixando ' + n + ' de ' + arquivos.length + '…', true); try { const r = await fetch(f.url); if (r.ok) zip.file(f.nome, await r.blob()); } catch (e) { console.warn(f.nome, e); } }
@@ -359,10 +401,10 @@ async function recarregar() { try { await carregar(); } catch (e) { toast('Não 
 (async function () {
   NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
   if (!NV) { $('main').innerHTML = '<div class="vazio">A administração precisa do banco online.</div>'; return; }
-  if (!NV.admin) { $('main').innerHTML = '<div class="vazio"><h3 style="margin:0 0 6px">Só administradores</h3><p class="muted" style="margin:0">Peça a um administrador para mudar o seu acesso.</p></div>'; return; }
+  if (!NV.admin) { $('main').innerHTML = '<div class="vazio"><h3 style="margin:0 0 6px">Só administradores</h3><p class="muted" style="margin:0">Peça a um administrador para mudar o seu perfil.</p></div>'; return; }
   sb = NV.cliente; EU = String(NV.usuario.email).toLowerCase();
+  VERSAO = await NV.administracao.versaoBanco();
   try { await carregar(); } catch (e) { $('main').innerHTML = '<div class="aviso">Não foi possível carregar as pessoas: ' + esc(e.message) + '</div>'; return; }
-  if (LISTA.length && !('confirmado' in LISTA[0])) toast('Rode o atualizacao-admin2.sql no Supabase para ver todas as informações.', 8000);
   const p = new URLSearchParams(location.search); if (p.get('filtro') && FILTROS[p.get('filtro')]) FILTRO = p.get('filtro');
   render();
 })();

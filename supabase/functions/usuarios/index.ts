@@ -53,7 +53,7 @@ async function apagarArquivos(caminhos: string[]) {
 }
 
 // cópia de todas as tabelas (os arquivos ficam no armazenamento; a cópia guarda a lista)
-const TABELAS = ['obras', 'registros', 'pendencias', 'pendencia_fotos', 'pendencia_eventos', 'pend_listas', 'pend_config', 'pend_plantas', 'membros', 'perfis', 'admin_log'];
+const TABELAS = ['obras', 'registros', 'pendencias', 'pendencia_fotos', 'pendencia_eventos', 'pend_listas', 'pend_config', 'pend_plantas', 'pend_funcionarios', 'membros', 'perfis', 'admin_log', 'lixeira_paineis', 'banco_versao'];
 async function montarBackup() {
   const tabelas: Record<string, unknown[]> = {};
   for (const t of TABELAS) {
@@ -95,10 +95,24 @@ async function limpeza() {
     for (const pasta of ['obras/' + o.id, 'risco/' + o.id, 'concretagem/' + o.id, 'fachada/' + o.id, 'pendencias/' + o.id]) {
       try { await apagarArquivos((await listarTudo(pasta)).map(f => f.name)); } catch (e) { console.warn(pasta, e); }
     }
+    await sb.from('lixeira_paineis').delete().like('painel', '%:' + o.id);
     await sb.from('obras').delete().eq('id', o.id); obras++;
   }
-  if (pend || obras) await registrar('sistema', '', 'lixeira', 'limpeza: ' + obras + ' obra(s) e ' + pend + ' pendência(s) apagadas de vez');
-  return { obras, pendencias: pend };
+  // mapas resetados: apaga de vez a cópia e os arquivos que só ela usava (imagens de fundo, logo)
+  let mapas = 0;
+  const { data: ls, error: el } = await sb.from('lixeira_paineis').select('id,painel,registros').lt('excluida_em', limite);
+  if (!el) for (const l of ls || []) {
+    const [ferr, obra] = String(l.painel).split(':');
+    const velhos = new Set((JSON.stringify(l.registros).match(new RegExp('"' + ferr + '/' + obra + '/[^"]+"', 'g')) || []).map(x => x.slice(1, -1)));
+    if (velhos.size) {
+      const { data: atuais } = await sb.from('registros').select('dados').eq('painel', l.painel);
+      const usados = JSON.stringify(atuais || []);
+      await apagarArquivos([...velhos].filter(c => !usados.includes('"' + c + '"')));
+    }
+    await sb.from('lixeira_paineis').delete().eq('id', l.id); mapas++;
+  }
+  if (pend || obras || mapas) await registrar('sistema', '', 'lixeira', 'limpeza: ' + obras + ' obra(s), ' + pend + ' pendência(s) e ' + mapas + ' mapa(s) resetado(s) apagados de vez');
+  return { obras, pendencias: pend, mapas };
 }
 
 Deno.serve(async (req) => {
@@ -121,7 +135,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user || !user.email) return resp({ erro: 'Entre no site novamente.' }, 401);
     const eu = low(user.email);
-    const { data: ms } = await sb.from('membros').select('email,admin');
+    const { data: ms } = await sb.from('membros').select('email,admin');   // admin = perfil Administrador
     if (!(ms || []).some(m => low(m.email) === eu && m.admin)) return resp({ erro: 'Só administradores podem fazer isso.' }, 403);
 
     if (acao === 'backup') {

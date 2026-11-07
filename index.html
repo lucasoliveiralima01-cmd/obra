@@ -9,23 +9,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2322425c'/%3E%3Ccircle cx='10' cy='11' r='4' fill='%235cb531'/%3E%3Ccircle cx='22' cy='11' r='4' fill='%23e3141b'/%3E%3Ccircle cx='16' cy='21' r='5' fill='%231736e0'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style>
-:root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
-  --r:10px; color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{min-height:100%}
@@ -90,10 +77,6 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .aj label{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;font-size:.86rem;color:var(--muted)}
 .aj input{accent-color:var(--accent);width:100%}
 @media (max-width:640px){.aj label{grid-template-columns:1fr}}
-.eq{display:grid;gap:8px}
-.eq-l{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px}
-.eq-l input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
-.eq-l small{grid-column:1/-1;color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
 .sheet.larga{width:min(820px,100%)}
 .adm{display:grid;gap:8px}
 .adm-l{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:4px 12px;align-items:center;padding:9px 11px;border:1px solid var(--line-2);border-radius:8px}
@@ -139,6 +122,7 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .app .badge{position:absolute;top:-6px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--accent);color:#fff;font:700 .72rem/20px var(--f-body);text-align:center;border:2px solid var(--panel)}
 .app .badge.ruim{background:var(--bad)}
 .ruim{color:var(--bad)}
+.bom{color:var(--ok)}
 .tool .rs1{margin:4px 0 0;font:600 .9rem var(--f-body);color:var(--ink)}
 .hero{display:grid;grid-template-columns:minmax(180px,320px) 1fr;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
 .hero .hft{aspect-ratio:16/7;border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(135deg,var(--navy),var(--petrol))}
@@ -225,8 +209,8 @@ const FERRAMENTAS = [
     desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
     icone: '<svg viewBox="0 0 30 30"><rect x="7" y="3" width="16" height="24" rx="1.5" fill="#e9e5dc" stroke="#8d979f" stroke-width=".8"/><rect x="7" y="3" width="16" height="8" fill="#2f9a59"/><rect x="7" y="11" width="16" height="7" fill="#e39b1c"/><rect x="10" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="20" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="20" width="3.5" height="3" fill="#9fc3d6"/></svg>' }
 ];
-// encarregados usam só o painel de pendências
-const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(NV && NV.cargo === 'encarregado' && f.id !== 'pendencias') && !(f.soOnline && !NV));
+// cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
+const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));
 const MAX_UP = 50 * 1024 * 1024;
 
 const $ = id => document.getElementById(id);
@@ -246,60 +230,91 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('ovl'
 
 let NV = null, lista = [], filtro = '';
 const ferr = () => ferramentasVisiveis().find(f => f.id === new URLSearchParams(location.search).get('ferramenta')) || null;
-const podeEditar = () => NV && NV.papel === 'editor';
+// criar, renomear, trocar o modelo e excluir obras: Engenharia e administradores
+const podeEditar = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
 
 /* ---------------- navegação: obra primeiro, depois a ferramenta ---------------- */
 const obraUrl = id => 'index.html?obra=' + encodeURIComponent(id);
 const ferramentasComPagina = () => ferramentasVisiveis().filter(f => f.pagina);
-// quem só tem uma ferramenta (encarregado) vai direto para ela
+// quem só tem uma ferramenta (Campo) vai direto para ela
 const destinoObra = id => { const fs = ferramentasComPagina(); return fs.length === 1 ? fs[0].pagina + '?obra=' + encodeURIComponent(id) : obraUrl(id); };
 const obraAtual = () => new URLSearchParams(location.search).get('obra');
 function redesenhar() { if (obraAtual()) telaObra(obraAtual()); else desenharLista(); }
 
 /* ---------------- resumo de cada obra (pendências, concretagens, mapa de risco) ---------------- */
-let RESUMO = {}, PENDS = [], ROMP = [];
+let RESUMO = {}, PENDS = [], ROMP = [], FACH = [];
 /* ---------------- "Meu dia": o que é de cada pessoa, em todas as obras ---------------- */
 function meuDiaHtml() {
   if (!NV) return '';
-  const hoje = hojeIso(), cargo = NV.cargo, nomeObra = id => ((lista || []).find(o => o.id === id) || { nome: id }).nome;
+  const hoje = hojeIso(), eu = String(NV.usuario.email || '').toLowerCase(), nomeObra = id => ((lista || []).find(o => o.id === id) || { nome: id }).nome;
   const venc = p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje;
   const rot = p => (p.numero ? '#' + p.numero + ' · ' : '') + [p.pavimento, p.local_tipo === 'Apartamento' && p.unidade ? 'Apto ' + p.unidade : p.local_tipo, p.comodo].filter(Boolean).join(' · ') + ' — ' + p.tipo;
   const linha = p => `<a href="pendencias.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span>${esc(rot(p))}</span><small>${esc(nomeObra(p.obra))}${venc(p) ? ' · <b class="ruim">vencida</b>' : p.prazo ? ' · prazo ' + fmtD(p.prazo) : ''}</small></a>`;
   const bloco = (tit, arr, vazio) => `<div class="md-b"><h3>${tit} <b>${arr.length}</b></h3>${arr.length ? arr.slice(0, 6).map(linha).join('') + (arr.length > 6 ? `<small class="muted">e mais ${arr.length - 6}…</small>` : '') : `<small class="muted">${vazio}</small>`}</div>`;
   const ordem = (a, b) => (+venc(b) - +venc(a)) || ['critica', 'alta', 'media', 'baixa'].indexOf(a.prioridade) - ['critica', 'alta', 'media', 'baixa'].indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9'));
-  const blocos = [];
-  if (cargo === 'encarregado') {
-    blocos.push(bloco('Suas pendências para corrigir', PENDS.filter(p => p.status === 'aberta' || p.status === 'em_correcao').sort(ordem), 'Nenhuma pendência aberta nas suas disciplinas.'));
+  const blocos = [], pf = NV.perfil;
+  if (pf === 'campo') {
+    blocos.push(bloco('Suas pendências para corrigir', PENDS.filter(p => p.status === 'aberta' || p.status === 'em_correcao').sort(ordem), 'Nenhuma pendência aberta nos seus ofícios.'));
     blocos.push(bloco('Aguardando aprovação', PENDS.filter(p => p.status === 'corrigida').sort(ordem), 'Nada aguardando.'));
-  } else if (cargo === 'engenharia' || cargo === 'seguranca') {
-    const minhas = p => cargo === 'seguranca' ? p.seguranca : !p.seguranca;
+    const sug = PENDS.filter(p => p.status === 'avaliacao' && String(p.criado_por || '').toLowerCase() === eu);
+    if (sug.length) blocos.push(bloco('Suas sugestões em avaliação', sug, ''));
+  } else if (['admin', 'engenharia', 'seguranca'].includes(pf)) {
+    // Segurança: as de segurança; Engenharia: as outras; administrador: todas
+    const minhas = p => pf === 'admin' || (pf === 'seguranca' ? p.seguranca : !p.seguranca);
+    const aval = PENDS.filter(p => p.status === 'avaliacao' && minhas(p)).sort(ordem);
+    if (aval.length) blocos.push(bloco(pf === 'seguranca' ? 'Para a Segurança avaliar' : 'Sugestões para avaliar', aval, ''));
     blocos.push(bloco('Corrigidas para você aprovar', PENDS.filter(p => p.status === 'corrigida' && minhas(p)).sort(ordem), 'Nada para aprovar.'));
-    blocos.push(bloco('Vencidas', PENDS.filter(p => venc(p) && (cargo === 'engenharia' || p.seguranca)).sort(ordem), 'Nenhuma vencida.'));
+    blocos.push(bloco('Vencidas', PENDS.filter(p => venc(p) && (pf !== 'seguranca' || p.seguranca)).sort(ordem), 'Nenhuma vencida.'));
   }
   const cps = ROMP.filter(r => r.hoje || r.pendentes);
-  if (cps.length && cargo !== 'encarregado') blocos.push(`<div class="md-b"><h3>Corpos de prova</h3>${cps.map(r => `<a href="concretagem.html?obra=${encodeURIComponent(r.obra)}"><span>${esc(nomeObra(r.obra))}</span><small>${[r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? '<b class="ruim">' + r.pendentes + ' sem resultado</b>' : ''].filter(Boolean).join(' · ')}</small></a>`).join('')}</div>`);
+  if (cps.length && NV.podeVer('concretagem')) blocos.push(`<div class="md-b"><h3>Corpos de prova</h3>${cps.map(r => `<a href="concretagem.html?obra=${encodeURIComponent(r.obra)}"><span>${esc(nomeObra(r.obra))}</span><small>${[r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? '<b class="ruim">' + r.pendentes + ' sem resultado</b>' : ''].filter(Boolean).join(' · ')}</small></a>`).join('')}</div>`);
+  // fachadas: áreas que terminam a cura hoje (liberadas para a próxima camada) e nos próximos 3 dias
+  const fs = FACH.filter(x => x.hoje || x.breve);
+  if (fs.length && NV.podeVer('fachada')) blocos.push(`<div class="md-b"><h3>Fachadas</h3>${fs.map(x => `<a href="fachadas.html?obra=${encodeURIComponent(x.obra)}"><span>${esc(nomeObra(x.obra))}</span><small>${[x.hoje ? '<b class="bom">' + x.hoje + ' liberada' + (x.hoje > 1 ? 's' : '') + ' hoje</b>' + (x.prox ? ' para ' + esc(x.prox) : '') : '', x.breve ? x.breve + ' libera' + (x.breve > 1 ? 'm' : '') + ' em até 3 dias' : ''].filter(Boolean).join(' · ')}</small></a>`).join('')}</div>`);
   if (!blocos.length) return '';
   return `<section class="md" aria-label="Meu dia"><h2>Meu dia${NV.pessoas ? ' · ' + esc(NV.pessoas.nome(NV.usuario.email)) : ''}</h2><div class="md-g">${blocos.join('')}</div></section>`;
+}
+// fachadas: por obra, quantas aplicações terminam a cura hoje e nos próximos 3 dias
+async function liberacoesFachada(hoje) {
+  const { data, error } = await NV.cliente.from('registros').select('painel,colecao,id,camada:dados->>camada,data:dados->>data,nome:dados->>nome,cura:dados->>cura,ordem:dados->>ordem')
+    .like('painel', 'fachada:%').in('colecao', ['camadas', 'aplicacoes']);
+  if (error) return [];
+  const soma = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() + n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+  const em3 = soma(hoje, 3), porObra = {};
+  for (const r of data || []) { const ob = String(r.painel).split(':')[1]; const o = porObra[ob] || (porObra[ob] = { cam: {}, apl: [] });
+    if (r.colecao === 'camadas') o.cam[r.id] = { nome: r.nome, cura: +r.cura || 0, ordem: +r.ordem || 0 }; else o.apl.push(r); }
+  const out = [];
+  for (const [obra, o] of Object.entries(porObra)) {
+    const ord = Object.entries(o.cam).sort((a, b) => a[1].ordem - b[1].ordem); let hojeN = 0, breve = 0, prox = '';
+    for (const a of o.apl) { const c = o.cam[a.camada]; if (!c || !c.cura || !/^\d{4}-\d{2}-\d{2}$/.test(String(a.data))) continue;
+      const lib = soma(a.data, c.cura);
+      if (lib === hoje) { hojeN++; const i = ord.findIndex(x => x[0] === a.camada); if (i >= 0 && ord[i + 1]) prox = ord[i + 1][1].nome; }
+      else if (lib > hoje && lib <= em3) breve++; }
+    if (hojeN || breve) out.push({ obra, hoje: hojeN, breve, prox });
+  }
+  return out;
 }
 const hojeIso = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const fmtD = s => { if (!s) return ''; const [y, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
 async function carregarResumo() {
   const R = {}; const g = id => R[id] || (R[id] = {});
   const sb = NV.cliente; const hoje = hojeIso();
-  PENDS = []; ROMP = [];
-  try { const { data, error } = await sb.rpc('rompimentos_resumo'); if (!error) ROMP = data || []; } catch (e) {}
+  PENDS = []; ROMP = []; FACH = [];
+  if (NV.podeVer('concretagem')) try { const { data, error } = await sb.rpc('rompimentos_resumo'); if (!error) ROMP = data || []; } catch (e) {}
+  if (NV.podeVer('fachada')) try { FACH = await liberacoesFachada(hoje); } catch (e) {}
   try {
     const { data, error } = await sb.from('pendencias').select('*');
     if (!error) PENDS = data || [];
     // funcionário de campo: o que foi escolhido para ele, ou sem ninguém escolhido (não as dos colegas)
-    if (!error && NV.cargo === 'encarregado') { try { const eu = String(NV.usuario.email || '').toLowerCase();
+    if (!error && NV.perfil === 'campo') { try { const eu = String(NV.usuario.email || '').toLowerCase();
       const fs = await sb.from('pend_funcionarios').select('id,email'); const meus = new Set((fs.data || []).filter(f => String(f.email || '').toLowerCase() === eu).map(f => f.id));
       PENDS = PENDS.filter(p => !p.responsavel || meus.has(p.responsavel)); } catch (e) {} }
-    if (!error) for (const p of data || []) { const r = g(p.obra); r.pend = r.pend || { abertas: 0, corrigidas: 0, fechadas: 0, venc: 0 };
+    if (!error) for (const p of data || []) { const r = g(p.obra); r.pend = r.pend || { abertas: 0, corrigidas: 0, fechadas: 0, venc: 0, aval: 0 };
       if (p.status === 'aberta' || p.status === 'em_correcao') { r.pend.abertas++; if (p.prazo && p.prazo < hoje) r.pend.venc++; }
+      else if (p.status === 'avaliacao') r.pend.aval++;
       else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }
   } catch (e) {}
-  if (NV.cargo !== 'encarregado') try {
+  if (NV.perfil !== 'campo') try {
     const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas', 'aplicacoes']);
     if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
       if (fe === 'concretagem' && x.colecao === 'concretagens') { r.conc = r.conc || { n: 0, ultima: '' }; r.conc.n++; if (x.data && x.data > r.conc.ultima) r.conc.ultima = x.data; }
@@ -313,7 +328,7 @@ async function carregarResumo() {
 function resumoDe(id, fid) {
   const r = RESUMO[id] || {};
   if (fid === 'pendencias') { const p = r.pend; if (!p) return 'Nenhuma pendência';
-    return [p.abertas ? p.abertas + ' aberta' + (p.abertas > 1 ? 's' : '') : 'Nenhuma aberta', p.venc ? `<b class="ruim">${p.venc} vencida${p.venc > 1 ? 's' : ''}</b>` : '', p.corrigidas ? p.corrigidas + ' para aprovar' : ''].filter(Boolean).join(' · '); }
+    return [p.abertas ? p.abertas + ' aberta' + (p.abertas > 1 ? 's' : '') : 'Nenhuma aberta', p.venc ? `<b class="ruim">${p.venc} vencida${p.venc > 1 ? 's' : ''}</b>` : '', p.corrigidas ? p.corrigidas + ' para aprovar' : '', p.aval ? p.aval + ' em avaliação' : ''].filter(Boolean).join(' · '); }
   if (fid === 'concretagem') { const c = r.conc; return c ? c.n + ' concretage' + (c.n > 1 ? 'ns' : 'm') + (c.ultima ? ' · última em ' + fmtD(c.ultima) : '') : 'Nenhuma concretagem'; }
   if (fid === 'fachada') { const c = r.fach; return c ? c.n + ' área' + (c.n > 1 ? 's' : '') + ' aplicada' + (c.n > 1 ? 's' : '') + (c.ultima ? ' · última em ' + fmtD(c.ultima) : '') : 'Nenhuma aplicação'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
@@ -591,42 +606,10 @@ function formFoto(f, o) {
     } catch (e) { if (enviada) NV.obras.apagarArquivo(enviada.asset).catch(() => {}); if (!avisoConflito(e, f)) { $('fOk').disabled = false; $('fMsg').className = 'msg err'; $('fMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); } }
   };
 }
-/* ---------------- equipe: nomes das pessoas ---------------- */
-async function formEquipe() {
-  if (!NV.pessoas.disponivel()) {
-    openSheet('Equipe', '<p style="margin:0">Para dar nome às pessoas, rode o arquivo <b>atualizacao-perfis.sql</b> no Supabase (SQL Editor) e recarregue a página.</p>', '<button class="btn" id="eqC">Fechar</button>');
-    $('eqC').onclick = closeSheet; return;
-  }
-  openSheet('Equipe', '<p class="muted" style="margin:0">Carregando…</p>', '<button class="btn ghost" id="eqC">Fechar</button>');
-  $('eqC').onclick = closeSheet;
-  let eq;
-  try { await NV.pessoas.carregar(); eq = await NV.pessoas.equipe(); }
-  catch (e) { $('ovlB').innerHTML = '<p class="msg err">Não foi possível carregar a equipe: ' + esc(msgErro(e)) + '</p>'; return; }
-  const eu = String(NV.usuario.email).toLowerCase();
-  const pode = m => podeEditar() || String(m.email).toLowerCase() === eu;
-  $('ovlB').innerHTML = `<p class="muted" style="margin:0">O nome aparece para a equipe no lugar do e-mail. ${podeEditar() ? 'Como editor, você pode dar nome a qualquer pessoa.' : 'Você pode mudar o seu nome.'} Para incluir ou tirar pessoas, use o Supabase (veja o README).</p>
-    <div class="eq">${eq.map((m, i) => `<div class="eq-l"><input data-i="${i}" maxlength="80" value="${esc(m.nome)}" placeholder="${esc(String(m.email).split('@')[0])}" aria-label="Nome de ${esc(m.email)}" ${pode(m) ? '' : 'disabled'}>
-      <span class="pill ${m.papel === 'editor' ? 'ok' : 'warn'}">${m.papel === 'editor' ? 'editor' : 'leitor'}</span><small>${esc(m.email)}${String(m.email).toLowerCase() === eu ? ' · você' : ''}</small></div>`).join('')}</div>`;
-  $('ovlF').innerHTML = '<span class="msg" id="eqMsg"></span><button class="btn ghost" id="eqC">Fechar</button><button class="btn" id="eqOk">Salvar nomes</button>';
-  $('eqC').onclick = closeSheet;
-  $('eqOk').onclick = async () => {
-    $('eqOk').disabled = true;
-    try {
-      for (const inp of $('ovlB').querySelectorAll('input[data-i]:not([disabled])')) {
-        const m = eq[+inp.dataset.i]; const n = inp.value.trim();
-        if (n !== (m.nome || '')) await NV.pessoas.salvarNome(m.email, n);
-      }
-      closeSheet(); toast('Nomes salvos.');
-      const q = document.getElementById('bQuem'); if (q) q.textContent = NV.pessoas.nome(NV.usuario.email) + (NV.papel === 'leitor' ? ' · leitura' : '');
-      redesenhar();
-    } catch (e) { $('eqOk').disabled = false; $('eqMsg').className = 'msg err'; $('eqMsg').textContent = 'Não foi possível salvar: ' + msgErro(e); }
-  };
-}
-
 /* ---------------- administração (página admin.html) ---------------- */
 async function contarPendentes() {
   const b = $('bAdmin'); if (!b) return;
-  try { const l = await NV.administracao.listar(); const n = l.filter(u => u.tem_conta && !u.papel).length;
+  try { const l = await NV.administracao.listar(); const n = l.filter(u => u.tem_conta && !(u.perfil || u.papel)).length;
     b.innerHTML = 'Administração' + (n ? ` <span class="cnt" title="${n} aguardando liberação">${n}</span>` : '');
     b.href = 'admin.html' + (n ? '?filtro=aguardando' : ''); } catch (e) {}
 }
@@ -667,18 +650,12 @@ async function cargaStart(f) {
 /* ---------------- início ---------------- */
 (async function () {
   NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
-  $('modeChip').textContent = NV ? 'Online' + (NV.papel === 'leitor' ? ' · leitura' : '') : 'Modo local';
-  if (NV) {
-    const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bEquipe'; b.textContent = 'Equipe'; b.title = 'Nomes das pessoas da equipe';
-    b.onclick = formEquipe; $('modeChip').after(b);
-    if (NV.admin) {
-      const a = document.createElement('a'); a.className = 'hbtn'; a.id = 'bAdmin'; a.href = 'admin.html'; a.textContent = 'Administração'; a.title = 'Pessoas, acessos, cargos, convites e atividade';
-      b.after(a); contarPendentes();
-    }
+  $('modeChip').textContent = NV ? 'Online' : 'Modo local';
+  if (NV && NV.admin) {
+    const a = document.createElement('a'); a.className = 'hbtn'; a.id = 'bAdmin'; a.href = 'admin.html'; a.textContent = 'Administração'; a.title = 'Pessoas, perfis, obras de cada um, convites e atividade';
+    $('modeChip').after(a); contarPendentes();
   }
   if (!NV) { telaFerramentas(); return; }
-  // Equipe vai para o menu "⋯" (Administração continua à vista, com o contador)
-  if (window.AppObra && AppObra.paraMenu) AppObra.paraMenu($('bEquipe'));
   if (obraAtual()) { await Promise.all([carregar(), carregarResumo()]); await telaObra(obraAtual()); }
   else await telaObras();
   NV.obras.aoMudar(async () => { if (!$('ovl').hidden) return; await Promise.all([carregar(), carregarResumo()]); redesenhar(); });

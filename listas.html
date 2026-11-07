@@ -10,23 +10,10 @@
 <link rel="icon" href="icone-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style>
-:root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
-  --r:10px; color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);padding-bottom:90px}
@@ -155,7 +142,7 @@ function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = f
 const LO = window.ListasObra;
 const clone = o => JSON.parse(JSON.stringify(o));
 const CORES = ['#2f7fb8', '#d9701c', '#2f9a59', '#7b52b0', '#c23b2f', '#11a3a3', '#b54d86', '#8a9a1e', '#4d6a80', '#e39b1c'];
-const ROT = { problema: 'Tipos de problema', comodo: 'Cômodos', servico: 'Serviços que podem ser travados', local: 'Tipos de local', disciplina: 'Cargos (responsável pela correção)' };
+const ROT = { problema: 'Tipos de problema', comodo: 'Cômodos', servico: 'Serviços que podem ser travados', local: 'Tipos de local', disciplina: 'Ofícios (quem corrige)' };
 const CAMPO = { problema: 'tipo', comodo: 'comodo', servico: 'servico', local: 'local_tipo', disciplina: 'disciplina' };
 const LISTAS4 = ['problema', 'comodo', 'servico', 'local'];
 const OBRIG = [['descricao', 'Descrição'], ['causador', 'Responsável pelo problema'], ['prazo', 'Prazo'], ['observacoes', 'Observações'], ['ponto', 'Local na planta (quando houver planta)'], ['bloqueios', 'Serviços travados']];
@@ -163,7 +150,7 @@ const PRI = [['critica', 'Crítica'], ['alta', 'Alta'], ['media', 'Média'], ['b
 
 let NV = null, sb = null, OBRA = new URLSearchParams(location.search).get('obra') || '', OBRA_NOME = '';
 let PADRAO = null, CFG = null, PLANTAS = [], USO = [], OBRAS = [];
-let ESC = OBRA ? 'obra' : 'padrao', ABA = 'problema';
+let ESC = OBRA ? 'obra' : 'padrao', ABA = new URLSearchParams(location.search).get('aba') || 'problema';
 let ED = null;         // cópia em edição: {listas:{problema,comodo,servico,local}, disciplina:[...], pavimentos, regras, listasMudou}
 let RENOMES = [];      // {campo, de, para, global}
 let SUJO = false;
@@ -206,17 +193,17 @@ function usoDe(t, v) {
 
 /* ---------------- tela ---------------- */
 function render() {
-  const abas = [['problema', 'Problemas'], ['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais'], ['disciplina', 'Cargos']]
+  const abas = [['problema', 'Problemas'], ['comodo', 'Cômodos'], ['servico', 'Serviços'], ['local', 'Locais'], ['disciplina', 'Ofícios']]
     .concat(ESC === 'obra' ? [['func', 'Funcionários'], ['pavs', 'Pavimentos e unidades'], ['tipos', 'Tipologias'], ['regras', 'Regras'], ['conferir', 'Conferir e simular']] : []).concat([['planilha', 'Planilha']]);
   if (!abas.some(a => a[0] === ABA)) ABA = 'problema';
   const nAv = ESC === 'obra' ? avisos().filter(a => !a.ok).length : 0;
   $('main').innerHTML = `
     <div class="escopo"><div class="seg" role="group" aria-label="Escopo">${OBRA ? `<button data-esc="obra" aria-pressed="${ESC === 'obra'}">Esta obra: ${esc(OBRA_NOME)}</button>` : ''}<button data-esc="padrao" aria-pressed="${ESC === 'padrao'}">Padrão da empresa</button></div>
-      <span class="info">${ESC === 'padrao' ? 'O padrão vale para as obras que não têm listas próprias e é a base de toda obra nova. As disciplinas são sempre do padrão (os cargos dos encarregados valem para todas as obras).'
+      <span class="info">${ESC === 'padrao' ? 'O padrão vale para as obras que não têm listas próprias e é a base de toda obra nova. Os ofícios são sempre do padrão da empresa e valem para todas as obras.'
         : CFG.listas ? 'Esta obra tem <b>listas próprias</b> (problemas, cômodos, serviços e locais). Pavimentos, tipologias e regras são sempre da obra.'
         : 'Esta obra usa as listas do <b>padrão da empresa</b>. Ao mudar problemas, cômodos, serviços ou locais aqui, ela passa a ter listas próprias.'}</span>
       ${ESC === 'obra' ? `<button class="btn sm ghost" id="bCopiar" type="button">Copiar de outra obra…</button>${CFG.listas ? '<button class="btn sm ghost" id="bPadrao" type="button">Voltar ao padrão da empresa</button>' : ''}` : ''}</div>
-    ${CFG && CFG.semColunas && ESC === 'obra' ? '<div class="aviso">Rode os arquivos <b>atualizacao-tipologias.sql</b> e <b>atualizacao-listas.sql</b> no Supabase para salvar listas e regras desta obra.</div>' : ''}
+    ${CFG && CFG.semColunas && ESC === 'obra' ? '<div class="aviso">Rode o arquivo <b>banco.sql</b> no Supabase para salvar listas e regras desta obra.</div>' : ''}
     <div class="tabs">${abas.map(([k, t]) => `<button class="tab" data-aba="${k}" aria-pressed="${ABA === k}">${t}${k === 'conferir' && nAv ? `<span class="n">${nAv}</span>` : ''}</button>`).join('')}</div>
     <div id="corpo"></div>`;
   $('main').querySelectorAll('[data-esc]').forEach(b => b.onclick = () => { if (b.dataset.esc === ESC) return; if (SUJO && !confirm('Descartar as alterações não salvas?')) return; ESC = b.dataset.esc; iniciarEdicao(); render(); });
@@ -233,13 +220,13 @@ function telaLista(t) {
   const L = lista(t);
   const discs = ED.disciplina.filter(x => x.ativo !== false).map(x => x.valor);
   $('corpo').innerHTML = `<div class="box"><h3>${ROT[t]}${t === 'disciplina' ? ' · padrão da empresa' : ''}</h3>
-    <p class="muted" style="margin:0">Arraste (⋮⋮) ou use ↑ ↓ para mudar a ordem. <b>Desativar</b> tira do formulário, mas mantém nas pendências antigas e nos filtros. Renomear atualiza as pendências que já usam o nome${t === 'disciplina' ? ' (em todas as obras) e os encarregados' : ''}. Só dá para apagar o que nunca foi usado.</p>
+    <p class="muted" style="margin:0">Arraste (⋮⋮) ou use ↑ ↓ para mudar a ordem. <b>Desativar</b> tira do formulário, mas mantém nas pendências antigas e nos filtros. Renomear atualiza as pendências que já usam o nome${t === 'disciplina' ? ' (em todas as obras), as pessoas de Campo e os funcionários' : ''}. Só dá para apagar o que nunca foi usado.</p>
     <div class="itens" id="itens">${L.map((x, i) => { const u = usoDe(t, x._orig || x.valor);
       return `<div class="it${x.ativo === false ? ' off' : ''}" draggable="true" data-i="${i}">
         <span class="mao" title="Arrastar">⋮⋮</span><input class="nm" data-nm="${i}" value="${esc(x.valor)}" aria-label="Nome">
         <span class="ac"><span class="uso">${u ? 'usado em ' + u : 'sem uso'}</span><label><input type="checkbox" data-at="${i}" ${x.ativo !== false ? 'checked' : ''}> ativo</label>
           <button type="button" data-up="${i}" aria-label="Subir">↑</button><button type="button" data-dn="${i}" aria-label="Descer">↓</button>${u ? '' : `<button type="button" data-rm="${i}" aria-label="Apagar">✕</button>`}</span>
-        ${t === 'problema' ? `<span class="ex">Disciplina sugerida <select data-dsug="${i}"><option value="">—</option>${discs.concat(x.extra.disciplina && !discs.includes(x.extra.disciplina) ? [x.extra.disciplina] : []).map(d => `<option ${d === x.extra.disciplina ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
+        ${t === 'problema' ? `<span class="ex">Ofício sugerido <select data-dsug="${i}"><option value="">—</option>${discs.concat(x.extra.disciplina && !discs.includes(x.extra.disciplina) ? [x.extra.disciplina] : []).map(d => `<option ${d === x.extra.disciplina ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
           <label><input type="checkbox" data-seg="${i}" ${x.extra.seguranca || x.extra.disciplina === 'Segurança' ? 'checked' : ''}> é de segurança</label></span>` : ''}
         ${t === 'local' ? `<span class="ex">Depois do local, perguntar <input type="text" data-opc="${i}" value="${esc((x.extra.opcoes || []).join('; '))}" placeholder="ex.: Esquerda; Direita (vazio = não pergunta)" style="min-width:240px"></span>` : ''}
         ${t === 'disciplina' ? `<span class="ex">Grupo (opcional, só para organizar) <input type="text" data-grp="${i}" value="${esc(x.extra.grupo || '')}" placeholder="ex.: Drywall e forro"></span>` : ''}
@@ -392,7 +379,7 @@ function avisos() {
   const comRegra = ED.pavimentos.filter(p => p.locais && p.locais.length);
   if (comRegra.length) { const usados = new Set(comRegra.flatMap(p => p.locais)); const nunca = ativosDe('local').filter(l => !usados.has(l) && ED.pavimentos.every(p => p.locais && p.locais.length)); if (nunca.length) out.push({ t: 'Local que não aparece em nenhum pavimento: ' + nunca.join(', ') }); }
   for (const p of ED.pavimentos) { if (p.locais && p.locais.includes('Apartamento') && !(p.unidades || []).length) out.push({ t: p.nome + ' tem “Apartamento” nos locais, mas nenhuma unidade cadastrada.' }); if ((p.unidades || []).length && p.locais && p.locais.length && !p.locais.includes('Apartamento')) out.push({ t: p.nome + ' tem unidades, mas “Apartamento” não está nos locais dele.' }); }
-  const semDisc = ED.listas.problema.filter(x => x.ativo !== false && !x.extra.disciplina); if (semDisc.length) out.push({ t: 'Tipo(s) de problema sem disciplina sugerida: ' + semDisc.map(x => x.valor).join(', ') });
+  const semDisc = ED.listas.problema.filter(x => x.ativo !== false && !x.extra.disciplina); if (semDisc.length) out.push({ t: 'Tipo(s) de problema sem ofício sugerido: ' + semDisc.map(x => x.valor).join(', ') });
   if (ED.pavimentos.length && PLANTAS.length) { const M = LO.mapaPlantas(ED.pavimentos, PLANTAS); const fora = ED.pavimentos.filter(p => !M[p.nome]).map(p => p.nome); if (fora.length) out.push({ t: 'Pavimento(s) sem planta do IFC (escolha a planta em Pavimentos e unidades): ' + fora.join(', ') }); }
   if (!out.length) out.push({ ok: true, t: 'Nenhum problema encontrado na configuração.' });
   return out;
@@ -483,13 +470,11 @@ function formCopiar() {
 
 /* ---------------- funcionários da obra (salvos na hora) ---------------- */
 let FUNC = null;       // null = tabela ainda não existe no banco
-let USUARIOS = [];     // pessoas com acesso ao sistema (para ligar o funcionário ao login dele)
 let USO_FUNC = {};     // id do funcionário -> nº de pendências
 async function carregarFunc() {
   const r = await sb.from('pend_funcionarios').select('*').order('nome');
   if (r.error) { FUNC = null; return; }
   FUNC = r.data || [];
-  try { const u = await sb.rpc('admin_usuarios'); USUARIOS = u.error ? [] : (u.data || []).filter(x => x.papel); } catch (e) { USUARIOS = []; }
   USO_FUNC = {};
   const p = await sb.from('pendencias').select('responsavel').not('responsavel', 'is', null);
   if (!p.error) for (const x of p.data || []) USO_FUNC[x.responsavel] = (USO_FUNC[x.responsavel] || 0) + 1;
@@ -502,34 +487,38 @@ async function gravarFunc(f, msg) {
   if (msg) toast(msg); return true;
 }
 function telaFunc() {
-  if (!FUNC) { $('corpo').innerHTML = '<div class="aviso">Para cadastrar funcionários, rode o arquivo <b>atualizacao-funcionarios.sql</b> no Supabase (SQL Editor) e recarregue esta página.</div>'; return; }
+  if (!FUNC) { $('corpo').innerHTML = '<div class="aviso">Para cadastrar funcionários, rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue esta página.</div>'; return; }
   const cargos = ativosDe('disciplina');
-  const daObra = FUNC.filter(f => f.obra === OBRA);
-  const deOutras = FUNC.filter(f => f.obra !== OBRA && f.ativo !== false);
-  const nomeUs = e => { const u = USUARIOS.find(x => x.email === e); return u ? (u.nome ? u.nome + ' · ' : '') + u.email : e; };
-  const quadro = cargos.map(c => [c, daObra.filter(f => f.ativo !== false && (f.cargos || []).includes(c))]).filter(x => x[1].length);
+  // quem tem login (perfil Campo) é cuidado na Administração; aqui se cadastra só quem não usa o sistema
+  const todosDaObra = FUNC.filter(f => f.obra === OBRA);
+  const daObra = todosDaObra.filter(f => !f.email);
+  const comLogin = todosDaObra.filter(f => f.email && f.ativo !== false);
+  const deOutras = FUNC.filter(f => f.obra !== OBRA && f.ativo !== false && !f.email);
+  const quadro = cargos.map(c => [c, todosDaObra.filter(f => f.ativo !== false && (f.cargos || []).includes(c))]).filter(x => x[1].length);
   $('corpo').innerHTML = `
-    <div class="box"><h3>Funcionários por cargo · ${esc(OBRA_NOME)}</h3>
+    <div class="box"><h3>Quem corrige, por ofício · ${esc(OBRA_NOME)}</h3>
       ${quadro.length ? `<div class="quadro">${quadro.map(([c, fs]) => `<div class="qrow"><b>${esc(c)}</b><span>${fs.map(f => `<span class="un">${esc(f.nome)}${f.equipe ? ' · ' + EQ[f.equipe] : ''}${f.email ? ' 📱' : ''}</span>`).join('')}</span></div>`).join('')}</div>
-        <p class="muted" style="margin:0">📱 = tem acesso ao sistema e recebe os avisos das pendências escolhidas para ele.</p>`
+        <p class="muted" style="margin:0">📱 = usa o sistema (perfil Campo) e recebe os avisos das pendências escolhidas para ele.</p>`
         : '<p class="muted" style="margin:0">Nenhum funcionário cadastrado nesta obra ainda.</p>'}
     </div>
-    <div class="box"><h3>Cadastro</h3>
-      <p class="muted" style="margin:0">Ao registrar uma pendência, depois do cargo (ex.: Pedreiro) aparece a lista de quem tem esse cargo nesta obra, para escolher quem vai corrigir. O aviso vai só para a pessoa escolhida.
-        Um funcionário pode ter <b>mais de um cargo</b> (ex.: Pedreiro e Impermeabilizador). Se ele usa o sistema, escolha o login dele em “Acesso”: os cargos dele passam a valer no acesso.
+    ${comLogin.length ? `<div class="box"><h3>Com login no sistema (${comLogin.length})</h3>
+      <p class="muted" style="margin:0">Quem tem perfil <b>Campo</b> e foi liberado nesta obra aparece aqui sozinho. Os ofícios e as obras dessas pessoas são escolhidos na <a href="admin.html">Administração</a>.</p>
+      <div class="chips">${comLogin.map(f => `<span class="un">${esc(f.nome)} · ${esc((f.cargos || []).join(', '))}</span>`).join('')}</div></div>` : ''}
+    <div class="box"><h3>Sem login no sistema</h3>
+      <p class="muted" style="margin:0">Cadastre aqui quem corrige mas não usa o sistema. Ao registrar uma pendência, depois do ofício (ex.: Pedreiro) aparece a lista de quem tem esse ofício nesta obra, para escolher quem vai corrigir.
+        Uma pessoa pode ter <b>mais de um ofício</b> (ex.: Pedreiro e Impermeabilizador). Quem for usar o sistema, convide pela <a href="admin.html">Administração</a> com o perfil Campo.
         <b>As mudanças desta aba são salvas na hora.</b></p>
       <div class="itens">${daObra.map(f => { const i = FUNC.indexOf(f), u = USO_FUNC[f.id] || 0;
         return `<div class="it${f.ativo === false ? ' off' : ''}" style="grid-template-columns:minmax(140px,1fr) auto">
           <input class="nm" data-fnm="${i}" value="${esc(f.nome)}" aria-label="Nome">
           <span class="ac"><span class="uso">${u ? u + ' pendência(s)' : 'sem pendências'}</span><label><input type="checkbox" data-fat="${i}" ${f.ativo !== false ? 'checked' : ''}> ativo</label>${u ? '' : `<button type="button" data-frm="${i}" aria-label="Apagar">✕</button>`}</span>
-          <span class="ex" style="grid-column:1/-1"><span class="chips" role="group" aria-label="Cargos">${cargos.concat((f.cargos || []).filter(c => !cargos.includes(c))).map(c => `<button type="button" data-fc="${i}" data-v="${esc(c)}" aria-pressed="${(f.cargos || []).includes(c)}">${esc(c)}</button>`).join('')}</span></span>
+          <span class="ex" style="grid-column:1/-1"><span class="chips" role="group" aria-label="Ofícios">${cargos.concat((f.cargos || []).filter(c => !cargos.includes(c))).map(c => `<button type="button" data-fc="${i}" data-v="${esc(c)}" aria-pressed="${(f.cargos || []).includes(c)}">${esc(c)}</button>`).join('')}</span></span>
           <span class="ex" style="grid-column:1/-1">
             Equipe <select data-feq="${i}"><option value="">—</option>${Object.entries(EQ).map(([k, t]) => `<option value="${k}" ${f.equipe === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
-            Acesso <select data-fem="${i}" style="max-width:260px"><option value="">Sem acesso ao sistema</option>${USUARIOS.map(x => `<option value="${esc(x.email)}" ${x.email === f.email ? 'selected' : ''}>${esc(nomeUs(x.email))}</option>`).join('')}${f.email && !USUARIOS.some(x => x.email === f.email) ? `<option selected value="${esc(f.email)}">${esc(f.email)}</option>` : ''}</select>
             Obra <select data-fob="${i}">${OBRAS.map(o => `<option value="${esc(o.id)}" ${o.id === f.obra ? 'selected' : ''}>${esc(o.nome)}</option>`).join('')}</select>
           </span></div>`; }).join('')}</div>
       <div class="add"><input id="fNovo" placeholder="Nome do funcionário…" aria-label="Nome do novo funcionário">
-        <select id="fNovoC" aria-label="Cargo" style="background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px"><option value="">Cargo…</option>${cargos.map(c => `<option>${esc(c)}</option>`).join('')}</select>
+        <select id="fNovoC" aria-label="Ofício" style="background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px"><option value="">Ofício…</option>${cargos.map(c => `<option>${esc(c)}</option>`).join('')}</select>
         <button class="btn sm" id="fAdd" type="button">+ Adicionar</button></div>
       ${deOutras.length ? `<details><summary class="muted">Trazer alguém de outra obra (${deOutras.length})</summary><div class="chips" style="margin-top:8px">${deOutras.map(f => `<button type="button" data-ftraz="${FUNC.indexOf(f)}">${esc(f.nome)} · ${esc((OBRAS.find(o => o.id === f.obra) || {}).nome || 'sem obra')}</button>`).join('')}</div></details>` : ''}
     </div>`;
@@ -537,11 +526,9 @@ function telaFunc() {
   C.querySelectorAll('[data-fnm]').forEach(inp => inp.onchange = async () => { const f = F(inp.dataset.fnm), v = inp.value.trim(); if (!v) { inp.value = f.nome; return; } f.nome = v; if (await gravarFunc(f, 'Nome salvo.')) telaFunc(); });
   C.querySelectorAll('[data-fat]').forEach(c => c.onchange = async () => { const f = F(c.dataset.fat); f.ativo = c.checked; if (await gravarFunc(f, c.checked ? 'Ativado.' : 'Desativado: não aparece mais para escolher nas pendências.')) telaFunc(); });
   C.querySelectorAll('[data-fc]').forEach(b => b.onclick = async () => { const f = F(b.dataset.fc), v = b.dataset.v, cs = (f.cargos || []).slice(), k = cs.indexOf(v);
-    if (k >= 0) { if (cs.length === 1) { toast('O funcionário precisa de ao menos um cargo.'); return; } cs.splice(k, 1); } else cs.push(v);
-    f.cargos = cs; if (await gravarFunc(f, 'Cargos salvos.')) telaFunc(); });
+    if (k >= 0) { if (cs.length === 1) { toast('Precisa de ao menos um ofício.'); return; } cs.splice(k, 1); } else cs.push(v);
+    f.cargos = cs; if (await gravarFunc(f, 'Ofícios salvos.')) telaFunc(); });
   C.querySelectorAll('[data-feq]').forEach(s => s.onchange = async () => { const f = F(s.dataset.feq); f.equipe = s.value || null; if (await gravarFunc(f, 'Equipe salva.')) telaFunc(); });
-  C.querySelectorAll('[data-fem]').forEach(s => s.onchange = async () => { const f = F(s.dataset.fem); f.email = s.value || null;
-    if (await gravarFunc(f, f.email ? 'Ligado ao login. Os cargos dele passam a valer no acesso.' : 'Desligado do login.')) telaFunc(); });
   C.querySelectorAll('[data-fob]').forEach(s => s.onchange = async () => { const f = F(s.dataset.fob); const o = OBRAS.find(x => x.id === s.value);
     if (!confirm('Mudar ' + f.nome + ' para a obra ' + (o ? o.nome : s.value) + '? As pendências já escolhidas para ele continuam com o nome dele.')) { s.value = f.obra; return; }
     f.obra = s.value; if (await gravarFunc(f, f.nome + ' agora está na obra ' + (o ? o.nome : s.value) + '.')) telaFunc(); });
@@ -550,7 +537,7 @@ function telaFunc() {
     FUNC.splice(FUNC.indexOf(f), 1); telaFunc(); toast('Apagado.'); });
   C.querySelectorAll('[data-ftraz]').forEach(b => b.onclick = async () => { const f = F(b.dataset.ftraz); f.obra = OBRA; if (await gravarFunc(f, f.nome + ' agora está nesta obra.')) telaFunc(); });
   const add = async () => { const nome = $('fNovo').value.trim(), c = $('fNovoC').value;
-    if (!nome) { $('fNovo').focus(); return; } if (!c) { toast('Escolha o cargo (depois dá para marcar outros).'); $('fNovoC').focus(); return; }
+    if (!nome) { $('fNovo').focus(); return; } if (!c) { toast('Escolha o ofício (depois dá para marcar outros).'); $('fNovoC').focus(); return; }
     if (daObra.some(f => f.nome.toLowerCase() === nome.toLowerCase())) { toast('Já existe ' + nome + ' nesta obra.'); return; }
     const f = { id: crypto.randomUUID(), obra: OBRA, nome, cargos: [c], equipe: null, email: null, ativo: true };
     if (await gravarFunc(f, nome + ' cadastrado como ' + c + '.')) { FUNC.push(f); FUNC.sort((a, b) => a.nome.localeCompare(b.nome, 'pt')); telaFunc(); $('fNovo').focus(); } };
@@ -599,6 +586,7 @@ window.addEventListener('beforeunload', e => { if (SUJO) { e.preventDefault(); e
   if (!NV.admin) { $('main').innerHTML = '<div class="aviso">Só administradores editam as listas e regras.</div>'; return; }
   sb = NV.cliente;
   if (OBRA) { $('bVolta').href = 'pendencias.html?obra=' + encodeURIComponent(OBRA); }
+  else { $('bVolta').href = 'admin.html'; $('bVolta').textContent = '← Administração'; }
   try { await carregar(); } catch (e) { $('main').innerHTML = '<div class="aviso">Não foi possível carregar: ' + esc(e.message || e) + '</div>'; return; }
   $('obraNome').textContent = OBRA ? OBRA_NOME : 'Padrão da empresa';
   document.title = 'Listas e regras · ' + (OBRA ? OBRA_NOME : 'Padrão');

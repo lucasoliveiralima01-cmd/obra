@@ -1,0 +1,31 @@
+/* =====================================================================
+   Ferramentas da Obra · cores e fontes comuns a todas as páginas
+   ---------------------------------------------------------------------
+   Mude aqui e vale para o sistema inteiro (tema claro e escuro).
+   Cada página só acrescenta o que é dela (ex.: cores do Mapa de Risco).
+   ===================================================================== */
+:root{
+  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
+  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
+  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
+  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2;
+  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:10px; color-scheme:light;
+}
+/* escuro: automático (segue o aparelho) ou escolhido no menu ⋯ */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
+  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
+  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
+  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
+  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a.hbtn{text-decoration:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

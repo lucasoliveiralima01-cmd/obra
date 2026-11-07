@@ -5,6 +5,8 @@
      e atualiza a tela quando outra pessoa salva alguma coisa.
    - Obras: cadastro comum (nome + modelo IFC) usado por todas as ferramentas.
      Cada ferramenta guarda os dados dela em painel = "ferramenta:obra".
+   - Perfis: cada pessoa tem um perfil (Administrador, Engenharia, Segurança,
+     Campo ou Consulta) e vê só as obras liberadas para ela.
    - Conflitos: ao salvar, confere se outra pessoa salvou o mesmo item antes.
    - Sem o config.js preenchido: o painel funciona só neste navegador
      (modo local), como o arquivo HTML original.
@@ -36,6 +38,24 @@
   }
 
   const hashInicial = location.hash || '';
+
+  /* ---------------- perfis: o que cada um vê e edita ---------------- */
+  const PERFIS = { admin: 'Administrador', engenharia: 'Engenharia', seguranca: 'Segurança', campo: 'Campo', consulta: 'Consulta' };
+  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências']];
+  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias'],
+    seguranca: ['risco', 'pendencias'], campo: ['pendencias'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias'] };
+  const EDITA = { admin: ['risco', 'concretagem', 'fachada'], engenharia: ['risco', 'concretagem', 'fachada'], seguranca: ['risco'], campo: [], consulta: [] };
+  const podeVer = f => (VE[perfil] || []).includes(f);
+  const podeEditar = f => (EDITA[perfil] || []).includes(f);
+  const temObra = id => obrasLib === null || obrasLib.includes(id);
+  function aplicarPerfil(p, ofs, obs) {
+    perfil = PERFIS[p] ? p : 'consulta';
+    admin = perfil === 'admin';
+    papel = ['admin', 'engenharia', 'seguranca'].includes(perfil) ? 'editor' : 'leitor';
+    cargo = { admin: 'engenharia', engenharia: 'engenharia', seguranca: 'seguranca', campo: 'encarregado' }[perfil] || null;
+    disciplinas = Array.isArray(ofs) ? ofs : [];
+    obrasLib = admin || !Array.isArray(obs) ? null : obs;
+  }
   let precisaSenha = /type=(invite|recovery|signup)/.test(hashInicial);
   const sb = window.supabase.createClient(C.supabaseUrl, C.supabaseAnonKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -58,6 +78,8 @@
   const painel = ferramenta ? ferramenta + ':' + obraId : '';
   const pasta = ferramenta ? ferramenta + '/' + obraId : '';
   let usuario = null, papel = null, admin = false, cargo = null, disciplinas = [], offline = false, iniciou = false;
+  // perfil: admin | engenharia | seguranca | campo | consulta; obrasLib: null = todas as obras
+  let perfil = null, obrasLib = null;
 
   /* ---------------- erros no formato que o painel entende ---------------- */
   function erro(e) {
@@ -264,7 +286,7 @@
     async apagar(id, ferramentas) {
       const r = await sb.rpc('obra_excluir', { p_id: id });
       if (!r.error) return;
-      // banco ainda sem lixeira (atualizacao-melhorias.sql não rodado): apaga de vez, como antes
+      // banco ainda sem lixeira (banco.sql não rodado): apaga de vez, como antes
       if (!/obra_excluir|function|schema cache/i.test(r.error.message || '')) throw erro(r.error);
       return obras.apagarDeVez(id, ferramentas);
     },
@@ -324,12 +346,6 @@
       if (error) throw erro(error);
       if (nome) nomes.set(String(e).toLowerCase(), nome); else nomes.delete(String(e).toLowerCase());
     },
-    // membros liberados no painel, com o nome de cada um
-    async equipe() {
-      const { data, error } = await sb.from('membros').select('email,papel').order('email');
-      if (error) throw erro(error);
-      return (data || []).map(m => ({ email: m.email, papel: m.papel, nome: nomes.get(String(m.email).toLowerCase()) || '' }));
-    }
   };
 
   /* ---------------- administração (só administradores) ---------------- */
@@ -340,15 +356,17 @@
       if (error) throw erro(error);
       return data || [];
     },
-    // papel: 'leitor' | 'editor' | 'nenhum'; ehAdmin: true para administrador
-    async definir(email, papel, ehAdmin) {
-      const { error } = await sb.rpc('admin_definir_acesso', { alvo: email, novo_papel: papel, novo_admin: !!ehAdmin });
+    // perfil: 'admin' | 'engenharia' | 'seguranca' | 'campo' | 'consulta' | 'nenhum' (bloqueia);
+    // ofícios e obras: null = mantém como está
+    async definirPerfil(email, perfil, oficios, obras) {
+      const { error } = await sb.rpc('admin_definir_perfil', { alvo: email, novo_perfil: perfil,
+        novos_oficios: oficios == null ? null : oficios, novas_obras: obras == null ? null : obras });
       if (error) throw erro(error);
     },
-    // cargo nas pendências: 'engenharia' | 'seguranca' | 'encarregado' | null; disciplinas para encarregados
-    async definirCargo(email, cargo, disciplinas) {
-      const { error } = await sb.rpc('admin_definir_cargo', { alvo: email, novo_cargo: cargo || null, novas_disciplinas: disciplinas || [] });
-      if (error) throw erro(error);
+    // versão do banco (null = banco sem o banco.sql)
+    async versaoBanco() {
+      const { data, error } = await sb.rpc('banco_versao');
+      return error ? null : data;
     }
   };
 
@@ -534,9 +552,18 @@
 
   function tSemFerramenta() {
     tela.hidden = false;
+    const ve = FERR_NOMES.filter(f => podeVer(f[0])).map(f => '<b>' + f[1] + '</b>');
+    const lista = ve.length > 1 ? ve.slice(0, -1).join(', ') + ' e ' + ve[ve.length - 1] : ve.join('');
     tela.innerHTML = `<div class="ac">${topo('Sem acesso a esta ferramenta')}
-      <p>O seu cargo (encarregado) dá acesso só ao painel de <b>Pendências de obra</b>.</p>
-      <div class="ar"><a class="ab" href="index.html?ferramenta=pendencias" style="text-decoration:none">Ir para as pendências</a><button class="al" id="sSair" type="button">Sair</button></div></div>`;
+      <p>O seu perfil (${esc(PERFIS[perfil] || perfil)}) dá acesso a ${lista || 'nenhuma ferramenta'}.</p>
+      <div class="ar"><a class="ab" href="index.html${obraId ? '?obra=' + encodeURIComponent(obraId) : ''}" style="text-decoration:none">Voltar</a><button class="al" id="sSair" type="button">Sair</button></div></div>`;
+    tela.querySelector('#sSair').onclick = sair;
+  }
+  function tSemObra() {
+    tela.hidden = false;
+    tela.innerHTML = `<div class="ac">${topo('Sem acesso a esta obra')}
+      <p>Você não faz parte desta obra. Peça a um administrador para incluir você nela.</p>
+      <div class="ar"><a class="ab" href="index.html" style="text-decoration:none">Ver as minhas obras</a><button class="al" id="sSair" type="button">Sair</button></div></div>`;
     tela.querySelector('#sSair').onclick = sair;
   }
   const semRede = e => !navigator.onLine || /fetch|network|Failed|conex/i.test(String((e && e.message) || e));
@@ -569,22 +596,24 @@
       catch (e) { tNome(primeira, 'Não foi possível salvar: ' + e.message); }
     };
   }
+  const rotQuem = () => pessoas.nome(usuario.email) + (perfil ? ' · ' + (PERFIS[perfil] || perfil) : '');
   function atualizarQuem() {
     const q = document.getElementById('bQuem'); if (!q) return;
-    q.textContent = pessoas.nome(usuario.email) + (cargo === 'encarregado' ? ' · encarregado' : papel === 'leitor' ? ' · leitura' : '');
+    q.textContent = rotQuem();
   }
 
   function mostrarQuem() {
     const h = document.querySelector('.hctl'); if (!h || document.getElementById('bSair')) return;
     const q = document.createElement('button'); q.type = 'button'; q.id = 'bQuem'; q.className = 'quem';
-    q.textContent = pessoas.nome(usuario.email) + (cargo === 'encarregado' ? ' · encarregado' : papel === 'leitor' ? ' · leitura' : '');
-    q.title = 'Conectado como ' + usuario.email + (papel === 'leitor' ? ' (somente leitura)' : '') + (pessoas.disponivel() ? '. Clique para mudar o seu nome.' : '');
+    q.textContent = rotQuem();
+    q.title = 'Conectado como ' + usuario.email + ' · perfil ' + (PERFIS[perfil] || perfil) + (ferramenta && ferramenta !== 'pendencias' && !podeEditar(ferramenta) ? ' (só visualizar)' : '') + (pessoas.disponivel() ? '. Clique para mudar o seu nome.' : '');
     if (pessoas.disponivel()) q.onclick = () => tNome(false);
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bSair'; b.textContent = 'Sair'; b.onclick = sair;
     h.appendChild(q);
     // "Sair" vai para o menu "⋯" quando ele existe (app.js)
     if (window.AppObra && window.AppObra.paraMenu) window.AppObra.paraMenu(b); else h.appendChild(b);
-    if (papel === 'leitor') { const r = document.getElementById('bReset'); if (r) r.hidden = true; }
+    // resetar um mapa: só administradores (o conteúdo vai para a lixeira)
+    if (!admin) { const r = document.getElementById('bReset'); if (r) r.hidden = true; }
   }
 
   async function entrou(sessao) {
@@ -594,24 +623,34 @@
     if (iniciou) { tela.hidden = true; return; }
     tCarregando('Verificando acesso…');
     const chave = 'mr_acesso_' + String(usuario.email).toLowerCase();
-    // papel_atual() devolve o papel de quem está conectado (null = sem acesso)
-    const { data, error } = await sb.rpc('papel_atual');
+    // meu_acesso(): perfil, ofícios e obras liberadas (null = sem acesso)
+    let { data, error } = await sb.rpc('meu_acesso');
+    let antigo = false;
+    if (error && !semRede(error) && /meu_acesso|function|schema cache/i.test(error.message || '')) {
+      // banco ainda sem perfis (banco.sql não rodado): usa o acesso antigo
+      antigo = true; ({ data, error } = await sb.rpc('papel_atual'));
+    }
     if (error) {
       // sem sinal: usa o último acesso confirmado neste aparelho (para registrar pendências na obra)
       let ult = null; try { ult = JSON.parse(localStorage.getItem(chave) || 'null'); } catch (e) {}
-      if (semRede(error) && ult && ult.papel) {
-        papel = ult.papel; admin = !!ult.admin; cargo = ult.cargo || null; disciplinas = ult.disciplinas || []; offline = true;
+      if (semRede(error) && ult && ult.perfil) {
+        aplicarPerfil(ult.perfil, ult.oficios, ult.obras); offline = true;
         liberar(); return;
       }
       tLogin('Não foi possível verificar o acesso: ' + error.message); return;
     }
-    papel = typeof data === 'string' ? data : null;
-    if (!papel) { try { localStorage.removeItem(chave); } catch (e) {} tSemAcesso(); return; }
-    // administrador? (se a função ainda não existe no banco, ninguém é)
-    try { const r = await sb.rpc('eh_admin'); admin = !r.error && r.data === true; } catch (e) { admin = false; }
-    // cargo nas pendências (engenharia, segurança, encarregado) e disciplinas
-    try { const r = await sb.rpc('meu_cargo'); if (!r.error && r.data) { cargo = r.data.cargo || null; disciplinas = r.data.disciplinas || []; } } catch (e) {}
-    try { localStorage.setItem(chave, JSON.stringify({ papel, admin, cargo, disciplinas })); } catch (e) {}
+    if (antigo) {
+      const p = typeof data === 'string' ? data : null;
+      if (!p) { try { localStorage.removeItem(chave); } catch (e) {} tSemAcesso(); return; }
+      let adm = false, cg = null, ds = [];
+      try { const r = await sb.rpc('eh_admin'); adm = !r.error && r.data === true; } catch (e) {}
+      try { const r = await sb.rpc('meu_cargo'); if (!r.error && r.data) { cg = r.data.cargo || null; ds = r.data.disciplinas || []; } } catch (e) {}
+      aplicarPerfil(adm ? 'admin' : cg === 'encarregado' ? 'campo' : cg || (p === 'editor' ? 'engenharia' : 'consulta'), ds, null);
+    } else {
+      if (!data || !data.perfil) { try { localStorage.removeItem(chave); } catch (e) {} tSemAcesso(); return; }
+      aplicarPerfil(data.perfil, data.oficios, data.obras);
+    }
+    try { localStorage.setItem(chave, JSON.stringify({ perfil, oficios: disciplinas, obras: obrasLib })); } catch (e) {}
     try { await pessoas.carregar(); } catch (e) {}
     let pulou = false; try { pulou = !!sessionStorage.getItem('mr_pulou_nome'); } catch (e) {}
     if (pessoas.disponivel() && !pessoas.temNome(usuario.email) && !pulou) { tNome(true); return; }
@@ -619,10 +658,17 @@
   }
   function liberar() {
     if (iniciou) return;
-    // encarregados só usam o painel de pendências
-    if (cargo === 'encarregado' && ferramenta && ferramenta !== 'pendencias') { tSemFerramenta(); return; }
+    // cada perfil vê só as suas ferramentas, e cada pessoa só as suas obras
+    if (ferramenta && !podeVer(ferramenta)) { tSemFerramenta(); return; }
+    if (obraId && !temObra(obraId)) { tSemObra(); return; }
     iniciou = true; tela.hidden = true; tela.innerHTML = '';
-    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, papel, admin, cargo, disciplinas, offline,
+    window.Nuvem = { db, assets, obras, pessoas, blobUrl, ferramenta, obraId, painel, offline,
+      // perfil e o que ele permite
+      perfil, perfilNome: PERFIS[perfil] || perfil, PERFIS, oficios: disciplinas, obrasLiberadas: obrasLib,
+      podeVer, podeEditar, temObra,
+      // nomes antigos (as telas ainda usam): papel = edita a ferramenta desta página
+      papel: ferramenta && ferramenta !== 'pendencias' ? (podeEditar(ferramenta) ? 'editor' : 'leitor') : papel,
+      admin, cargo, disciplinas,
       administracao, usuario, sair, cliente: sb };
     mostrarQuem(); ligarAoVivo();
     pronto(window.Nuvem);

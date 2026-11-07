@@ -7,16 +7,27 @@ Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC
 
 - **Mapa de Fachadas**: as 4 fachadas geradas do IFC da arquitetura (o IFC é lido no computador de quem importa; só imagens leves das fachadas vão para a nuvem). Camadas livres (chapisco, reboco, textura, pinturas…) com material e tempo de cura; cada aplicação é desenhada sobre a fachada com a data. O painel mostra o que está liberado, o que está em cura e quanto falta, as quebras de cura (camada seguinte aplicada antes do prazo) e as áreas prontas para a próxima etapa, com a área sem janelas e portas. Exporta imagem e planilha (CSV).
 
-- **Pendências de obra**: registro de pendências e retrabalhos com fotos (antes e depois), responsável pela correção, prioridade e prazo, serviços travados, fluxo aberta → em correção → corrigida → fechada, histórico, resumo e relatórios em PDF. Funciona sem sinal: o que é registrado fica no aparelho e sobe sozinho quando a conexão volta.
+- **Pendências de obra**: registro de pendências e retrabalhos com fotos (antes e depois), ofício de quem corrige, prioridade e prazo, serviços travados, fluxo (em avaliação →) aberta → em correção → corrigida → fechada, histórico, resumo e relatórios em PDF. Funciona sem sinal: o que é registrado fica no aparelho e sobe sozinho quando a conexão volta.
 
-Cargos nas pendências (definidos em **Administração**):
-- **Engenharia**: abre, edita e vê todas; fecha as que não são de segurança.
-- **Segurança**: abre, vê e fecha só as de segurança.
-- **Encarregado**: vê só as das suas disciplinas (pode ter mais de uma, se forem complementares, como Drywall e Forro/Gesso), marca como corrigida com foto obrigatória, não abre pendências e não entra nos mapas.
+### Perfis e obras
+
+Cada pessoa tem **um perfil** (escolhido em **Administração**) e vê **só as obras liberadas para ela** (o administrador vê todas):
+
+| Perfil | Risco | Concretagem e Fachadas | Pendências | Administração |
+|---|---|---|---|---|
+| **Administrador** | edita | edita | tudo o que a Engenharia faz, e fecha também as de segurança | sim |
+| **Engenharia** | edita | edita | abre, edita, avalia as sugestões e fecha as que não são de segurança | não |
+| **Segurança** | edita | não vê | registra, avalia e fecha as de segurança | não |
+| **Campo** | não vê | não vê | vê as dos seus **ofícios**, marca como corrigida (com foto) e **sugere** novas | não |
+| **Consulta** | só vê | só vê | só vê | não |
+
+- **Ofícios** (Pedreiro, Eletricista, Impermeabilizador…) são só de quem é de Campo e podem ser vários. A lista de ofícios fica em **Listas e regras → Ofícios**.
+- **Pendência de segurança**: a Segurança registra e escolhe quem corrige. Quando a Engenharia vê uma não conformidade de segurança, marca **É de segurança do trabalho** e ela vai **em avaliação** para a Segurança, que escolhe quem corrige e encaminha. Quem dá a baixa final é a Segurança.
+- **Sugestão de Campo**: quem é de Campo registra o que encontrou; a pendência fica **em avaliação** até a Engenharia aprovar (escolhendo quem corrige) ou não aprovar (com o motivo, que volta para quem sugeriu).
 
 Essas regras ficam no banco (RLS), não só na tela.
 
-A obra **Start** é criada sozinha, com o modelo IFC, o mapa de risco do térreo e as concretagens já registradas, na primeira vez que um editor abre a lista de obras.
+A obra **Start** é criada sozinha, com o modelo IFC, o mapa de risco do térreo e as concretagens já registradas, na primeira vez que alguém da Engenharia (ou um administrador) abre a lista de obras.
 
 Como funciona:
 
@@ -41,38 +52,28 @@ Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse ca
 | `sw.js` | Guarda as páginas no aparelho para as pendências abrirem sem sinal |
 | `start.js`, `start-concretagem.js` | Dados da obra Start (modelo IFC, mapa de risco e concretagens) |
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
-| `nuvem.js` | Login, cadastro de obras e conexão com o banco (não precisa mexer) |
-| `supabase.sql` | Cria as tabelas, as regras de acesso e a pasta de arquivos no Supabase (instalação nova) |
-| `atualizacao-obras.sql` | Atualiza um banco criado antes do cadastro de obras (rodar uma vez) |
-| `atualizacao-perfis.sql` | Atualiza um banco criado antes dos nomes das pessoas e da foto das obras (rodar uma vez) |
+| `nuvem.js` | Login, perfil de quem entrou, cadastro de obras e conexão com o banco (não precisa mexer) |
+| `estilo.css` | Cores e fontes comuns a todas as páginas (tema claro e escuro) |
+| `banco.sql` | O banco inteiro: tabelas, regras de acesso e pasta de arquivos. Serve para instalar e para atualizar |
+| `admin.html`, `listas.html` | Administração (pessoas, perfis, obras, dados) e Listas e regras (ofícios, problemas, locais…) |
+| `supabase/functions/` | Funções `notificar` (avisos) e `usuarios` (convites, backup e limpeza da lixeira) |
 
-## Já usava uma versão anterior?
+## Atualizar o banco (quem já usa o sistema)
 
-Rode os arquivos de atualização que ainda não rodou, **uma vez cada**, nesta ordem, antes de enviar os arquivos novos ao GitHub:
+Sempre que o `banco.sql` mudar, antes de enviar os arquivos novos ao GitHub:
 
-1. `atualizacao-obras.sql`
-2. `atualizacao-perfis.sql`
-3. `atualizacao-admin.sql` (troque `SEU_EMAIL@exemplo.com`, no fim, pelo seu e-mail antes de rodar)
-4. `atualizacao-pendencias.sql` (módulo de pendências; instalações novas também rodam este, depois do `supabase.sql`)
-5. `atualizacao-push.sql` (avisos; veja "App instalável e avisos")
-6. `atualizacao-admin2.sql` (página de Administração: atividade, convites e mais informações por pessoa)
-7. `atualizacao-melhorias.sql` (lixeira de 30 dias, comentários, local na planta, versões do modelo, espaço usado, avisos de concreto, backup semanal e limpeza diária). Depois dele, republique as funções `notificar` e `usuarios` com o código novo.
-8. `atualizacao-tipologias.sql` (preenchimento condicionado: locais por pavimento e cômodos por tipo de apartamento)
-9. `atualizacao-listas.sql` (listas próprias de cada obra a partir do padrão da empresa, e renomear itens atualizando as pendências já registradas). Tudo isso é editado na página **Listas e regras** (Pendências → ⋯ → Listas e regras, só administradores).
-10. `atualizacao-locais.sql` (locais de cada pavimento da Start, com Elevador e Fachada pedindo o lado; responsáveis pela correção por cargo, como Pedreiro e Eletricista, com "Próprio ou Terceiro"; altura das plantas do IFC para ligar os pavimentos pela ordem)
-11. `atualizacao-funcionarios.sql` (funcionários de cada obra com um ou mais cargos, em Listas e regras → Funcionários; na pendência, escolher quem vai corrigir, e o aviso vai só para essa pessoa; um usuário pode ter cargos de grupos diferentes). Depois dele, republique a função `notificar` com o código novo.
+1. No Supabase, abra **SQL Editor → New query**, cole o `banco.sql` **inteiro** e clique em **Run**. Ele vê sozinho o que o seu banco já tem e aplica só o que falta (não precisa trocar o e-mail do começo). Rodar de novo não estraga nada.
+2. Se a mudança pedir, republique as funções `notificar` e `usuarios` (veja abaixo).
 
-12. `atualizacao-fachadas.sql` (Mapa de Fachadas: aviso de quebra de cura para a Engenharia). Depois dele, republique as funções `notificar` (aviso de quebra de cura e aviso diário das áreas liberadas) e `usuarios` (apaga também as imagens das fachadas quando uma obra é excluída de vez).
+Se o banco estiver desatualizado, a página de **Administração** avisa no topo.
+
+**Desta versão (perfis e obras):** rode o `banco.sql` e republique as duas funções. Quem já tinha acesso ganha um perfil a partir do acesso e do cargo de antes (Editar + Engenharia → Engenharia, Só visualizar sem cargo → Consulta, encarregado → Campo…) e continua vendo as obras que já existiam; quem é de Campo fica nas obras em que estava cadastrado como funcionário. Depois, confira cada pessoa em **Administração**.
 
 ### Backup e lixeira
 
 - **Backup**: todo domingo de madrugada uma cópia dos dados é guardada no Supabase (ficam as 8 últimas). Em **Administração → Dados** dá para baixar os dados (JSON) e todos os arquivos (ZIP) a qualquer momento; guarde essas cópias fora do Supabase de vez em quando.
-- **Lixeira**: obras e pendências excluídas ficam 30 dias em **Administração → Dados** (dá para restaurar) e depois são apagadas de vez, junto com os arquivos.
-- **Local na planta**: as plantas dos pavimentos são geradas sozinhas quando alguém com acesso de edição abre o **Mapa de Risco** da obra (e de novo quando o modelo IFC muda).
-
-Para cada um: no Supabase, abra **SQL Editor → New query**, cole o conteúdo e clique em **Run**. Rodar de novo não estraga nada.
-
-O `atualizacao-obras.sql` cria o cadastro de obras e transforma cada painel antigo em uma obra. Por exemplo, o painel `principal` vira a obra "Principal", com o mesmo modelo IFC, as mesmas áreas, símbolos e revisões. Depois, dá para renomear a obra na lista.
+- **Lixeira**: obras e pendências excluídas, pendências não aprovadas e mapas resetados ficam 30 dias em **Administração → Dados** (dá para restaurar) e depois são apagados de vez, junto com os arquivos. **Resetar o mapa** (Risco ou Concretagem) é só para administradores.
+- **Local na planta**: as plantas dos pavimentos são geradas sozinhas quando alguém que edita o **Mapa de Risco** abre o mapa da obra (e de novo quando o modelo IFC muda).
 
 ## Passo a passo (instalação nova)
 
@@ -80,7 +81,7 @@ O `atualizacao-obras.sql` cria o cadastro de obras e transforma cada painel anti
 
 1. Crie uma conta em [supabase.com](https://supabase.com) e um projeto novo (o plano gratuito serve para começar).
 2. No projeto, abra **SQL Editor → New query**.
-3. Abra o `supabase.sql`, troque `SEU_EMAIL@exemplo.com` (perto do fim) pelo seu e-mail, cole tudo no editor e clique em **Run**.
+3. Abra o `banco.sql`, troque `SEU_EMAIL@exemplo.com` (no começo) pelo seu e-mail, cole tudo no editor e clique em **Run**. Você vira o primeiro administrador.
 4. Vá em **Project Settings → API** (ou **Data API / API Keys**) e copie:
    - **Project URL**, só o endereço, sem `/rest/v1/` no fim;
    - a chave **anon / publishable** (nunca a `service_role` / `secret`).
@@ -116,14 +117,18 @@ O site pode ser instalado como app: no Chrome ou no Edge aparece o botão **Inst
 
 Cada pessoa liga os avisos no próprio aparelho pelo botão **🔔 Avisos** do painel de Pendências. Quem recebe o quê:
 
-- **Nova pendência** → encarregados da disciplina responsável.
+- **Nova pendência** → quem foi escolhido para corrigir (ou todos de Campo daquele ofício na obra).
+- **Sugestão de Campo** → Engenharia da obra; **pendência de segurança encaminhada** → Segurança da obra.
+- **Sugestão não aprovada** → quem sugeriu, com o motivo.
 - **Marcada como corrigida** → Engenharia (ou Segurança, nas de segurança).
-- **Reprovada ou reaberta** → encarregados da disciplina, com o motivo.
-- **Todo dia às 8h** → vencidas para a disciplina (e para a Segurança, nas de segurança) e um resumo para a Engenharia.
+- **Reprovada ou reaberta** → quem corrige, com o motivo.
+- **Todo dia às 8h** → vencidas para quem corrige (e para a Segurança, nas de segurança) e um resumo para a Engenharia.
+
+Cada pessoa só recebe avisos das obras liberadas para ela.
 
 Configuração (uma vez, no Supabase):
 
-1. **SQL Editor**: rode o `atualizacao-push.sql` e depois a linha `update public.push_config ...` do arquivo `segredos-push.txt` (gerado no seu computador, fora do GitHub).
+1. **SQL Editor**: rode o `banco.sql` (se ainda não rodou) e depois a linha `update public.push_config ...` do arquivo `segredos-push.txt` (gerado no seu computador, fora do GitHub).
 2. **Edge Functions → Deploy a new function → Via Editor**: nome `notificar`, cole o conteúdo de `supabase/functions/notificar/index.ts` e publique. Nos detalhes da função, desligue **Verify JWT** (a função confere o acesso sozinha).
 3. **Edge Functions → Secrets**: crie `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_SUBJECT` e `AVISO_SEGREDO` com os valores do `segredos-push.txt`.
 4. No painel de Pendências: **🔔 Avisos → Ligar avisos → Enviar teste**.
@@ -134,34 +139,19 @@ A chave pública das notificações fica no `config.js` (`vapidPublica`); a priv
 
 **Pelo site (administradores):** o botão **Administração** abre a página `admin.html`:
 
-- **Resumo no topo**: pessoas, aguardando liberação, convites não aceitos, quantos por cargo e quantos com avisos ligados (cada número filtra a lista).
-- **Pessoas**: acesso aos mapas (Sem acesso, Só visualizar, Editar, Administrador), cargo nas pendências e disciplinas, nome, último acesso, pendências registradas e avisos ligados; ações para **enviar link de senha**, **reenviar convite** e **excluir conta**.
-- **+ Convidar pessoa**: e-mail, nome, acesso e cargo num passo só; o convite sai por e-mail.
-- **Atividade**: quem mudou o acesso ou o cargo de quem, convites, links de senha e exclusões.
+- **Pessoas**: um cartão por pessoa com o **perfil** (Administrador, Engenharia, Segurança, Campo ou Consulta), os **ofícios** (só para Campo) e as **obras** dela. Cada toque salva na hora. Filtros por perfil, “aguardando liberação”, “convite não aceito” e “sem obra”; ações para **enviar link de senha**, **reenviar convite**, **bloquear acesso** e **excluir conta**.
+- **+ Convidar pessoa**: e-mail, nome, perfil, ofícios e obras num passo só; o convite sai por e-mail.
+- **Atividade**: quem mudou o perfil ou as obras de quem, convites, links de senha, exclusões e lixeira.
+- **Dados**: espaço usado, backup e lixeira.
+- **Ofícios e listas**: abre **Listas e regras** (ofícios, tipos de problema, locais…). Quem corrige mas **não usa o sistema** é cadastrado em **Listas e regras → Funcionários** de cada obra; quem usa o sistema com perfil Campo aparece lá sozinho.
 
-Para convidar e excluir contas pelo site, publique também a Edge Function `usuarios` (mesmo jeito da `notificar`: **Edge Functions → Deploy a new function → Via Editor**, nome `usuarios`, cole `supabase/functions/usuarios/index.ts`, publique e desligue **Verify JWT**). Ela não precisa de segredos novos. Sem ela, o resto da página funciona e o convite pode ser feito pelo Supabase (**Authentication → Users → Invite user**).
+Quem cria a obra já entra nela. Para colocar outras pessoas na obra nova, marque a obra no cartão de cada uma.
 
-**Pelo Supabase**, sem o painel, são duas coisas, nesta ordem:
+Para convidar e excluir contas pelo site, publique também a Edge Function `usuarios` (mesmo jeito da `notificar`: **Edge Functions → Deploy a new function → Via Editor**, nome `usuarios`, cole `supabase/functions/usuarios/index.ts`, publique e desligue **Verify JWT**). Ela não precisa de segredos novos. Sem ela, o resto da página funciona e o convite pode ser feito pelo Supabase (**Authentication → Users → Invite user**); depois, a pessoa aparece em **Administração** como “aguardando liberação”.
 
-1. **Criar o usuário**: em **Authentication → Users**:
-   - **Create new user**: você define o e-mail e a senha e passa a senha para a pessoa; ou
-   - **Send invitation**: a pessoa recebe um e-mail, clica no link e cria a própria senha no painel.
-2. **Liberar no painel**: no **SQL Editor**, rode:
-   ```sql
-   insert into public.membros (email, papel) values ('colega@empresa.com', 'editor');
-   ```
-   Use `'leitor'` no lugar de `'editor'` para quem só pode ver. Também dá para editar pela tela **Table Editor → membros**.
+Quem tem login mas ainda não foi liberado vê a mensagem "Acesso pendente" e não enxerga nenhum dado.
 
-Para tirar o acesso: `delete from public.membros where email = 'colega@empresa.com';`
-
-Quem tem login mas não está em `membros` vê a mensagem "Acesso pendente" e não enxerga nenhum dado.
-
-**Nomes:** no primeiro acesso, cada pessoa informa como quer ser chamada. Depois dá para mudar clicando no próprio nome no topo da página. Na página inicial, o botão **Equipe** lista os membros: cada um muda o próprio nome, e editores podem dar nome a qualquer pessoa.
-
-O que cada papel pode fazer:
-
-- **Editor**: cria, renomeia e exclui obras, envia e troca o modelo IFC e edita os dados das ferramentas.
-- **Leitor**: só vê.
+**Nomes:** no primeiro acesso, cada pessoa informa como quer ser chamada. Depois dá para mudar clicando no próprio nome no topo da página. O administrador também pode mudar o nome de qualquer pessoa na Administração.
 
 ## Links
 
@@ -176,6 +166,7 @@ O endereço da obra (`residencial-x`) é criado a partir do nome e não muda qua
 1. Crie a página, por exemplo `concretagem.html`. Antes do `nuvem.js`, coloque `<script>window.NUVEM_FERRAMENTA='concretagem'</script>`.
 2. Em `index.html`, na lista `FERRAMENTAS`, preencha `pagina: 'concretagem.html'`.
 3. Na página, `Nuvem.obras.obter(Nuvem.obraId)` traz o nome e o modelo IFC da obra, e `Nuvem.db` guarda os dados da ferramenta separados por obra.
+4. Diga quais perfis veem e editam a ferramenta: em `nuvem.js` (listas `VE` e `EDITA`), em `app.js` (lista `FERR`) e, no banco, na função `ferramenta_ok` (um passo novo no fim do `banco.sql`).
 
 ## Bom saber
 

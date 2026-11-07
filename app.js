@@ -116,7 +116,8 @@
   async function montarTroca(nv) {
     if (!nv || !nv.obraId || !nv.ferramenta) return;
     const id = nv.obraId, atual = nv.ferramenta;
-    const visiveis = FERR.filter(f => !(nv.cargo === 'encarregado' && f.id !== 'pendencias'));
+    // só as ferramentas do perfil (Segurança: Risco e Pendências; Campo: só Pendências)
+    const visiveis = FERR.filter(f => (nv.podeVer ? nv.podeVer(f.id) : !(nv.cargo === 'encarregado' && f.id !== 'pendencias')));
     // "← Obra": página da obra (ou a lista de obras, para quem só tem uma ferramenta)
     const bo = document.getElementById('bObras');
     if (bo) { if (visiveis.length > 1) { bo.href = 'index.html?obra=' + encodeURIComponent(id); bo.textContent = '← Obra'; bo.title = 'Página da obra: ferramentas e resumo'; } else { bo.href = 'index.html'; bo.textContent = '← Obras'; } }

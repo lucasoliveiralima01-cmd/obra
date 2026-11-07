@@ -5,24 +5,22 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2322425c'/%3E%3Crect x='7' y='5' width='18' height='23' rx='1.5' fill='%23e9e5dc'/%3E%3Crect x='7' y='5' width='18' height='8' fill='%232f9a59'/%3E%3Crect x='7' y='13' width='18' height='7' fill='%23e39b1c'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style>
 /* Layout: faixa da marca · fachada à esquerda · avisos, ficha, aplicações e andamento à direita; no celular tudo empilha */
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
 :root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2; --canvas-bg:#e3e9ee;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2; --wait:#5b7287; --wait-soft:#e2e9ef;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --canvas-bg:#e3e9ee;
+  --wait:#5b7287; --wait-soft:#e2e9ef;
   --r:8px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445; --canvas-bg:#0f1a23;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}}
+  --canvas-bg:#0f1a23;
+  --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445; --canvas-bg:#0f1a23;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}
+  --canvas-bg:#0f1a23;
+  --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -632,9 +630,10 @@ function renderDrawbar() {
   const d = S.draw; const b = $('drawbar'); if (!d) { b.hidden = true; return; }
   const cm = camById(d.dados.camada);
   const info = d.salvas ? `${d.salvas} área${d.salvas > 1 ? 's' : ''} salva${d.salvas > 1 ? 's' : ''}. Desenhe outra com os mesmos dados ou toque em Encerrar.` :
+    d.tool === 'pano' ? 'Toque numa parede para marcar o pano inteiro (a parede contínua, sem as aberturas).' :
     d.tool === 'ret' ? 'Arraste de um canto ao outro. O ímã puxa para as bordas da parede, os pavimentos e os cantos de outras áreas. A área fica só no pano onde a maior parte foi desenhada.' : 'Toque nos cantos da área (o ímã puxa para as bordas da parede). Toque no 1º ponto (ou em Concluir) para fechar.';
   b.innerHTML = `<div class="who"><span class="sw" style="background:${esc(corCam(cm))}"></span>${d.aplId ? 'Redesenhando: ' : ''}${esc(cm ? cm.nome : '')} · ${fmtD(d.dados.data)}</div><div class="info">${info}</div>
-    <div class="seg" role="group" aria-label="Ferramenta"><button data-t="ret" aria-pressed="${d.tool === 'ret'}">Retângulo</button><button data-t="pol" aria-pressed="${d.tool === 'pol'}">Pontos</button></div>
+    <div class="seg" role="group" aria-label="Ferramenta"><button data-t="pano" aria-pressed="${d.tool === 'pano'}" title="Um toque marca a parede inteira">Pano inteiro</button><button data-t="ret" aria-pressed="${d.tool === 'ret'}">Retângulo</button><button data-t="pol" aria-pressed="${d.tool === 'pol'}">Pontos</button></div>
     ${d.tool === 'pol' ? `<button class="btn sm ghost" id="dUndo" ${d.pts.length ? '' : 'disabled'}>Desfazer ponto</button><button class="btn sm" id="dOk" ${d.pts.length >= 3 ? '' : 'disabled'}>Concluir</button>` : ''}
     <button class="btn sm ghost" id="dEnd">${d.salvas ? 'Encerrar' : 'Cancelar'}</button>`;
   b.hidden = false;
@@ -645,7 +644,9 @@ function renderDrawbar() {
 }
 function iniciarDesenho(dados, aplId) {
   if (!fachAtual()) { toast('Escolha uma fachada primeiro.'); return; }
-  S.draw = { tool: 'ret', pts: [], p0: null, p1: null, dados, aplId: aplId || null, salvas: 0 }; CACHE.imas = null;
+  // no celular começa no "pano inteiro" (um toque); no computador, no retângulo
+  const I = imgDe(fachAtual().id);
+  S.draw = { tool: (TOQUE || matchMedia('(pointer:coarse)').matches) && I && I.lab ? 'pano' : 'ret', pts: [], p0: null, p1: null, dados, aplId: aplId || null, salvas: 0 }; CACHE.imas = null;
   renderDrawbar(); req();
   if (window.innerWidth <= 1000) $('views').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -669,6 +670,22 @@ async function concluirArea(pts) {
   depoisDados();
   const novas = quebras().filter(q => !antes.has(q.A.id + '>' + q.B.id) && (q.A.id === a.id || q.B.id === a.id));
   if (novas.length) avisarQuebras(novas);
+}
+
+// "pano inteiro": a parede contínua no ponto tocado vira a área (o retângulo que a envolve,
+// contando só a parede desse pano, sem as aberturas)
+function marcarPano(u, z) {
+  const f = fachAtual(); const I = f && imgDe(f.id);
+  if (!I || !I.lab) { toast('A imagem desta fachada ainda não tem os panos. Use Retângulo ou Pontos.', 5000); return; }
+  const c = Math.floor((u - f.u0) / f.px), r = Math.floor((f.z1 - z) / f.px);
+  const l = c >= 0 && r >= 0 && c < f.W && r < f.H ? I.lab[r * f.W + c] : -1;
+  if (l < 0) { toast('Toque sobre uma parede (não numa janela, porta ou no céu).'); return; }
+  let c0 = 1e9, c1 = -1, r0 = 1e9, r1 = -1;
+  for (let y = 0; y < f.H; y++) { const b = y * f.W; for (let x = 0; x < f.W; x++) if (I.lab[b + x] === l) { if (x < c0) c0 = x; if (x > c1) c1 = x; if (y < r0) r0 = y; if (y > r1) r1 = y; } }
+  const pts = retPts([f.u0 + c0 * f.px, f.z1 - (r1 + 1) * f.px], [f.u0 + (c1 + 1) * f.px, f.z1 - r0 * f.px]);
+  // pano em formato de L em volta de outro maior: o retângulo pegaria o outro
+  if (planoDominante(f.id, [pts]) !== l) { toast('Este pano tem um formato que o toque não cobre bem. Desenhe com Retângulo ou Pontos.', 5000); return; }
+  concluirArea(pts);
 }
 
 /* ---------- ponteiro: arrastar, zoom, desenhar, selecionar ---------- */
@@ -708,6 +725,7 @@ function fimPtr(ev) {
   if (g.moved || g.pan) return;
   // toque simples
   const m = toM(p[0], p[1]);
+  if (S.draw && S.draw.tool === 'pano') { marcarPano(m[0], m[1]); return; }
   if (S.draw && S.draw.tool === 'pol') {
     const d = S.draw; const s = snap(m[0], m[1], ev.altKey);
     if (d.pts.length >= 3) { const [fx, fy] = toS(d.pts[0][0], d.pts[0][1]); if (Math.hypot(fx - p[0], fy - p[1]) < 14) { concluirArea(d.pts.slice()); return; } }

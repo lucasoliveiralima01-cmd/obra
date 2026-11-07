@@ -5,7 +5,7 @@
    (Supabase > Project Settings > API):
      - supabaseUrl:     "Project URL"
      - supabaseAnonKey: chave "anon" / "publishable" (pode ficar pública;
-                        quem protege os dados são as regras do supabase.sql)
+                        quem protege os dados são as regras do banco.sql)
    NUNCA cole aqui a chave "service_role" / "secret".
 
    Deixando supabaseUrl vazio, o painel funciona sem login e guarda
@@ -23,7 +23,7 @@ window.MAPA_CONFIG = {
   // vê os dados depois que o e-mail dela for incluído na tabela "membros".
   permitirCadastro: false,
 
-  // Nome do bucket de arquivos criado pelo supabase.sql.
+  // Nome do bucket de arquivos criado pelo banco.sql.
   bucket: 'arquivos',
 
   // Chave pública das notificações (VAPID). Pode ficar pública; a chave

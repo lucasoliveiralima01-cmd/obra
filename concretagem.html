@@ -5,28 +5,23 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
 <style data-pv>
 /* Layout: faixa da marca · palco 3D/planta à esquerda · coluna de pendências, ficha e concretagens à direita; no celular tudo empilha */
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
 :root{
-  --navy:#22425c; --petrol:#074669; --brand-ink:#ffffff; --brand-soft:#9fc3d6;
-  --bg:#eef2f5; --panel:#ffffff; --ink:#14222e; --muted:#5a6b78; --line:#d3dce3; --line-2:#e4eaef;
-  --accent:#074669; --accent-ink:#ffffff; --accent-soft:#dcebf2;
   --plan-bg:#f7f9fa; --slab:#c9cfd3; --beam:#a7afb6; --col:#4a5560; --edge:#7d8790;
   --canvas-bg:#e3e9ee;
-  --ok:#23804a; --ok-soft:#dcf0e3; --bad:#c23b2f; --bad-soft:#f8e0dc; --warn:#b86e00; --warn-soft:#fbecd2; --wait:#5b7287; --wait-soft:#e2e9ef;
-  --f-disp:"Titillium Web","Segoe UI",Arial,sans-serif; --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --wait:#5b7287; --wait-soft:#e2e9ef;
   --r:8px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
   --plan-bg:#101c26; --slab:#4a5966; --beam:#5d6c79; --col:#c8d2da; --edge:#7f909d; --canvas-bg:#0f1a23;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}}
+  --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0d1720; --panel:#14212c; --ink:#e3eaf0; --muted:#93a5b3; --line:#27394a; --line-2:#1d2d3a;
-  --accent:#62aed3; --accent-ink:#06202e; --accent-soft:#163445;
   --plan-bg:#101c26; --slab:#4a5966; --beam:#5d6c79; --col:#c8d2da; --edge:#7f909d; --canvas-bg:#0f1a23;
-  --ok:#53c07f; --ok-soft:#163a26; --bad:#f07a6c; --bad-soft:#41201c; --warn:#f0a93a; --warn-soft:#3d2c10; --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}
+  --wait:#93a9bd; --wait-soft:#1c2b38; color-scheme:dark}
+
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;margin:0;-webkit-tap-highlight-color:transparent}
@@ -79,6 +74,8 @@ a.hbtn{text-decoration:none}
 #cplan{background:var(--plan-bg)}
 .ov{position:absolute;z-index:2}
 .card-ov{background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 10px rgba(10,30,45,.08)}
+.sotela{display:none}
+@media (max-width:1000px){.sotela{display:inline-flex}}
 .legend{left:10px;bottom:10px;padding:7px 9px;font-size:.76rem;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:calc(100% - 20px);align-items:center}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .demochip{left:10px;top:10px;border-style:dashed;color:var(--muted)}
@@ -250,7 +247,7 @@ table.prev th{color:var(--muted);font-weight:600}
     <button class="hbtn solid" id="bPdf" title="Prancha do pavimento com a planta, a legenda dos caminhões e o carimbo">Exportar PDF</button>
     <button class="hbtn" id="bImg" data-menu>Exportar imagem</button>
     <button class="hbtn" id="bExp" data-menu>Exportar Excel</button>
-    <button class="hbtn" id="bReset" data-menu title="Apaga modelo, concretagens e imagens do painel">Resetar painel</button>
+    <button class="hbtn" id="bReset" data-menu title="Manda as concretagens e revisões desta obra para a lixeira (só administradores)">Resetar o mapa</button>
   </div>
 </div></header>
 
@@ -265,8 +262,8 @@ table.prev th{color:var(--muted);font-weight:600}
     <div class="views" id="views">
       <canvas id="c3d" aria-label="Estrutura em 3D"></canvas>
       <canvas id="cplan" aria-label="Planta do pavimento" hidden></canvas>
-      <div class="ov vbtns" id="vb3d"><button class="ibtn" id="bFit">Enquadrar</button><button class="ibtn" id="bCut" aria-pressed="true" title="Esconde os pavimentos acima do selecionado">Cortar acima</button></div>
-      <div class="ov vbtns" id="vbPlan" hidden><button class="ibtn" id="bPFit">Enquadrar</button><button class="ibtn" id="bBg" title="Coloque a foto do mapeamento em papel por baixo da planta">Mapa em papel</button></div>
+      <div class="ov vbtns" id="vb3d"><button class="ibtn" id="bFit">Enquadrar</button><button class="ibtn" id="bCut" aria-pressed="true" title="Esconde os pavimentos acima do selecionado">Cortar acima</button><button class="ibtn sotela" data-lista title="Ir para a lista de concretagens">Concretagens ↓</button></div>
+      <div class="ov vbtns" id="vbPlan" hidden><button class="ibtn" id="bPFit">Enquadrar</button><button class="ibtn" id="bBg" title="Coloque a foto do mapeamento em papel por baixo da planta">Mapa em papel</button><button class="ibtn sotela" data-lista title="Ir para a lista de concretagens">Concretagens ↓</button></div>
       <div class="ov card-ov revbar" id="revbar" hidden></div>
       <div class="ov legend card-ov" id="legend"></div>
       <button class="ov ibtn demochip" id="demoChip" hidden title="Modelo simplificado: vigas com 50 cm e sem escadas">Modelo de exemplo</button>
@@ -1027,7 +1024,8 @@ const Store={
     const nv=window.Nuvem||null; if(nv) db=nv.db;
     if(db){
       this.kind='db'; this.db=db; this.assets=nv.assets; this.downloads=null;
-      if(nv.papel==='leitor') S.readOnly=true;
+      // quem só visualiza (perfil Consulta) não vê os botões de edição
+      if(nv.papel==='leitor'){ S.readOnly=true; ['bNewC','bBg','bRev'].forEach(id=>{ const b=document.getElementById(id); if(b) b.hidden=true }) }
       // a obra (nome e modelo IFC) vem do cadastro de obras, comum a todas as ferramentas
       try{ S.obra=await nv.obras.obter(nv.obraId) }catch(e){ console.error(e); S.obra=undefined }
       if(!S.obra) return false;
@@ -1750,6 +1748,8 @@ function renderPend(){
   $('pendList').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const [cid,tid]=b.dataset.r.split('|'); truckForm(cid,tid,true)});
 }
 $('hPend').onclick=()=>{ $('pendCard').scrollIntoView({behavior:'smooth',block:'start'}) };
+// no celular a lista fica embaixo do modelo: atalho para ela
+document.querySelectorAll('[data-lista]').forEach(b=>b.onclick=()=>$('concCard').scrollIntoView({behavior:'smooth',block:'start'}));
 function fillPavSelect(){ $('selPav').innerHTML=S.storeys.slice().reverse().map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('') }
 $('selPav').onchange=()=>{ if(S.mode&&S.mode.k==='draw'){ toast('Conclua o desenho antes de trocar de pavimento.'); $('selPav').value=S.pav; return } S.pav=$('selPav').value; applyCut(); renderTower(); if(S.view==='plan'){fitPlan(); P.fitted=S.pav} reqPlan() };
 function renderTower(){
@@ -2447,22 +2447,27 @@ $('bReset').onclick=()=>{
   openSheet('Resetar o painel',`<p style="margin-top:0">Isto apaga <b>tudo</b> do Mapa de Concretagem${db?' desta obra para todas as pessoas que o usam':' neste navegador'}:</p>
     <ul style="margin:.4em 0 1em;padding-left:1.2em;line-height:1.6">${db?'':`<li>o modelo IFC carregado${S.res?' ('+esc(S.modelName)+')':''};</li>`}<li>${nC} concretagem(ns) e ${nT} caminhão(ões), com áreas desenhadas, pilares marcados e resultados de rompimento;</li><li>${S.revs.length} revisão(ões) emitida(s);</li><li>${nB} imagem(ns) de mapa em papel${db?'':' e o nome da obra'}.</li></ul>
     ${db?'<p class="muted">O cadastro da obra e o modelo IFC continuam, porque são usados pelas outras ferramentas. Para apagar a obra inteira, use “Excluir” na lista de obras.</p>':''}
-    <p class="muted">Não dá para desfazer. Se quiser guardar uma cópia, exporte o Excel antes.</p>
+    <p class="muted">${db?'Tudo vai para a lixeira por 30 dias: dá para restaurar em Administração → Dados.':'Não dá para desfazer. Se quiser guardar uma cópia, exporte o Excel antes.'}</p>
     <div class="fg"><div class="fld full"><label for="rsTxt">Para confirmar, digite RESETAR</label><input id="rsTxt" autocomplete="off" autocapitalize="characters"></div></div>`,
     `<button class="btn ghost" id="rsExp" style="margin-right:auto">Exportar Excel antes</button><button class="btn ghost" id="rsC">Cancelar</button><button class="btn danger" id="rsOk" disabled>Resetar tudo</button>`);
   $('rsTxt').oninput=()=>{ $('rsOk').disabled=$('rsTxt').value.trim().toUpperCase()!=='RESETAR' };
   $('rsExp').onclick=exportExcel; $('rsC').onclick=closeSheet;
-  $('rsOk').onclick=async()=>{ $('rsOk').disabled=true; $('rsOk').textContent='Apagando…'; await resetAll(); closeSheet(); toast(db?'Mapa de Concretagem desta obra resetado.':'Painel resetado. Importe o IFC de estrutura para começar.',5000) };
+  $('rsOk').onclick=async()=>{ $('rsOk').disabled=true; $('rsOk').textContent='Apagando…'; if(await resetAll()===false){ $('rsOk').disabled=false; $('rsOk').textContent='Resetar tudo'; return } closeSheet(); toast(db?'Mapa de Concretagem desta obra resetado. O conteúdo ficou 30 dias na lixeira.':'Painel resetado. Importe o IFC de estrutura para começar.',6000) };
 };
 async function resetAll(){
   if(S.mode) endMode(); S.sel=null; S.open.clear(); S.until=null; if(S.rev){ S.rev=null; aplicarRev() }
   const ids=S.conc.map(c=>c.id), bgKeys=Object.keys(S.bgs), revIds=S.revs.map(r=>r.id);
-  if(Store.kind==='db'){
+  // online: o banco guarda uma cópia na lixeira e apaga (só administradores); os arquivos ficam até a lixeira esvaziar
+  const nv=window.Nuvem; let lixeira=false;
+  if(Store.kind==='db'&&nv){ const r=await nv.cliente.rpc('painel_resetar',{p_painel:nv.painel});
+    if(!r.error) lixeira=true;
+    else if(!/painel_resetar|function|schema cache/i.test(r.error.message||'')){ toast('Não foi possível resetar: '+r.error.message,7000); return false } }
+  if(Store.kind==='db'&&!lixeira){
     for(const id of ids){ try{ await Store.db.doc('concretagens/'+id).delete() }catch(e){} }
     for(const id of revIds){ try{ await Store.db.doc('revisoes/'+id).delete() }catch(e){} }
     for(const k of bgKeys){ try{ await Store.db.doc('fundos/'+k).delete() }catch(e){} }
     if(Store.assets){ try{ const l=await Store.assets.list(); for(const a of l.assets){ try{ await Store.assets.delete(a.id) }catch(e){} } }catch(e){} }
-  } else {
+  } else if(Store.kind!=='db'){
     try{ localStorage.removeItem(LSK) }catch(e){}
     await idbDel('ifc').catch(()=>{}); for(const k of bgKeys) await idbDel('bg:'+k).catch(()=>{});
   }
