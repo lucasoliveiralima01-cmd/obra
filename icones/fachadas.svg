@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244A66"/><stop offset="0.52" stop-color="#163852"/><stop offset="1" stop-color="#102B43"/></linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F8F9"/><stop offset="1" stop-color="#CBDDE6"/></linearGradient>
+<linearGradient id="orange" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC04F"/><stop offset="1" stop-color="#F18A20"/></linearGradient>
+<linearGradient id="concrete" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDE8EE"/><stop offset=".55" stop-color="#9EB4C1"/><stop offset="1" stop-color="#6A8394"/></linearGradient>
+<linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FC7563"/><stop offset="1" stop-color="#DB4141"/></linearGradient>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#041D2E" flood-opacity="0.23"/></filter>
+</defs>
+<rect x="65" y="65" width="894" height="894" rx="190" fill="url(#tile)"/>
+<rect x="82" y="82" width="860" height="860" rx="176" fill="none" stroke="#52748B" stroke-width="9" opacity=".65"/>
+<path d="M182 250 C245 168 341 150 460 150" fill="none" stroke="#8EB1C4" stroke-opacity=".11" stroke-width="13" stroke-linecap="round"/>
+
+<!-- Building elevation, large uniform windows, façade map overlay -->
+<g filter="url(#shadow)" stroke-linejoin="round">
+ <!-- flat roof -->
+ <path d="M221 242 H750 L805 305 H271 Z" fill="#B1C5D0" stroke="#0E3049" stroke-width="23"/>
+ <rect x="243" y="286" width="541" height="505" rx="18" fill="url(#paper)" stroke="#0C2940" stroke-width="22"/>
+ <!-- floor divisions -->
+ <path d="M246 460 H781 M246 621 H781" stroke="#8FA8B6" stroke-width="21"/>
+ <path d="M478 295 V788" stroke="#9EB7C5" stroke-width="15" opacity=".75"/>
+ <!-- windows -->
+ <g fill="#285776" stroke="#143B55" stroke-width="13">
+  <rect x="286" y="339" width="150" height="88" rx="9"/>
+  <rect x="539" y="339" width="171" height="88" rx="9"/>
+  <rect x="286" y="499" width="150" height="87" rx="9"/>
+  <rect x="539" y="499" width="171" height="87" rx="9"/>
+  <rect x="286" y="664" width="150" height="88" rx="9"/>
+  <rect x="539" y="664" width="171" height="88" rx="9"/>
+ </g>
+ <path d="M310 351 V406 M561 351 V406 M310 512 V565 M561 512 V565 M310 677 V730 M561 677 V730" stroke="#6F95AC" stroke-width="12" opacity=".65"/>
+</g>
+<!-- Survey highlight: orange dashed zone & four scan corners -->
+<rect x="267" y="474" width="465" height="142" rx="13" fill="#FFA52A" fill-opacity=".10" stroke="#FFA52A" stroke-width="14" stroke-dasharray="26 17"/>
+<g stroke="#FFAB32" stroke-width="25" fill="none" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M247 509 V455 H299"/>
+ <path d="M700 455 H752 V509"/>
+ <path d="M247 583 V637 H299"/>
+ <path d="M700 637 H752 V583"/>
+</g>
+<!-- locator marker -->
+<g filter="url(#shadow)">
+ <path d="M769 703 C769 644 821 614 861 650 C913 696 850 774 823 812 C796 777 769 741 769 703 Z" fill="url(#orange)" stroke="#0D2D46" stroke-width="14"/>
+ <circle cx="824" cy="696" r="24" fill="#E6F1F4"/>
+</g>
+</svg>

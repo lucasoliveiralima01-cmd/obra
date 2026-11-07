@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244A66"/><stop offset="0.52" stop-color="#163852"/><stop offset="1" stop-color="#102B43"/></linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F8F9"/><stop offset="1" stop-color="#CBDDE6"/></linearGradient>
+<linearGradient id="orange" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC04F"/><stop offset="1" stop-color="#F18A20"/></linearGradient>
+<linearGradient id="concrete" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDE8EE"/><stop offset=".55" stop-color="#9EB4C1"/><stop offset="1" stop-color="#6A8394"/></linearGradient>
+<linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FC7563"/><stop offset="1" stop-color="#DB4141"/></linearGradient>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#041D2E" flood-opacity="0.23"/></filter>
+</defs>
+<rect x="65" y="65" width="894" height="894" rx="190" fill="url(#tile)"/>
+<rect x="82" y="82" width="860" height="860" rx="176" fill="none" stroke="#52748B" stroke-width="9" opacity=".65"/>
+<path d="M182 250 C245 168 341 150 460 150" fill="none" stroke="#8EB1C4" stroke-opacity=".11" stroke-width="13" stroke-linecap="round"/>
+
+<!-- Rolled technical floor plan with the three classical risk levels -->
+<g filter="url(#shadow)">
+ <rect x="171" y="211" width="635" height="625" rx="65" fill="#0C2940"/>
+ <rect x="194" y="232" width="590" height="579" rx="45" fill="url(#paper)"/>
+ <rect x="213" y="250" width="552" height="542" rx="33" fill="none" stroke="white" stroke-width="9" opacity=".50"/>
+</g>
+<!-- Architectural schematic -->
+<g fill="none" stroke="#50788F" stroke-width="19" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M280 317 H681 V416 H585 V538 H677 V710 H288 V593 H379 V488 H280 Z"/>
+ <path d="M425 317 V488 H585 M379 488 H585 M288 593 H505 V710 M505 538 V710"/>
+</g>
+<!-- Risk spots, large and distinguishable -->
+<g stroke="#F8FBFC" stroke-width="11">
+ <circle cx="358" cy="388" r="44" fill="#32A964"/>
+ <circle cx="531" cy="427" r="44" fill="#F7BB39"/>
+ <circle cx="596" cy="619" r="51" fill="#E25448"/>
+</g>
+<!-- a warning marker occupying the lower-right corner -->
+<g filter="url(#shadow)" stroke-linejoin="round">
+ <path d="M691 554 L826 777 Q839 803 813 803 H568 Q541 803 554 777 Z" fill="#0C2940" stroke="#0C2940" stroke-width="18"/>
+ <path d="M691 573 L807 772 H574 Z" fill="url(#orange)"/>
+ <path d="M691 639 V712" stroke="#143B55" stroke-width="27" stroke-linecap="round"/>
+ <circle cx="691" cy="746" r="13" fill="#143B55"/>
+</g>
+</svg>

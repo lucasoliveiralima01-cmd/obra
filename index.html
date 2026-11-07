@@ -6,7 +6,7 @@
 <meta name="description" content="Ferramentas de obra sobre o modelo IFC: mapa de risco, mapa de concretagem e outras.">
 <title>Ferramentas da Obra</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2322425c'/%3E%3Ccircle cx='10' cy='11' r='4' fill='%235cb531'/%3E%3Ccircle cx='22' cy='11' r='4' fill='%23e3141b'/%3E%3Ccircle cx='16' cy='21' r='5' fill='%231736e0'/%3E%3C/svg%3E">
+<link rel="icon" href="icones/principal.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="estilo.css">
@@ -27,7 +27,7 @@ a{color:var(--accent)}
 .brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
 .brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;max-width:1180px;margin:0 auto;padding:12px 16px}
 .logo{display:block;color:inherit;text-decoration:none}
-.logo svg{height:34px;width:auto;display:block}
+.logo img{height:40px;width:40px;display:block}
 .ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:18px;min-width:0}
 .ttl .kick{font:600 .68rem var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--brand-soft)}
 .ttl h1{font:700 1.45rem/1.1 var(--f-disp);margin:0}
@@ -47,8 +47,8 @@ main{max-width:1180px;margin:0 auto;padding:22px 16px 48px;display:grid;gap:18px
 .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
 .tool{display:grid;grid-template-rows:auto 1fr auto;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;text-align:left;color:inherit;text-decoration:none;min-height:190px;position:relative}
 a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)}
-.tool .ic{width:46px;height:46px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft)}
-.tool .ic svg{width:30px;height:30px}
+.tool .ic{width:52px;height:52px;display:grid;place-items:center}
+.tool .ic img{width:52px;height:52px;display:block}
 .tool h3{margin:0;font:700 1.2rem var(--f-disp)}
 .tool p{margin:4px 0 0;color:var(--muted);font-size:.9rem;line-height:1.4}
 .tool .go{font:600 .86rem var(--f-body);color:var(--accent)}
@@ -115,8 +115,8 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin:2px -6px}
 .app{display:grid;justify-items:center;gap:5px;padding:6px 2px;border-radius:12px;color:var(--ink);text-decoration:none;min-width:0}
 .app:hover,.app:focus-visible{background:var(--accent-soft)}
-.app .ap-ic{position:relative;width:54px;height:54px;border-radius:15px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);box-shadow:0 2px 6px rgba(10,30,45,.1)}
-.app .ap-ic svg{width:32px;height:32px}
+.app .ap-ic{position:relative;width:60px;height:60px;display:grid;place-items:center;filter:drop-shadow(0 2px 4px rgba(10,30,45,.18))}
+.app .ap-ic img{width:60px;height:60px;display:block}
 .app:hover .ap-ic{border-color:var(--accent)}
 .app .ap-nm{font:600 .74rem/1.15 var(--f-body);letter-spacing:-.01em;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app .badge{position:absolute;top:-6px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--accent);color:#fff;font:700 .72rem/20px var(--f-body);text-align:center;border:2px solid var(--panel)}
@@ -166,16 +166,7 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 </head>
 <body>
 <header class="brand"><div class="brand-in">
-  <a class="logo" href="index.html" aria-label="Início"><svg viewBox="0 0 40 40" aria-hidden="true">
-    <rect x="1" y="1" width="38" height="38" rx="8" fill="none" stroke="currentColor" stroke-opacity=".35"/>
-    <!-- prédio em construção: pavimentos empilhados + grua -->
-    <rect x="7" y="25.5" width="17" height="6.5" rx="1" fill="#9fc3d6"/>
-    <rect x="7" y="18.5" width="17" height="5.5" rx="1" fill="#9fc3d6" fill-opacity=".75"/>
-    <rect x="7" y="11.5" width="17" height="5.5" rx="1" fill="none" stroke="#9fc3d6" stroke-width="1.3" stroke-dasharray="2.2 1.6"/>
-    <path d="M29 33V7.5M18.5 7.5H35M29 7.5l-4.5 4" stroke="#f0a93a" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M33 7.5v5" stroke="#f0a93a" stroke-width="1.3"/>
-    <rect x="31.6" y="12.4" width="2.8" height="2.6" rx=".5" fill="#f0a93a"/>
-  </svg></a>
+  <a class="logo" href="index.html" aria-label="Início"><img src="icones/principal.svg" alt="" width="40" height="40"></a>
   <div class="ttl"><span class="kick">Engenharia e segurança</span><h1>Ferramentas da Obra</h1></div>
   <div class="hctl"><span class="modechip" id="modeChip" hidden>Carregando…</span></div>
 </div></header>
@@ -198,16 +189,16 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 const FERRAMENTAS = [
   { id: 'risco', nome: 'Mapa de Risco', curto: 'Riscos', pagina: 'risco.html',
     desc: 'Áreas de risco por grupo e intensidade (NR-5), símbolos de sinalização, revisões e pranchas em PDF sobre o modelo da obra.',
-    icone: '<svg viewBox="0 0 30 30"><circle cx="9" cy="10" r="5" fill="#5cb531"/><circle cx="21" cy="10" r="5" fill="#e3141b"/><circle cx="15" cy="21" r="6.5" fill="#1736e0"/></svg>' },
+    icone: '<img src=\"icones/risco.svg\" alt=\"\">' },
   { id: 'concretagem', nome: 'Mapa de Concretagem', curto: 'Concretagens', pagina: 'concretagem.html',
     desc: 'Concretagens por pavimento e por caminhão, áreas e pilares concretados, corpos de prova e pendências de rompimento, sobre o mesmo modelo IFC da obra.',
-    icone: '<svg viewBox="0 0 30 30"><rect x="3" y="18" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="6" y="10" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="9" y="3" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
+    icone: '<img src=\"icones/concretagem.svg\" alt=\"\">' },
   { id: 'pendencias', nome: 'Pendências de obra', curto: 'Pendências', pagina: 'pendencias.html', soOnline: true,
     desc: 'Registro de pendências e retrabalhos com fotos, responsável pela correção, prazos, bloqueios de frentes, histórico e relatórios em PDF. Funciona sem sinal.',
-    icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' },
+    icone: '<img src=\"icones/pendencias.svg\" alt=\"\">' },
   { id: 'fachada', nome: 'Mapa de Fachadas', curto: 'Fachadas', pagina: 'fachadas.html', soOnline: true,
     desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
-    icone: '<svg viewBox="0 0 30 30"><rect x="7" y="3" width="16" height="24" rx="1.5" fill="#e9e5dc" stroke="#8d979f" stroke-width=".8"/><rect x="7" y="3" width="16" height="8" fill="#2f9a59"/><rect x="7" y="11" width="16" height="7" fill="#e39b1c"/><rect x="10" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="6" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="13" width="3.5" height="3" fill="#9fc3d6"/><rect x="10" y="20" width="3.5" height="3" fill="#9fc3d6"/><rect x="16.5" y="20" width="3.5" height="3" fill="#9fc3d6"/></svg>' }
+    icone: '<img src=\"icones/fachadas.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));

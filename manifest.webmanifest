@@ -1,20 +1,24 @@
 {
   "name": "Ferramentas da Obra",
   "short_name": "Obra",
-  "description": "Mapa de Risco, Mapa de Concretagem e Pendências de obra.",
+  "description": "Mapa de Risco, Mapa de Concretagem, Mapa de Fachadas e Pendências de obra.",
   "lang": "pt-BR",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#22425c",
+  "background_color": "#163852",
   "theme_color": "#22425c",
   "icons": [
     { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icone-512-mask.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icone-512-mask.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icones/principal.svg", "sizes": "any", "type": "image/svg+xml" }
   ],
   "shortcuts": [
-    { "name": "Pendências de obra", "short_name": "Pendências", "url": "./index.html?ferramenta=pendencias", "icons": [{ "src": "icone-192.png", "sizes": "192x192" }] }
+    { "name": "Pendências de obra", "short_name": "Pendências", "url": "./index.html?ferramenta=pendencias", "icons": [{ "src": "icones/pendencias-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Mapa de Risco", "short_name": "Riscos", "url": "./index.html?ferramenta=risco", "icons": [{ "src": "icones/risco-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Mapa de Concretagem", "short_name": "Concretagens", "url": "./index.html?ferramenta=concretagem", "icons": [{ "src": "icones/concretagem-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Mapa de Fachadas", "short_name": "Fachadas", "url": "./index.html?ferramenta=fachada", "icons": [{ "src": "icones/fachadas-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }

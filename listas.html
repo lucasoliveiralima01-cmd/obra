@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#22425c">
 <title>Listas e regras · Pendências</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" href="icone-192.png">
+<link rel="icon" href="icones/principal.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="estilo.css">
@@ -23,7 +23,7 @@ button{cursor:pointer}
 .brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
 .brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
 .brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1180px;margin:0 auto;padding:12px 16px}
-.logo{display:block;color:inherit}.logo svg{height:34px;width:auto;display:block}
+.logo{display:block;color:inherit}.logo img{height:40px;width:40px;display:block}
 .ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
 .ttl .kick{font:600 .66rem var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--brand-soft)}
 .ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
@@ -119,7 +119,7 @@ table.mx td.impl input{opacity:.45}
 </head>
 <body>
 <header class="brand"><div class="brand-in">
-  <a class="logo" href="index.html" aria-label="Início"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="8" fill="none" stroke="currentColor" stroke-opacity=".35"/><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#ffffff"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg></a>
+  <a class="logo" href="index.html" aria-label="Início"><img src="icones/principal.svg" alt="" width="40" height="40"></a>
   <div class="ttl"><span class="kick">Pendências de obra</span><h1>Listas e regras</h1><span class="obra" id="obraNome"></span></div>
   <div class="hctl"><a class="hbtn" id="bVolta" href="index.html">← Pendências</a></div>
 </div></header>

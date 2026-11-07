@@ -405,7 +405,7 @@
     border-radius:12px;padding:26px 24px 22px;box-shadow:0 24px 60px rgba(0,0,0,.35);display:grid;gap:14px}
   #authTela .ak{font:600 .7rem var(--f-disp,sans-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#5a6b78);
     display:flex;align-items:center;gap:8px}
-  #authTela .ak svg{width:26px;height:26px;flex:none}
+  #authTela .ak img{width:30px;height:30px;flex:none}
   #authTela h1{margin:-6px 0 0;font:700 1.7rem/1.1 var(--f-disp,sans-serif)}
   #authTela p{margin:0;color:var(--muted,#5a6b78);font-size:.92rem;line-height:1.45}
   #authTela form{display:grid;gap:12px}
@@ -434,15 +434,15 @@
   // título, subtítulo e ícone da tela de login/carregamento, conforme a página aberta
   const MARCAS = {
     risco: { kick: 'Segurança do trabalho · NR-5', titulo: 'Mapa de Risco',
-      icone: '<svg viewBox="0 0 40 40"><circle cx="13" cy="14" r="5" fill="#5cb531"/><circle cx="27" cy="14" r="5" fill="#e3141b"/><circle cx="20" cy="27" r="6.5" fill="#1736e0"/></svg>' },
+      icone: '<img src="icones/risco.svg" alt="">' },
     concretagem: { kick: 'Rastreabilidade do concreto', titulo: 'Mapa de Concretagem',
-      icone: '<svg viewBox="0 0 40 40"><rect x="8" y="23" width="24" height="7" rx="1.5" fill="#8d979f"/><rect x="11" y="15" width="18" height="6" rx="1.5" fill="#b9c5ce"/><rect x="14" y="8" width="12" height="5" rx="1.5" fill="#d9701c"/></svg>' },
+      icone: '<img src="icones/concretagem.svg" alt="">' },
     fachada: { kick: 'Revestimento e pintura', titulo: 'Mapa de Fachadas',
-      icone: '<svg viewBox="0 0 40 40"><rect x="10" y="7" width="20" height="26" rx="1.5" fill="#e9e5dc"/><rect x="10" y="7" width="20" height="9" fill="#2f9a59"/><rect x="10" y="16" width="20" height="8" fill="#e39b1c"/><rect x="14" y="10" width="4" height="4" fill="#9fc3d6"/><rect x="22" y="10" width="4" height="4" fill="#9fc3d6"/><rect x="14" y="18" width="4" height="4" fill="#9fc3d6"/><rect x="22" y="18" width="4" height="4" fill="#9fc3d6"/></svg>' },
+      icone: '<img src="icones/fachadas.svg" alt="">' },
     pendencias: { kick: 'Acabamentos · retrabalhos', titulo: 'Pendências de obra',
-      icone: '<svg viewBox="0 0 40 40"><rect x="9" y="7" width="22" height="27" rx="3" fill="#9fc3d6"/><rect x="15" y="5" width="10" height="5" rx="1.5" fill="#22425c"/><path d="M14 18l3 3 6-6" stroke="#23804a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27h12" stroke="#d9701c" stroke-width="2.6" stroke-linecap="round"/></svg>' },
+      icone: '<img src="icones/pendencias.svg" alt="">' },
     '': { kick: 'Engenharia e segurança', titulo: C.titulo || 'Ferramentas da Obra',
-      icone: '<svg viewBox="0 0 40 40"><rect x="7" y="25.5" width="17" height="6.5" rx="1" fill="#4d7f9c"/><rect x="7" y="18.5" width="17" height="5.5" rx="1" fill="#4d7f9c" fill-opacity=".7"/><rect x="7" y="11.5" width="17" height="5.5" rx="1" fill="none" stroke="#4d7f9c" stroke-width="1.3" stroke-dasharray="2.2 1.6"/><path d="M29 33V7.5M18.5 7.5H35M29 7.5l-4.5 4" stroke="#e39b1c" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M33 7.5v5" stroke="#e39b1c" stroke-width="1.3"/><rect x="31.6" y="12.4" width="2.8" height="2.6" rx=".5" fill="#e39b1c"/></svg>' }
+      icone: '<img src="icones/principal.svg" alt="">' }
   };
   const MARCA = MARCAS[ferramenta] || MARCAS[''];
   const topo = (titulo) => `<div class="ak">${MARCA.icone}<span>${esc(MARCA.kick)}</span></div><h1>${titulo}</h1>`;

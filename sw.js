@@ -8,8 +8,8 @@
 // As páginas e scripts do site são sempre conferidos na internet (sem esperar o
 // cache do navegador), então publicar uma versão nova não exige mexer aqui.
 // Só troque o número se mudar a lista BASICO (o que fica guardado para usar sem sinal).
-const CACHE = 'obra-v10';
-const BASICO = ['./', 'index.html', 'pendencias.html', 'estilo.css', 'listas-comum.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png',
+const CACHE = 'obra-v11';
+const BASICO = ['./', 'index.html', 'pendencias.html', 'estilo.css', 'listas-comum.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png', 'icones/principal.svg', 'icones/pendencias.svg',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
 
@@ -37,7 +37,7 @@ self.addEventListener('notificationclick', ev => {
   }));
 });
 
-const guardar = u => /\.(html|js|css|png|webmanifest)(\?|$)/.test(u.pathname) || u.pathname.endsWith('/') ||
+const guardar = u => /\.(html|js|css|png|svg|webmanifest)(\?|$)/.test(u.pathname) || u.pathname.endsWith('/') ||
   /^(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(u.hostname);
 
 self.addEventListener('fetch', ev => {

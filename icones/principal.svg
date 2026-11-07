@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#244A66"/>
+    <stop offset="0.52" stop-color="#163852"/>
+    <stop offset="1" stop-color="#102B43"/>
+  </linearGradient>
+  <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#F4F8F9"/>
+    <stop offset="1" stop-color="#CBDDE6"/>
+  </linearGradient>
+  <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFC04F"/>
+    <stop offset="1" stop-color="#F18A20"/>
+  </linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+    <feDropShadow dx="0" dy="15" stdDeviation="17" flood-color="#041D2E" flood-opacity="0.22"/>
+  </filter>
+</defs>
+<rect x="65" y="65" width="894" height="894" rx="190" fill="url(#tile)"/>
+        <rect x="82" y="82" width="860" height="860" rx="176" fill="none" stroke="#52748B" stroke-width="9" opacity=".65"/>
+<!-- Restrained background highlights -->
+<path d="M182 250 C245 168 341 150 460 150" fill="none" stroke="#8EB1C4" stroke-opacity=".11" stroke-width="13" stroke-linecap="round"/>
+<!-- Construction crane: mast with simple diagonal bracing -->
+<g stroke-linecap="round" stroke-linejoin="round">
+ <path d="M747 313 V762" stroke="#0D2D46" stroke-width="49"/>
+ <path d="M747 313 V762" stroke="#FFAB32" stroke-width="31"/>
+ <path d="M735 405 L760 459 L735 512 L760 566 L735 621 L760 675" fill="none" stroke="#C66C18" stroke-width="11"/>
+ <!-- horizontal boom -->
+ <path d="M450 288 H825" stroke="#0E3049" stroke-width="43"/>
+ <path d="M450 288 H825" stroke="#FFAB32" stroke-width="27"/>
+ <!-- jib truss on top -->
+ <path d="M530 282 L733 222 L815 281" stroke="#FFAB32" stroke-width="14" fill="none"/>
+ <!-- lifting cable and hook -->
+ <path d="M604 311 V372" stroke="#BCD4E0" stroke-width="10"/>
+ <path d="M604 374 C604 396 629 391 626 374" fill="none" stroke="#F7A32A" stroke-width="14"/>
+</g>
+<!-- Clipboard, with generous spacing for the smallest sizes -->
+<g filter="url(#shadow)">
+ <rect x="211" y="338" width="484" height="448" rx="58" fill="#0C2940"/>
+ <rect x="232" y="360" width="442" height="403" rx="37" fill="url(#paper)"/>
+ <rect x="246" y="374" width="414" height="375" rx="27" fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="9"/>
+ <rect x="372" y="297" width="165" height="85" rx="22" fill="#0C2940"/>
+ <rect x="385" y="309" width="139" height="60" rx="16" fill="url(#orange)"/>
+ <circle cx="454" cy="329" r="11" fill="#163B56"/>
+</g>
+<!-- Simple inspection entries: two completed, one available -->
+<g stroke-linejoin="round" stroke-linecap="round">
+ <rect x="294" y="436" width="74" height="74" rx="13" fill="#E1EDF1" stroke="#2B5875" stroke-width="12"/>
+ <path d="M310 472 l16 17 l31 -34" fill="none" stroke="#FF9D20" stroke-width="14"/>
+ <path d="M405 455 h186" stroke="#335F79" stroke-width="20"/>
+ <path d="M405 488 h125" stroke="#7398A9" stroke-width="11"/>
+ <rect x="294" y="554" width="74" height="74" rx="13" fill="#E1EDF1" stroke="#2B5875" stroke-width="12"/>
+ <path d="M310 590 l16 17 l31 -34" fill="none" stroke="#FF9D20" stroke-width="14"/>
+ <path d="M405 573 h186" stroke="#335F79" stroke-width="20"/>
+ <path d="M405 606 h133" stroke="#7398A9" stroke-width="11"/>
+ <rect x="294" y="672" width="74" height="62" rx="13" fill="#E1EDF1" stroke="#2B5875" stroke-width="12"/>
+ <path d="M405 689 h186" stroke="#335F79" stroke-width="20"/>
+ <path d="M405 719 h105" stroke="#7398A9" stroke-width="11"/>
+</g>
+</svg>
