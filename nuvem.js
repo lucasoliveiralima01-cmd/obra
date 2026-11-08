@@ -332,6 +332,11 @@
       if (error) { temPerfis = false; return; }
       temPerfis = true; nomes.clear();
       for (const p of data || []) if (p.nome) nomes.set(String(p.email).toLowerCase(), p.nome);
+      try { localStorage.setItem('mr_nomes', JSON.stringify([...nomes])); } catch (e) {}
+    },
+    // nomes guardados da última vez (para a página abrir sem esperar o servidor)
+    usarGuardados() {
+      try { const l = JSON.parse(localStorage.getItem('mr_nomes') || 'null'); if (Array.isArray(l)) { nomes.clear(); for (const [e, n] of l) nomes.set(e, n); temPerfis = true; } } catch (e) {}
     },
     disponivel() { return temPerfis; },
     // nome para mostrar: o cadastrado, ou o começo do e-mail
@@ -621,8 +626,18 @@
     usuario = sessao.user;
     if (precisaSenha) { tNovaSenha(); return; }
     if (iniciou) { tela.hidden = true; return; }
-    tCarregando('Verificando acesso…');
     const chave = 'mr_acesso_' + String(usuario.email).toLowerCase();
+    // já entrou neste aparelho: abre a página direto com o acesso guardado
+    // e confere no servidor por trás (se mudou, a página recarrega sozinha)
+    let guardado = null; try { guardado = JSON.parse(localStorage.getItem(chave) || 'null'); } catch (e) {}
+    if (guardado && guardado.perfil) {
+      aplicarPerfil(guardado.perfil, guardado.oficios, guardado.obras);
+      pessoas.usarGuardados();
+      liberar();
+      conferirPorTras(chave, guardado);
+      return;
+    }
+    tCarregando('Verificando acesso…');
     // meu_acesso(): perfil, ofícios e obras liberadas (null = sem acesso)
     let { data, error } = await sb.rpc('meu_acesso');
     let antigo = false;
@@ -656,6 +671,23 @@
     if (pessoas.disponivel() && !pessoas.temNome(usuario.email) && !pulou) { tNome(true); return; }
     liberar();
   }
+  // confere o acesso guardado; se mudou (perfil, ofícios, obras) ou foi tirado, recarrega
+  async function conferirPorTras(chave, guardado) {
+    let { data, error } = await sb.rpc('meu_acesso');
+    if (error && !semRede(error) && /meu_acesso|function|schema cache/i.test(error.message || '')) {
+      // banco sem perfis: só confere se ainda tem acesso
+      const r = await sb.rpc('papel_atual'); if (!r.error && !r.data) { try { localStorage.removeItem(chave); } catch (e) {} location.reload(); }
+      return;
+    }
+    if (error) { if (semRede(error)) { offline = true; if (window.Nuvem) window.Nuvem.offline = true; } return; }
+    if (!data || !data.perfil) { try { localStorage.removeItem(chave); } catch (e) {} location.reload(); return; }
+    const novo = { perfil: data.perfil, oficios: Array.isArray(data.oficios) ? data.oficios : [], obras: data.perfil === 'admin' || !Array.isArray(data.obras) ? null : data.obras };
+    const igual = JSON.stringify([novo.perfil, [...novo.oficios].sort(), novo.obras && [...novo.obras].sort()])
+      === JSON.stringify([guardado.perfil, [...(guardado.oficios || [])].sort(), guardado.obras && [...guardado.obras].sort()]);
+    try { localStorage.setItem(chave, JSON.stringify(novo)); } catch (e) {}
+    if (!igual) { location.reload(); return; }
+    try { await pessoas.carregar(); atualizarQuem(); } catch (e) {}
+  }
   function liberar() {
     if (iniciou) return;
     // cada perfil vê só as suas ferramentas, e cada pessoa só as suas obras
@@ -679,7 +711,6 @@
     else if (ev === 'SIGNED_OUT' && iniciou) location.reload();
   });
 
-  tCarregando('Conectando…');
   sb.auth.getSession().then(({ data }) => entrou(data.session)).catch(() => tLogin());
 
   function mostrarFalha(t) {
