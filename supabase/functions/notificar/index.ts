@@ -54,7 +54,7 @@ const emails = (ms: Membro[]) => ms.map(m => low(m.email));
 // Engenharia (e administradores), Segurança e quem é de campo de um ofício, só da obra
 const engenhariaDe = (ms: Membro[], obra: string) => emails(ms.filter(m => ['engenharia', 'admin'].includes(perfilDe(m)) && naObra(m, obra)));
 const segurancaDe = (ms: Membro[], obra: string) => emails(ms.filter(m => perfilDe(m) === 'seguranca' && naObra(m, obra)));
-const campoDe = (ms: Membro[], disc: string, obra: string) => emails(ms.filter(m => perfilDe(m) === 'campo' && (m.disciplinas || []).includes(disc) && naObra(m, obra)));
+const campoDe = (ms: Membro[], disc: string, obra: string) => emails(ms.filter(m => ['campo', 'seguranca'].includes(perfilDe(m)) && (m.disciplinas || []).includes(disc) && naObra(m, obra)));
 // quem decide (avalia, fecha, reprova): Segurança nas de segurança, Engenharia nas outras
 const decideDe = (ms: Membro[], p: Record<string, unknown>) => p.seguranca ? segurancaDe(ms, String(p.obra)) : engenhariaDe(ms, String(p.obra));
 // quem corrige: o funcionário escolhido na pendência (se ele tem acesso ao sistema);

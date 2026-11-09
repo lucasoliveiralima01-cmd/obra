@@ -17,11 +17,11 @@ Cada pessoa tem **um perfil** (escolhido em **Administração**) e vê **só as 
 |---|---|---|---|---|
 | **Administrador** | edita | edita | tudo o que a Engenharia faz, e fecha também as de segurança | sim |
 | **Engenharia** | edita | edita | abre, edita, avalia as sugestões e fecha as que não são de segurança | não |
-| **Segurança** | edita | não vê | registra, avalia e fecha as de segurança | não |
+| **Segurança** (técnicos de segurança) | edita | não vê | registra pendências oficiais direto (sem passar pela Engenharia), avalia e fecha as de segurança | não |
 | **Campo** | não vê | não vê | vê as dos seus **ofícios**, marca como corrigida (com foto) e **sugere** novas | não |
 | **Consulta** | só vê | só vê | só vê | não |
 
-- **Ofícios** (Pedreiro, Eletricista, Impermeabilizador…) são só de quem é de Campo e podem ser vários. A lista de ofícios fica em **Listas e regras → Ofícios**.
+- **Ofícios** (Pedreiro, Eletricista, Impermeabilizador…) são obrigatórios para quem é de Campo e podem ser vários. Quem é da Segurança pode ter ofício também (ex.: Técnico de segurança), para receber as pendências desse ofício e ser escolhido como responsável. Técnico de segurança deve ficar no perfil **Segurança**, não em Campo; a Administração avisa quando isso acontece. A lista de ofícios fica em **Listas e regras → Ofícios**.
 - **Pendência de segurança**: a Segurança registra e escolhe quem corrige. Quando a Engenharia vê uma não conformidade de segurança, marca **É de segurança do trabalho** e ela vai **em avaliação** para a Segurança, que escolhe quem corrige e encaminha. Quem dá a baixa final é a Segurança.
 - **Sugestão de Campo**: quem é de Campo registra o que encontrou; a pendência fica **em avaliação** até a Engenharia aprovar (escolhendo quem corrige) ou não aprovar (com o motivo, que volta para quem sugeriu).
 

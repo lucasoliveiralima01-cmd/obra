@@ -2612,6 +2612,66 @@ $p15$;
   raise notice 'Passo 15 aplicado: Foto da obra para todos da obra';
 end $passo$;
 
+
+-- =====================================================================
+-- Passo 16: Segurança com ofício (técnico de segurança)
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 16 then return; end if;
+  execute $p16$
+-- quem é do perfil Segurança também pode ter ofícios (ex.: Técnico de segurança):
+-- aparece na lista de funcionários para ser escolhido como responsável pela correção
+-- e vê as pendências do seu ofício, além das de segurança
+create or replace function public.membro_funcionarios(p_email text) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  e text := lower(trim(p_email));
+  m public.membros;
+  nm text;
+  com_oficio boolean;
+begin
+  select * into m from public.membros where lower(email) = e;
+  com_oficio := m.email is not null and m.perfil in ('campo', 'seguranca') and array_length(m.disciplinas, 1) > 0;
+  update public.pend_funcionarios f set ativo = false
+  where lower(f.email) = e and f.ativo
+    and (not com_oficio or f.obra is null or not (f.obra = any(m.obras)));
+  if not com_oficio then return; end if;
+  select nullif(trim(nome), '') into nm from public.perfis where lower(email) = e;
+  update public.pend_funcionarios f set cargos = m.disciplinas, ativo = true
+  where lower(f.email) = e and f.obra = any(m.obras);
+  insert into public.pend_funcionarios (obra, nome, cargos, email, ativo)
+  select o, coalesce(nm, split_part(e, '@', 1)), m.disciplinas, e, true
+  from unnest(m.obras) o
+  where exists (select 1 from public.obras where id = o)
+    and not exists (select 1 from public.pend_funcionarios f where lower(f.email) = e and f.obra = o);
+end $$;
+revoke all on function public.membro_funcionarios(text) from public, anon, authenticated;
+
+create or replace function public.pend_ve(p_obra text, p_seg boolean, p_disc text, p_status text, p_por text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select case
+      when not (m.perfil = 'admin' or p_obra = any(m.obras)) then false
+      when m.perfil in ('admin', 'engenharia', 'consulta') then true
+      when m.perfil = 'seguranca' then p_seg or lower(p_por) = lower(m.email)
+                                       or (p_status <> 'avaliacao' and p_disc = any(m.disciplinas))
+      when m.perfil = 'campo' then lower(p_por) = lower(m.email)
+                                   or (p_status <> 'avaliacao' and p_disc = any(m.disciplinas))
+      else false end
+    from public.membros m where lower(m.email) = lower(auth.jwt() ->> 'email') limit 1), false)
+$$;
+
+-- refaz a lista de funcionários de quem já é da Segurança e tem ofício
+do $x$ declare r record; begin
+  for r in select email from public.membros where perfil = 'seguranca' and array_length(disciplinas, 1) > 0 loop
+    perform public.membro_funcionarios(r.email);
+  end loop;
+end $x$;
+$p16$;
+  update public.banco_versao set versao = 16, atualizado_em = now();
+  raise notice 'Passo 16 aplicado: Segurança com ofício';
+end $passo$;
+
 -- =====================================================================
 -- Conferência final
 -- =====================================================================

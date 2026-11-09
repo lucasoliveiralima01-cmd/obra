@@ -103,6 +103,8 @@ a.tab{text-decoration:none;margin-left:auto}
   .p{grid-template-columns:40px minmax(0,1fr)}.pc,.pa{grid-column:1/-1}a.tab{margin-left:0}
   .form{grid-template-columns:1fr}.ativ div{grid-template-columns:1fr;gap:2px}
 }
+.aviso-pf p{margin:0}
+.aviso-pf{display:grid;gap:8px;justify-items:start;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);border-radius:8px;padding:9px 11px;font-size:.86rem;margin:4px 0}
 </style>
 </head>
 <body>
@@ -131,13 +133,13 @@ const iniciais = n => String(n || '').trim().split(/[\s.@_-]+/).filter(Boolean).
 const PERFIS = [
   ['admin', 'Administrador', 'Tudo, em todas as obras, e esta Administração.'],
   ['engenharia', 'Engenharia', 'Edita Risco, Concretagem e Fachadas. Abre, aprova e fecha pendências.'],
-  ['seguranca', 'Segurança', 'Edita o Mapa de Risco. Registra, avalia e fecha as pendências de segurança.'],
-  ['campo', 'Campo', 'Só Pendências: vê as dos seus ofícios, marca como corrigida e sugere novas.'],
+  ['seguranca', 'Segurança', 'Técnicos de segurança do trabalho. Edita o Mapa de Risco e registra pendências oficiais direto, sem passar pela Engenharia; avalia e fecha as de segurança. Não vê Concretagem nem Fachadas.'],
+  ['campo', 'Campo', 'Equipes que corrigem. Só Pendências: vê as dos seus ofícios, marca como corrigida e sugere novas (a Engenharia aprova).'],
   ['consulta', 'Consulta', 'Só visualiza os mapas e as pendências, sem alterar nada.']
 ];
 const rotPerfil = v => (PERFIS.find(p => p[0] === v) || [, v || 'Sem acesso'])[1];
 const descPerfil = v => (PERFIS.find(p => p[0] === v) || [, , ''])[2];
-const BANCO_ESPERADO = 15;   // versão do banco.sql que esta tela espera
+const BANCO_ESPERADO = 16;   // versão do banco.sql que esta tela espera
 
 let NV = null, sb = null, LISTA = [], DISC = [], OBRAS = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '', VERSAO = null;
 const nomeDe = e => { const u = LISTA.find(x => x.email === String(e || '').toLowerCase()); return (u && u.nome) || (NV ? NV.pessoas.nome(e) : String(e || '').split('@')[0]); };
@@ -234,7 +236,9 @@ function pessoaHtml(u) {
   const info = [u.tem_conta ? 'conta criada em ' + fmtDia(u.criado_em) : '', u.ultimo_acesso ? 'último acesso em ' + fmtDH(u.ultimo_acesso) : (u.tem_conta ? 'ainda não entrou' : ''), u.pendencias ? u.pendencias + ' pendência(s) registrada(s)' : ''].filter(Boolean).join(' · ');
   const perfis = `<div class="seg" role="radiogroup" aria-label="Perfil de ${esc(u.email)}">${PERFIS.map(([v, t]) => `<button type="button" role="radio" data-perfil="${i}" data-v="${v}" aria-checked="${pf === v}" ${sou ? 'disabled' : ''}>${t}</button>`).join('')}</div>
     <p class="hint">${pf ? esc(descPerfil(pf)) : 'Escolha o perfil para liberar o acesso.'}${sou ? ' Para mudar o seu próprio perfil, peça a outro administrador.' : ''}</p>`;
-  const oficios = pf === 'campo' ? `<div class="grupo"><span class="lbl">Ofícios${r ? ' <b class="ruim">· marque ao menos um para salvar</b>' : ''}</span><div class="dsc" role="group" aria-label="Ofícios">${chipsOficios(ofs, 'data-of')}</div></div>` : '';
+  const oficios = pf === 'campo' || pf === 'seguranca' ? `<div class="grupo"><span class="lbl">Ofícios${pf === 'seguranca' ? ' (opcional: para receber as pendências do ofício)' : ''}${r ? ' <b class="ruim">· marque ao menos um para salvar</b>' : ''}</span><div class="dsc" role="group" aria-label="Ofícios">${chipsOficios(ofs, 'data-of')}</div></div>` : '';
+  // Campo com ofício de segurança: o perfil certo é Segurança
+  const errado = pf === 'campo' && !sou && ofs.some(o => /segur/i.test(o)) ? `<div class="aviso-pf"><p>Tem o ofício <b>${esc(ofs.find(o => /segur/i.test(o)))}</b>, mas está no perfil Campo: só vê Pendências e o que registra passa pela Engenharia. No perfil <b>Segurança</b> passa a editar o Mapa de Risco e a registrar pendências oficiais direto. O ofício continua marcado.</p><button type="button" class="btn sm" data-paraseg="${i}">Mudar para Segurança</button></div>` : '';
   const obras = pf && pf !== 'admin' ? `<div class="grupo"><span class="lbl">Obras${obs.length ? ' · ' + obs.length + ' de ' + OBRAS.length : ''}</span><div class="dsc" role="group" aria-label="Obras">${chipsObras(obs, 'data-ob')}</div></div>`
     : pf === 'admin' ? '<p class="hint">Administrador vê todas as obras.</p>' : '';
   const acoes = [u.tem_conta && !sou ? `<button class="btn sm ghost" data-senha="${i}" type="button">Enviar link de senha</button>` : '',
@@ -245,7 +249,7 @@ function pessoaHtml(u) {
     <span class="av" aria-hidden="true">${esc(iniciais(u.nome || u.email))}</span>
     <div class="pi"><div class="nm"><input class="nome" data-nome="${i}" maxlength="80" value="${esc(u.nome || '')}" placeholder="${esc(u.email.split('@')[0])} (sem nome)" aria-label="Nome de ${esc(u.email)}">${badges}</div>
       <span class="em">${esc(u.email)}</span>${info ? `<span class="info">${esc(info)}</span>` : ''}</div>
-    <div class="pc"><span class="lbl">Perfil</span>${perfis}${oficios}${obras}</div>
+    <div class="pc"><span class="lbl">Perfil</span>${perfis}${errado}${oficios}${obras}</div>
     ${acoes ? `<div class="pa">${acoes}</div>` : ''}
   </article>`;
 }
@@ -267,8 +271,12 @@ function ligarPessoas(C) {
     await salvarPerfil(u, v, null, obras, (u.nome || u.email) + ': ' + rotPerfil(v) + '.'); });
   C.querySelectorAll('[data-of]').forEach(b => b.onclick = async () => { const art = b.closest('[data-email]'); const u = LISTA.find(x => x.email === art.dataset.email), v = b.dataset.of;
     const r = RASC[u.email]; const ds = (r ? r.oficios : (u.oficios || u.disciplinas || [])).slice(); const k = ds.indexOf(v); if (k >= 0) ds.splice(k, 1); else ds.push(v);
-    if (!ds.length) { if (r) { r.oficios = []; telaPessoas(); } else toast('Quem é de Campo precisa de ao menos um ofício.'); return; }
-    await salvarPerfil(u, 'campo', ds, null, (u.nome || u.email) + ': ' + ds.join(', ') + '.'); });
+    if (!ds.length && (r ? r.perfil : perfilDe(u)) === 'campo') { if (r) { r.oficios = []; telaPessoas(); } else toast('Quem é de Campo precisa de ao menos um ofício.'); return; }
+    const pfAtual = r ? r.perfil : perfilDe(u);
+    if (!ds.length && pfAtual === 'seguranca') { await salvarPerfil(u, 'seguranca', [], null, (u.nome || u.email) + ': sem ofício.'); return; }
+    await salvarPerfil(u, pfAtual === 'seguranca' ? 'seguranca' : 'campo', ds, null, (u.nome || u.email) + ': ' + ds.join(', ') + '.'); });
+  C.querySelectorAll('[data-paraseg]').forEach(b => b.onclick = async () => { const u = L(b.dataset.paraseg);
+    await salvarPerfil(u, 'seguranca', null, null, (u.nome || u.email) + ': Segurança.'); });
   C.querySelectorAll('[data-ob]').forEach(b => b.onclick = async () => { const art = b.closest('[data-email]'); const u = LISTA.find(x => x.email === art.dataset.email), v = b.dataset.ob;
     const os = (u.obras || []).slice(); const k = os.indexOf(v); if (k >= 0) os.splice(k, 1); else os.push(v);
     await salvarPerfil(u, perfilDe(u), null, os, (u.nome || u.email) + (k >= 0 ? ' saiu de ' : ' entrou em ') + nomeObra(v) + '.'); });
@@ -299,7 +307,7 @@ function telaConvidar() {
     <div class="fld"><label for="cEmail">E-mail *</label><input id="cEmail" type="email" required placeholder="colega@empresa.com"></div>
     <div class="fld"><label for="cNome">Nome</label><input id="cNome" maxlength="80" placeholder="Como aparece para a equipe"></div>
     <div class="fld full"><span class="l">Perfil</span><div class="seg" id="cPerfil" role="radiogroup" aria-label="Perfil"></div><p class="hint" id="cDesc"></p></div>
-    <div class="fld full" id="cOfBox"><span class="l">Ofícios</span><div class="dsc" id="cOf"></div></div>
+    <div class="fld full" id="cOfBox"><span class="l" id="cOfL">Ofícios</span><div class="dsc" id="cOf"></div></div>
     <div class="fld full" id="cObBox"><span class="l">Obras</span><div class="dsc" id="cOb"></div></div>
     <label class="full" style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="cEnviar" checked> Enviar o convite por e-mail agora</label>
     <div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" id="cOk" type="button">Convidar e liberar</button><span class="msg" id="cMsg"></span></div>
@@ -307,7 +315,7 @@ function telaConvidar() {
   const desenhar = () => {
     $('cPerfil').innerHTML = PERFIS.map(([v, t]) => `<button type="button" role="radio" data-v="${v}" aria-checked="${pf === v}">${t}</button>`).join('');
     $('cDesc').textContent = descPerfil(pf);
-    $('cOfBox').hidden = pf !== 'campo'; $('cObBox').hidden = pf === 'admin';
+    $('cOfBox').hidden = pf !== 'campo' && pf !== 'seguranca'; $('cOfL').textContent = pf === 'seguranca' ? 'Ofícios (opcional)' : 'Ofícios'; $('cObBox').hidden = pf === 'admin';
     $('cOf').innerHTML = chipsOficios(ofs, 'data-v'); $('cOb').innerHTML = chipsObras(obs, 'data-v');
     $('cPerfil').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { pf = b.dataset.v; desenhar(); });
     $('cOf').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const v = b.dataset.v, k = ofs.indexOf(v); if (k >= 0) ofs.splice(k, 1); else ofs.push(v); desenhar(); });
@@ -323,7 +331,7 @@ function telaConvidar() {
     if (LISTA.some(u => u.email === email && perfilDe(u)) && !(await confirmar('Pessoa já liberada', esc(email) + ' já tem acesso. Atualizar o perfil e as obras e reenviar o e-mail?', 'Atualizar'))) return;
     $('cOk').disabled = true; msg('Liberando…', true);
     try {
-      await NV.administracao.definirPerfil(email, pf, pf === 'campo' ? ofs : null, pf === 'admin' ? null : obs);
+      await NV.administracao.definirPerfil(email, pf, pf === 'campo' || pf === 'seguranca' ? ofs : null, pf === 'admin' ? null : obs);
       if (nome) await NV.pessoas.salvarNome(email, nome);
       let aviso = 'Acesso liberado.';
       if ($('cEnviar').checked) {
