@@ -2582,6 +2582,36 @@ $p14$;
   raise notice 'Passo 14 aplicado: Perfis, ofícios e acesso por obra';
 end $passo$;
 
+
+-- =====================================================================
+-- Passo 15: Foto da obra para todos da obra
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 15 then return; end if;
+  execute $p15$
+-- a foto da obra (obras/<obra>/…) aparece na tela inicial de todos os perfis com acesso à obra,
+-- inclusive Campo; enviar e apagar continua só com Administrador, Engenharia e Segurança
+create or replace function public.arquivo_ok(p_nome text, p_editar boolean) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when split_part(p_nome, '/', 1) in ('risco', 'concretagem', 'fachada')
+      then public.painel_ok(split_part(p_nome, '/', 1) || ':' || split_part(p_nome, '/', 2), p_editar)
+    when split_part(p_nome, '/', 1) = 'obras'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'seguranca') or (not p_editar and public.perfil_atual() is not null), false)
+    when p_nome like 'pendencias/%/plantas/%'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and (not p_editar or public.ferramenta_ok('risco', true))
+    when split_part(p_nome, '/', 1) = 'pendencias'
+      then public.pend_visivel_id(split_part(p_nome, '/', 3))
+           and (not p_editar or coalesce(public.perfil_atual() <> 'consulta', false))
+    else false end
+$$;
+$p15$;
+  update public.banco_versao set versao = 15, atualizado_em = now();
+  raise notice 'Passo 15 aplicado: Foto da obra para todos da obra';
+end $passo$;
+
 -- =====================================================================
 -- Conferência final
 -- =====================================================================
