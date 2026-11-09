@@ -63,8 +63,8 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
 .obras{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.obra{display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:0 16px 14px;overflow:hidden}
-.obra .ft{display:block;margin:0 -16px 4px;aspect-ratio:16/7;background:linear-gradient(135deg,var(--navy),var(--petrol));position:relative;overflow:hidden;text-decoration:none}
+.obra{display:grid;gap:8px;align-content:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:0 16px 14px}
+.obra .ft{display:block;margin:0 -16px 4px;border-radius:var(--r) var(--r) 0 0;aspect-ratio:16/7;background:linear-gradient(135deg,var(--navy),var(--petrol));position:relative;overflow:hidden;text-decoration:none}
 .obra .ft img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .obra .ft span{position:absolute;left:16px;bottom:10px;font:700 1.9rem/1 var(--f-disp);color:rgba(255,255,255,.85);letter-spacing:.04em}
 .ft-prev{position:relative;aspect-ratio:16/7;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,var(--navy),var(--petrol))}
@@ -100,15 +100,43 @@ a.tool:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(10,30,45,.08)
 .obra a.nm{font:700 1.15rem/1.2 var(--f-disp);color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
 .obra a.nm::after{content:" →";color:var(--accent)}
 .obra a.nm:hover{color:var(--accent)}
-.md{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px}
-.md h2{margin:0;font:700 1.15rem var(--f-disp)}
-.md-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
-.md-b{display:grid;gap:4px;align-content:start;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px}
-.md-b h3{margin:0 0 2px;font:700 .78rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:6px;align-items:center}
-.md-b h3 b{font-family:var(--f-mono);color:var(--ink)}
-.md-b a{display:grid;gap:1px;text-decoration:none;color:var(--ink);padding:5px 6px;border-radius:6px}
-.md-b a:hover{background:var(--accent-soft)}
-.md-b a span{font:600 .88rem var(--f-body)} .md-b a small{color:var(--muted);font-size:.78rem}
+/* "Meu dia" */
+.md{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px 18px;display:grid;gap:12px}
+.md-top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px}
+.md h2{margin:0;font:700 1.45rem var(--f-disp)}
+.md-chips{display:flex;flex-wrap:wrap;gap:6px}
+.md-chip{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 11px;font:500 .84rem var(--f-body);color:var(--muted);background:none}
+.md-chip.on{color:var(--ink);border-color:var(--accent)}
+.md-chip.on b{font-family:var(--f-mono);color:var(--accent)}
+.md-chip.on:hover,.md-chip[aria-pressed="true"]{background:var(--accent-soft)}
+.md-h{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.md-h h3{margin:0;font:700 1.12rem var(--f-disp)}
+.md-volta{background:none;border:0;color:var(--accent);font:600 .86rem var(--f-body);padding:4px 2px}
+.md-o{display:grid;gap:6px}
+.md-o h3{margin:0;font:600 .9rem var(--f-body);color:var(--accent)}
+.md-l{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:6px 16px}
+.md-c{display:flex;gap:10px;align-items:center;min-height:48px;padding:7px 10px 7px 12px;border:1px solid var(--line);border-radius:7px;color:var(--ink);text-decoration:none;transition:background .12s,border-color .12s}
+.md-c:hover,.md-c:focus-visible{background:var(--accent-soft);border-color:var(--accent)}
+.md-t{display:grid;gap:1px;min-width:0;flex:1}
+.md-t b{font:600 .92rem var(--f-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.md-t small{color:var(--muted);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.md-t small b{font:inherit;font-weight:700}
+.md-pri{flex:none;font:600 .74rem var(--f-body);padding:3px 10px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.md-pri.pri-critica{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.md-pri.pri-alta{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.md-ch{flex:none;color:var(--muted);font:600 1.2rem/1 var(--f-body);width:14px;text-align:center}
+.md-c:hover .md-ch{color:var(--accent)}
+.md-mais{font:600 .84rem var(--f-body);text-decoration:none}
+/* nome da obra com a engrenagem */
+.nmr{display:flex;gap:8px;align-items:center;justify-content:space-between;min-width:0}
+.engr{position:relative;flex:none}
+.engr-b{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--muted)}
+.engr-b:hover,.engr-b[aria-expanded="true"]{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.engr-m{position:absolute;right:0;top:calc(100% + 4px);z-index:10;min-width:170px;display:grid;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.25)}
+.engr-m button{background:none;border:0;border-radius:5px;padding:8px 11px;text-align:left;font:500 .9rem var(--f-body);color:var(--ink)}
+.engr-m button:hover,.engr-m button:focus-visible{background:var(--accent-soft)}
+.engr-m button.ruim{color:var(--bad)}
+.engr-m button.ruim:hover{background:var(--bad-soft)}
 .vers{display:grid;gap:4px;margin-top:6px}
 .vers div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.86rem;border-top:1px solid var(--line-2);padding-top:5px}
 /* ferramentas da obra: ícones como apps de celular */
@@ -235,35 +263,56 @@ function redesenhar() { if (obraAtual()) telaObra(obraAtual()); else desenharLis
 /* ---------------- resumo de cada obra (pendências, concretagens, mapa de risco) ---------------- */
 let RESUMO = {}, PENDS = [], ROMP = [], FACH = [];
 /* ---------------- "Meu dia": o que é de cada pessoa, em todas as obras ---------------- */
+const PRI_MD = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' }, PRI_ORD_MD = ['critica', 'alta', 'media', 'baixa'];
+let mdAba = '';   // lista mostrada no "Meu dia" ('' = a principal)
 function meuDiaHtml() {
   if (!NV) return '';
   const hoje = hojeIso(), eu = String(NV.usuario.email || '').toLowerCase(), nomeObra = id => ((lista || []).find(o => o.id === id) || { nome: id }).nome;
   const venc = p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje;
-  const rot = p => (p.numero ? '#' + p.numero + ' · ' : '') + [p.pavimento, p.local_tipo === 'Apartamento' && p.unidade ? 'Apto ' + p.unidade : p.local_tipo, p.comodo].filter(Boolean).join(' · ') + ' — ' + p.tipo;
-  const linha = p => `<a href="pendencias.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span>${esc(rot(p))}</span><small>${esc(nomeObra(p.obra))}${venc(p) ? ' · <b class="ruim">vencida</b>' : p.prazo ? ' · prazo ' + fmtD(p.prazo) : ''}</small></a>`;
-  const bloco = (tit, arr, vazio) => `<div class="md-b"><h3>${tit} <b>${arr.length}</b></h3>${arr.length ? arr.slice(0, 6).map(linha).join('') + (arr.length > 6 ? `<small class="muted">e mais ${arr.length - 6}…</small>` : '') : `<small class="muted">${vazio}</small>`}</div>`;
-  const ordem = (a, b) => (+venc(b) - +venc(a)) || ['critica', 'alta', 'media', 'baixa'].indexOf(a.prioridade) - ['critica', 'alta', 'media', 'baixa'].indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9'));
-  const blocos = [], pf = NV.perfil;
+  const ordem = (a, b) => (+venc(b) - +venc(a)) || PRI_ORD_MD.indexOf(a.prioridade) - PRI_ORD_MD.indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9'));
+  const onde = p => [p.pavimento, p.local_tipo === 'Apartamento' && p.unidade ? 'Apto ' + p.unidade : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo, p.numero ? '#' + p.numero : ''].filter(Boolean).join(' · ');
+  const cartao = p => `<a class="md-c" href="pendencias.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span class="md-t"><b>${esc(p.tipo || 'Pendência')}</b><small>${esc(onde(p))}${venc(p) && mdAba ? ' · <b class="ruim">em atraso</b>' : ''}</small></span>${PRI_MD[p.prioridade] ? `<span class="md-pri pri-${p.prioridade}">${PRI_MD[p.prioridade]}</span>` : ''}<span class="md-ch" aria-hidden="true">›</span></a>`;
+  // agrupa por obra; no máximo 6 por obra, o resto num link para a obra
+  const grupos = arr => { const por = {}; arr.forEach(p => (por[p.obra] = por[p.obra] || []).push(p));
+    return Object.entries(por).map(([ob, ps]) => `<div class="md-o"><h3>${esc(nomeObra(ob))}</h3><div class="md-l">${ps.slice(0, 6).map(cartao).join('')}</div>${ps.length > 6 ? `<a class="md-mais" href="pendencias.html?obra=${encodeURIComponent(ob)}">Ver mais ${ps.length - 6} em ${esc(nomeObra(ob))} →</a>` : ''}</div>`).join(''); };
+  const plural = (n, s, p) => n + ' ' + (n === 1 ? s : p);
+  // listas: a principal (sem chip) e as que ficam nos chips do canto
+  const listas = [], pf = NV.perfil;
   if (pf === 'campo') {
-    blocos.push(bloco('Suas pendências para corrigir', PENDS.filter(p => p.status === 'aberta' || p.status === 'em_correcao').sort(ordem), 'Nenhuma pendência aberta nos seus ofícios.'));
-    blocos.push(bloco('Aguardando aprovação', PENDS.filter(p => p.status === 'corrigida').sort(ordem), 'Nada aguardando.'));
-    const sug = PENDS.filter(p => p.status === 'avaliacao' && String(p.criado_por || '').toLowerCase() === eu);
-    if (sug.length) blocos.push(bloco('Suas sugestões em avaliação', sug, ''));
+    const corr = PENDS.filter(p => p.status === 'aberta' || p.status === 'em_correcao').sort(ordem);
+    listas.push({ id: '', arr: corr, tit: n => plural(n, 'pendência para corrigir', 'pendências para corrigir'), vazio: 'Nenhuma pendência para corrigir nos seus ofícios.', cor: corr.some(venc) ? 'ruim' : '' });
+    listas.push({ id: 'aprov', arr: PENDS.filter(p => p.status === 'corrigida').sort(ordem), tit: n => plural(n, 'aguardando aprovação', 'aguardando aprovação'), nada: 'Nada aguardando aprovação' });
+    listas.push({ id: 'sug', arr: PENDS.filter(p => p.status === 'avaliacao' && String(p.criado_por || '').toLowerCase() === eu).sort(ordem), tit: n => plural(n, 'sugestão em avaliação', 'sugestões em avaliação'), oculta: true });
   } else if (['admin', 'engenharia', 'seguranca'].includes(pf)) {
     // Segurança: as de segurança; Engenharia: as outras; administrador: todas
     const minhas = p => pf === 'admin' || (pf === 'seguranca' ? p.seguranca : !p.seguranca);
-    const aval = PENDS.filter(p => p.status === 'avaliacao' && minhas(p)).sort(ordem);
-    if (aval.length) blocos.push(bloco(pf === 'seguranca' ? 'Para a Segurança avaliar' : 'Sugestões para avaliar', aval, ''));
-    blocos.push(bloco('Corrigidas para você aprovar', PENDS.filter(p => p.status === 'corrigida' && minhas(p)).sort(ordem), 'Nada para aprovar.'));
-    blocos.push(bloco('Vencidas', PENDS.filter(p => venc(p) && (pf !== 'seguranca' || p.seguranca)).sort(ordem), 'Nenhuma vencida.'));
+    listas.push({ id: '', arr: PENDS.filter(p => venc(p) && (pf !== 'seguranca' || p.seguranca)).sort(ordem), tit: n => plural(n, 'pendência em atraso', 'pendências em atraso'), vazio: 'Nenhuma pendência em atraso.', cor: 'ruim' });
+    listas.push({ id: 'aval', arr: PENDS.filter(p => p.status === 'avaliacao' && minhas(p)).sort(ordem), tit: n => plural(n, pf === 'seguranca' ? 'pendência para a Segurança avaliar' : 'sugestão para avaliar', pf === 'seguranca' ? 'pendências para a Segurança avaliar' : 'sugestões para avaliar'), oculta: true });
+    listas.push({ id: 'aprov', arr: PENDS.filter(p => p.status === 'corrigida' && minhas(p)).sort(ordem), tit: n => plural(n, 'pendência para aprovar', 'pendências para aprovar'), nada: 'Nenhuma pendência para aprovar' });
   }
+  // corpos de prova e fachadas: cartões no mesmo formato, depois das pendências
+  const extras = [];
   const cps = ROMP.filter(r => r.hoje || r.pendentes);
-  if (cps.length && NV.podeVer('concretagem')) blocos.push(`<div class="md-b"><h3>Corpos de prova</h3>${cps.map(r => `<a href="concretagem.html?obra=${encodeURIComponent(r.obra)}"><span>${esc(nomeObra(r.obra))}</span><small>${[r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? '<b class="ruim">' + r.pendentes + ' sem resultado</b>' : ''].filter(Boolean).join(' · ')}</small></a>`).join('')}</div>`);
+  if (cps.length && NV.podeVer('concretagem')) extras.push(`<div class="md-o"><h3>Corpos de prova</h3><div class="md-l">${cps.map(r => `<a class="md-c" href="concretagem.html?obra=${encodeURIComponent(r.obra)}"><span class="md-t"><b>${esc(nomeObra(r.obra))}</b><small>${[r.hoje ? r.hoje + ' rompem hoje' : '', r.pendentes ? '<b class="ruim">' + r.pendentes + ' sem resultado</b>' : ''].filter(Boolean).join(' · ')}</small></span><span class="md-ch" aria-hidden="true">›</span></a>`).join('')}</div></div>`);
   // fachadas: áreas que terminam a cura hoje (liberadas para a próxima camada) e nos próximos 3 dias
   const fs = FACH.filter(x => x.hoje || x.breve);
-  if (fs.length && NV.podeVer('fachada')) blocos.push(`<div class="md-b"><h3>Fachadas</h3>${fs.map(x => `<a href="fachadas.html?obra=${encodeURIComponent(x.obra)}"><span>${esc(nomeObra(x.obra))}</span><small>${[x.hoje ? '<b class="bom">' + x.hoje + ' liberada' + (x.hoje > 1 ? 's' : '') + ' hoje</b>' + (x.prox ? ' para ' + esc(x.prox) : '') : '', x.breve ? x.breve + ' libera' + (x.breve > 1 ? 'm' : '') + ' em até 3 dias' : ''].filter(Boolean).join(' · ')}</small></a>`).join('')}</div>`);
-  if (!blocos.length) return '';
-  return `<section class="md" aria-label="Meu dia"><h2>Meu dia${NV.pessoas ? ' · ' + esc(NV.pessoas.nome(NV.usuario.email)) : ''}</h2><div class="md-g">${blocos.join('')}</div></section>`;
+  if (fs.length && NV.podeVer('fachada')) extras.push(`<div class="md-o"><h3>Fachadas</h3><div class="md-l">${fs.map(x => `<a class="md-c" href="fachadas.html?obra=${encodeURIComponent(x.obra)}"><span class="md-t"><b>${esc(nomeObra(x.obra))}</b><small>${[x.hoje ? '<b class="bom">' + x.hoje + ' liberada' + (x.hoje > 1 ? 's' : '') + ' hoje</b>' + (x.prox ? ' para ' + esc(x.prox) : '') : '', x.breve ? x.breve + ' libera' + (x.breve > 1 ? 'm' : '') + ' em até 3 dias' : ''].filter(Boolean).join(' · ')}</small></span><span class="md-ch" aria-hidden="true">›</span></a>`).join('')}</div></div>`);
+  if (!listas.length && !extras.length) return '';
+  if (!listas.some(l => l.id === mdAba && (l.id === '' || l.arr.length))) mdAba = '';
+  const atual = listas.find(l => l.id === mdAba);
+  const chips = listas.filter(l => l.id && (l.arr.length || !l.oculta)).map(l => l.arr.length
+    ? `<button type="button" class="md-chip on" data-md="${l.id}" aria-pressed="${mdAba === l.id}"><b>${l.arr.length}</b> ${esc(l.tit(l.arr.length).replace(/^\d+ /, ''))}</button>`
+    : `<span class="md-chip"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 8.2l2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${esc(l.nada)}</span>`).join('');
+  let corpo = '';
+  if (atual) {
+    const n = atual.arr.length;
+    corpo = `<div class="md-h"><h3 class="${n ? atual.cor || '' : 'bom'}">${n ? esc(atual.tit(n)) : esc(atual.vazio)}</h3>${mdAba ? '<button type="button" class="md-volta" data-md="">‹ Voltar</button>' : ''}</div>${grupos(atual.arr)}`;
+  }
+  return `<section class="md" aria-label="Meu dia"><div class="md-top"><h2>Meu dia</h2>${chips ? `<div class="md-chips">${chips}</div>` : ''}</div>${corpo}${mdAba ? '' : extras.join('')}</section>`;
+}
+function ligarMeuDia() {
+  const box = $('meuDia'); if (!box) return;
+  box.querySelectorAll('[data-md]').forEach(b => b.onclick = () => { mdAba = mdAba === b.dataset.md ? '' : b.dataset.md; box.innerHTML = meuDiaHtml(); ligarMeuDia(); });
 }
 // fachadas: por obra, quantas aplicações terminam a cura hoje e nos próximos 3 dias
 async function liberacoesFachada(hoje) {
@@ -333,9 +382,17 @@ function seloDe(id, fid) {
 }
 const fotoHtml = o => o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" style="${fotoEstilo(o.foto)}" hidden>` : `<span>${esc(iniciais(o.nome))}</span>`;
 const pintarFotos = box => box.querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; img.hidden = false; }).catch(() => {}));
-const acoesObra = o => podeEditar() ? `<div class="acts"><button class="btn sm ghost" data-ren="${esc(o.id)}">Renomear</button><button class="btn sm ghost" data-fot="${esc(o.id)}">Foto</button><button class="btn sm ghost" data-mod="${esc(o.id)}">${o.modelo && o.modelo.asset ? 'Trocar modelo' : 'Enviar modelo'}</button><button class="btn sm danger" data-del="${esc(o.id)}">Excluir</button></div>` : '';
+// engrenagem da obra: abre a lista Renomear / Foto / Modelo / Excluir
+const ENGR = '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M10.3 2.8h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
+const menuObra = o => podeEditar() ? `<div class="engr"><button type="button" class="engr-b" data-engr aria-haspopup="menu" aria-expanded="false" aria-label="Opções da obra ${esc(o.nome)}" title="Opções da obra">${ENGR}</button>
+  <div class="engr-m" role="menu" hidden><button type="button" role="menuitem" data-ren="${esc(o.id)}">Renomear</button><button type="button" role="menuitem" data-fot="${esc(o.id)}">${o.foto && o.foto.asset ? 'Trocar foto' : 'Foto'}</button><button type="button" role="menuitem" data-mod="${esc(o.id)}">${o.modelo && o.modelo.asset ? 'Trocar modelo' : 'Enviar modelo'}</button><button type="button" role="menuitem" class="ruim" data-del="${esc(o.id)}">Excluir</button></div></div>` : '';
+function fecharMenus(exceto) { document.querySelectorAll('.engr-m').forEach(m => { if (m === exceto) return; m.hidden = true; const b = m.previousElementSibling; if (b) b.setAttribute('aria-expanded', 'false'); }); }
+document.addEventListener('click', ev => { if (!ev.target.closest('.engr')) fecharMenus(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fecharMenus(); });
 function ligarAcoes(box) {
   const porId = id => lista.find(o => o.id === id);
+  box.querySelectorAll('[data-engr]').forEach(b => b.onclick = () => { const m = b.nextElementSibling, abrir = m.hidden; fecharMenus(m); m.hidden = !abrir; b.setAttribute('aria-expanded', String(abrir)); if (abrir) { const it = m.querySelector('button'); if (it) it.focus(); } });
+  box.querySelectorAll('.engr-m button').forEach(b => b.addEventListener('click', () => fecharMenus()));
   box.querySelectorAll('[data-fot]').forEach(b => b.onclick = () => formFoto(null, porId(b.dataset.fot)));
   box.querySelectorAll('[data-ren]').forEach(b => b.onclick = () => formRenomear(null, porId(b.dataset.ren)));
   box.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => formModelo(null, porId(b.dataset.mod)));
@@ -360,7 +417,7 @@ async function telaObras() {
   $('busca').oninput = ev => { filtro = ev.target.value; desenharLista(); };
   if ($('bNova')) $('bNova').onclick = () => formNova(null);
   await Promise.all([carregar(), carregarResumo()]);
-  const md = meuDiaHtml(); if (md && !$('meuDia')) $('main').insertAdjacentHTML('afterbegin', `<div id="meuDia">${md}</div>`);
+  const md = meuDiaHtml(); if (md && !$('meuDia')) { $('main').insertAdjacentHTML('afterbegin', `<div id="meuDia">${md}</div>`); ligarMeuDia(); }
   desenharLista();
   cargaStart(null);
 }
@@ -379,10 +436,8 @@ function desenharLista() {
   const fs = ferramentasComPagina();
   box.innerHTML = '<div class="obras">' + vis.map(o => `<article class="obra">
       <a class="ft" href="${destinoObra(o.id)}" tabindex="-1" aria-hidden="true">${fotoHtml(o)}</a>
-      <a class="nm" href="${destinoObra(o.id)}">${esc(o.nome)}</a>
+      <div class="nmr"><a class="nm" href="${destinoObra(o.id)}">${esc(o.nome)}</a>${menuObra(o)}</div>
       <nav class="apps" aria-label="Ferramentas de ${esc(o.nome)}">${fs.map(f => `<a class="app" href="${f.pagina}?obra=${encodeURIComponent(o.id)}" title="${esc(f.nome)}: ${esc(resumoDe(o.id, f.id).replace(/<[^>]+>/g, ''))}"><span class="ap-ic">${f.icone}${seloDe(o.id, f.id)}</span><span class="ap-nm">${esc(f.curto || f.nome)}</span></a>`).join('')}</nav>
-      <dl><dt>Modelo IFC</dt><dd>${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.bytes ? ' <span class="muted">(' + fmtMB(o.modelo.bytes) + ')</span>' : '') : '<span class="pill warn">sem modelo</span>'}</dd></dl>
-      ${acoesObra(o)}
     </article>`).join('') + '</div>';
   pintarFotos(box); ligarAcoes(box);
 }
@@ -396,8 +451,8 @@ async function telaObra(id) {
   if (fs.length === 1) { location.replace(fs[0].pagina + '?obra=' + encodeURIComponent(id)); return; }
   document.title = o.nome + ' · Ferramentas da Obra';
   $('main').innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><span>${esc(o.nome)}</span></nav>
-    <section class="hero"><div class="hft">${fotoHtml(o)}</div><div class="hinfo"><h2>${esc(o.nome)}</h2>
-      <p class="muted" style="margin:0">Modelo IFC: ${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.em ? ' (desde ' + fmtDia(o.modelo.em) + ')' : '') : 'nenhum'} · alterada em ${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' por ' + esc(quem(o.atualizado_por)) : ''}</p>${acoesObra(o)}
+    <section class="hero"><div class="hft">${fotoHtml(o)}</div><div class="hinfo"><div class="nmr"><h2>${esc(o.nome)}</h2>${menuObra(o)}</div>
+      <p class="muted" style="margin:0">Modelo IFC: ${o.modelo && o.modelo.asset ? esc(o.modelo.nome) + (o.modelo.em ? ' (desde ' + fmtDia(o.modelo.em) + ')' : '') : 'nenhum'} · alterada em ${fmtDH(o.atualizado_em)}${o.atualizado_por ? ' por ' + esc(quem(o.atualizado_por)) : ''}</p>
       ${(o.modelos || []).length ? `<details class="vers"><summary class="muted" style="cursor:pointer">Versões anteriores do modelo (${o.modelos.length})</summary>${o.modelos.map((m, i) => `<div><b>${esc(m.nome || 'modelo')}</b><span class="muted">usado até ${fmtDia(m.substituido_em)}${m.substituido_por ? ' · trocado por ' + esc(quem(m.substituido_por)) : ''}</span>${podeEditar() ? `<button class="btn sm ghost" data-volta="${i}" type="button">Voltar para esta versão</button>` : ''}</div>`).join('')}</details>` : ''}</div></section>
     <div class="tools">${fs.map(f => `<a class="tool" href="${f.pagina}?obra=${encodeURIComponent(o.id)}"><span class="ic">${f.icone}</span><div><h3>${esc(f.nome)}</h3><p class="rs1">${resumoDe(o.id, f.id)}</p><p>${esc(f.desc)}</p></div><span class="go">Abrir →</span></a>`).join('')}</div>`;
   pintarFotos($('main')); ligarAcoes($('main'));
