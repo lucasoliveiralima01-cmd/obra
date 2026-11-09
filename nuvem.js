@@ -615,7 +615,7 @@
     if (pessoas.disponivel()) q.onclick = () => tNome(false);
     const b = document.createElement('button'); b.className = 'hbtn'; b.id = 'bSair'; b.textContent = 'Sair'; b.onclick = sair;
     h.appendChild(q);
-    // "Sair" vai para o menu "⋯" quando ele existe (app.js)
+    // "Sair" vai para o menu da engrenagem quando ele existe (app.js)
     if (window.AppObra && window.AppObra.paraMenu) window.AppObra.paraMenu(b); else h.appendChild(b);
     // resetar um mapa: só administradores (o conteúdo vai para a lixeira)
     if (!admin) { const r = document.getElementById('bReset'); if (r) r.hidden = true; }

@@ -2,7 +2,7 @@
    Peças comuns a todas as páginas
    - App instalável: registra o sw.js e mostra o botão "Instalar app".
    - Tema: automático (segue o aparelho), claro ou escuro.
-   - Menu "⋯" no topo: junta as ações secundárias (botões com data-menu).
+   - Menu da engrenagem (configurações) no topo: junta as ações secundárias (botões com data-menu).
    - Nas ferramentas: abas para trocar de ferramenta na mesma obra e o
      nome da obra vira um seletor para trocar de obra.
    ===================================================================== */
@@ -31,7 +31,7 @@
 
   /* ---------------- estilos das peças ---------------- */
   const css = `
-  .mo-btn{font-size:1.05rem!important;line-height:1;padding:5px 10px!important}
+  .mo-btn{line-height:1;padding:5px 8px!important}.mo-btn svg{display:block}
   .mo-painel{position:fixed;z-index:60;min-width:230px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 80px);overflow:auto;background:var(--panel,#fff);color:var(--ink,#14222e);
     border:1px solid var(--line,#d3dce3);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.28);padding:6px;display:grid;gap:2px}
   .mo-painel .hbtn,.mo-painel a.hbtn{all:unset;box-sizing:border-box;display:flex;gap:8px;align-items:center;width:100%;padding:9px 10px;border-radius:7px;cursor:pointer;
@@ -90,8 +90,9 @@
   function garantirBotao() {
     if (document.getElementById('bMais')) return;
     const h = document.querySelector('.hctl'); if (!h) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn mo-btn'; b.id = 'bMais'; b.textContent = '⋯';
-    b.title = 'Mais opções'; b.setAttribute('aria-label', 'Mais opções'); b.setAttribute('aria-haspopup', 'menu');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn mo-btn'; b.id = 'bMais';
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M10.3 2.8h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+    b.title = 'Configurações'; b.setAttribute('aria-label', 'Configurações'); b.setAttribute('aria-haspopup', 'menu');
     b.onclick = ev => {
       ev.stopPropagation(); if (aberto && aberto.dataset.menu) { fechar(); return; }
       const box = document.createElement('div'); box.style.display = 'contents';
