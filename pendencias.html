@@ -400,34 +400,59 @@ const fecha = p => perfil() === 'admin' || (p.seguranca ? perfil() === 'seguranc
 const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
 
 /* ======================= IndexedDB: fila, fotos e cópia para usar sem sinal ======================= */
-// No iPhone (Safari) o IndexedDB às vezes falha (modo privado, Modo de Bloqueio) e um Blob guardado nele
-// pode não ser relido na hora de enviar ("Load failed"). Por isso: as fotos são guardadas como bytes
-// (ArrayBuffer) e, se o IndexedDB não abrir, tudo fica na memória desta página (funciona com sinal).
+// No iPhone (Safari) o IndexedDB falha de vários jeitos: modo privado, Modo de Bloqueio e, principalmente,
+// depois que a câmera abre a página vai para segundo plano e o Safari derruba a conexão; na volta, gravar ou
+// abrir de novo pode ficar esperando para sempre. Por isso: cada operação tem prazo, a conexão é refeita
+// quando cai e, se mesmo assim não der, os dados ficam na memória desta página (e são enviados com sinal).
+// As fotos são guardadas como bytes (ArrayBuffer), que o Safari relê sem problema na hora de enviar.
+const comPrazo = (pr, ms, nome) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error((nome || 'operação') + ' demorou demais')), ms))]);
 let IDB = null, SEM_IDB = false; const MEM = { fila: new Map(), blobs: new Map(), cache: new Map() };
-function idb() { if (IDB) return IDB; IDB = new Promise((res, rej) => { let r; try { r = indexedDB.open('pendencias_obra', 1); } catch (e) { rej(e); return; }
-  r.onupgradeneeded = () => { const d = r.result; for (const s of ['fila', 'blobs', 'cache']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); };
-  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('IndexedDB bloqueado')); });
-  IDB.catch(e => { console.warn('IndexedDB indisponível; usando a memória', e); SEM_IDB = true; IDB = null; }); return IDB; }
-async function abrir() { if (SEM_IDB) return null; try { return await idb(); } catch (e) { SEM_IDB = true; return null; } }
-const paraBytes = async b => ({ _bytes: b.arrayBuffer ? await b.arrayBuffer() : await new Response(b).arrayBuffer(), type: b.type || 'application/octet-stream' });
+function idb() {
+  if (IDB) return IDB;
+  const pr = comPrazo(new Promise((res, rej) => { let r; try { r = indexedDB.open('pendencias_obra', 1); } catch (e) { rej(e); return; }
+    r.onupgradeneeded = () => { const d = r.result; for (const s of ['fila', 'blobs', 'cache']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); };
+    r.onsuccess = () => { const d = r.result; d.onclose = () => { if (IDB === pr) IDB = null; }; d.onversionchange = () => { d.close(); if (IDB === pr) IDB = null; }; res(d); };
+    r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('IndexedDB bloqueado')); }), 2000, 'abrir o armazenamento');
+  IDB = pr; pr.catch(() => { if (IDB === pr) IDB = null; }); return pr;
+}
+// roda uma operação; se a conexão caiu ou travou, reabre e tenta mais uma vez; depois desiste (null)
+async function noIdb(fn) {
+  if (SEM_IDB) return { ok: false };
+  for (let i = 0; i < 2; i++) {
+    try { const d = await idb(); const v = await comPrazo(new Promise((res, rej) => fn(d, res, rej)), 2000, 'gravar no aparelho'); return { ok: true, v }; }
+    catch (e) { console.warn('IndexedDB', e); IDB = null; }
+  }
+  SEM_IDB = true;   // falhou mesmo reabrindo: nesta página usa só a memória (volta a usar o aparelho ao recarregar)
+  return { ok: false };
+}
+// voltou para a página (ex.: depois da câmera): abre uma conexão nova em vez de reaproveitar a que o Safari pode ter derrubado
+document.addEventListener('visibilitychange', () => { if (!document.hidden && IDB) { const velho = IDB; IDB = null; velho.then(d => { try { d.close(); } catch (e) {} }).catch(() => {}); } });
+window.addEventListener('pageshow', () => { IDB = null; });
+const paraBytes = async b => {
+  try { const buf = await comPrazo(b.arrayBuffer ? b.arrayBuffer() : new Response(b).arrayBuffer(), 5000, 'ler a foto'); return { _bytes: buf, type: b.type || 'image/jpeg' }; }
+  catch (e) { return await comPrazo(new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res({ _bytes: fr.result, type: b.type || 'image/jpeg' }); fr.onerror = () => rej(fr.error); fr.readAsArrayBuffer(b); }), 5000, 'ler a foto').catch(() => b); }
+};
 const deBytes = v => v && v._bytes ? new Blob([v._bytes], { type: v.type }) : v;
 async function idbPut(st, k, v) {
   if (st === 'blobs' && v instanceof Blob) v = await paraBytes(v);
-  const d = await abrir(); if (!d) { MEM[st].set(k, v); return; }
-  try { await new Promise((res, rej) => { const t = d.transaction(st, 'readwrite'); t.objectStore(st).put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); }
-  catch (e) { console.warn('IndexedDB não gravou; usando a memória', e); MEM[st].set(k, v); }
+  MEM[st].set(k, v);   // a memória sempre tem a versão mais nova; o aparelho guarda para depois
+  const r = await noIdb((d, res, rej) => { const t = d.transaction(st, 'readwrite'); t.objectStore(st).put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error('gravação cancelada')); });
+  if (r.ok && st !== 'fila') MEM[st].delete(k);   // a fila fica também na memória (é pequena)
 }
 async function idbGet(st, k) {
   let v = MEM[st].has(k) ? MEM[st].get(k) : null;
-  if (v == null) { const d = await abrir(); if (d) v = await new Promise(res => { try { const r = d.transaction(st).objectStore(st).get(k); r.onsuccess = () => res(r.result ?? null); r.onerror = () => res(null); } catch (e) { res(null); } }); }
+  if (v == null) { const r = await noIdb((d, res, rej) => { const q = d.transaction(st).objectStore(st).get(k); q.onsuccess = () => res(q.result ?? null); q.onerror = () => rej(q.error); }); if (r.ok) v = r.v; }
   return st === 'blobs' ? deBytes(v) : v;
 }
-async function idbDel(st, k) { MEM[st].delete(k); const d = await abrir(); if (!d) return; return new Promise(res => { try { const t = d.transaction(st, 'readwrite'); t.objectStore(st).delete(k); t.oncomplete = res; t.onerror = res; } catch (e) { res(); } }); }
-async function idbAll(st) { const d = await abrir(); const m = new Map();
-  if (d) await new Promise(res => { try { const r = d.transaction(st).objectStore(st).openCursor();
-    r.onsuccess = () => { const c = r.result; if (c) { m.set(c.key, c.value); c.continue(); } else res(); }; r.onerror = () => res(); } catch (e) { res(); } });
-  for (const [k, v] of MEM[st]) m.set(k, v);   // o que só ficou na memória vale por cima
-  return [...m.values()]; }
+async function idbDel(st, k) { MEM[st].delete(k); await noIdb((d, res, rej) => { const t = d.transaction(st, 'readwrite'); t.objectStore(st).delete(k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+async function idbAll(st) {
+  const m = new Map();
+  const r = await noIdb((d, res, rej) => { const o = new Map(); const q = d.transaction(st).objectStore(st).openCursor();
+    q.onsuccess = () => { const c = q.result; if (c) { o.set(c.key, c.value); c.continue(); } else res(o); }; q.onerror = () => rej(q.error); });
+  if (r.ok) for (const [k, v] of r.v) m.set(k, v);
+  for (const [k, v] of MEM[st]) m.set(k, v);   // o que está na memória vale por cima
+  return [...m.values()];
+}
 
 /* ======================= fotos: reduz para 1600 px e JPEG ======================= */
 async function comprimir(arq) {
@@ -1003,7 +1028,7 @@ function formPend(id, encaminhar) {
       bloqueios: (f.bloqueios || []).filter(b => b.servico).map(b => ({ servico: b.servico, local: String(b.local || '').trim() })),
       prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null,
       ponto: f.ponto && f.ponto.pav === plantaDe(f.pavimento) ? f.ponto : null };
-    $('pOk').disabled = true;
+    $('pOk').disabled = true; $('pMsg').className = 'msg'; $('pMsg').textContent = 'Registrando…';
     try {
     for (const x of novas) await idbPut('blobs', x.fid, x.blob);
     const fotos = novas.map(x => ({ fid: x.fid, tipo: 'antes' }));
