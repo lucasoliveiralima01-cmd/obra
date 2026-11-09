@@ -12,8 +12,8 @@
   const instalado = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const FERR = [
-    { id: 'risco', nome: 'Risco', pag: 'risco.html' },
-    { id: 'concretagem', nome: 'Concretagem', pag: 'concretagem.html' },
+    { id: 'risco', nome: 'Riscos', pag: 'risco.html' },
+    { id: 'concretagem', nome: 'Concretagens', pag: 'concretagem.html' },
     { id: 'fachada', nome: 'Fachadas', pag: 'fachadas.html' },
     { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html' }
   ];
@@ -59,7 +59,21 @@
   .mo-obras a[aria-current="true"]{background:var(--accent-soft,#dcebf2)}
   .mo-obras a[aria-current="true"]::after{content:"atual";font:500 .72rem var(--f-mono,monospace);color:var(--muted,#5a6b78)}
   .mo-busca{background:var(--bg,#eef2f5);border:1px solid var(--line,#d3dce3);border-radius:7px;padding:8px 10px;margin:2px 4px 6px;color:var(--ink,#14222e);font:inherit}
-  @media (max-width:640px){.mo-abas{width:100%;justify-content:space-between}.mo-abas a{flex:1;text-align:center;padding:6px 4px}}
+  .mo-trilha{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:8px max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))}
+  .mo-crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font:.86rem var(--f-body,sans-serif);color:var(--muted,#5a6b78)}
+  .mo-crumbs a{font-weight:600;text-decoration:none;color:var(--accent,#074669)} .mo-crumbs a:hover{text-decoration:underline}
+  .mo-acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .mo-acoes:empty{display:none}
+  .mo-trilha .hbtn{background:var(--panel,#fff);color:var(--ink,#14222e);border:1px solid var(--line,#d3dce3);border-radius:8px;padding:6px 14px;font:600 .86rem var(--f-body,sans-serif);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;cursor:pointer}
+  .mo-trilha .hbtn:hover{border-color:var(--accent,#074669);background:var(--panel,#fff)}
+  .mo-trilha .hbtn[hidden]{display:none}
+  .mo-trilha .hbtn.pendchip{background:var(--warn-soft,#fbecd2);color:var(--warn,#b86e00);border-color:var(--warn,#b86e00)}
+  .mo-trilha .hbtn.alerta{background:var(--bad-soft,#f8e0dc);color:var(--bad,#c23b2f);border-color:var(--bad,#c23b2f)}
+  @media (max-width:640px){.mo-abas{width:100%;justify-content:space-between;order:3}.mo-abas a{flex:1;text-align:center;padding:6px 4px}
+    .brand .hctl{width:auto;margin-left:auto;order:2}
+    .brand .ttl{width:auto;flex:1 1 0;min-width:0}
+    .brand #bQuem{display:none}
+    .mo-trilha .hbtn{padding:5px 10px;font-size:.8rem}}
   `;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
@@ -117,15 +131,39 @@
     garantirBotao();
   }
 
+  /* ---------------- caminho e ações principais (nos mapas) ---------------- */
+  function montarTrilha(id, atual, temObra) {
+    const topo = document.querySelector('header.brand'); if (!topo || document.querySelector('.mo-trilha')) return;
+    const bo = document.getElementById('bObras'); if (bo) bo.hidden = true;
+    const nomeF = (FERR.find(f => f.id === atual) || {}).nome || '';
+    const t = document.createElement('div'); t.className = 'mo-trilha';
+    t.innerHTML = `<nav class="mo-crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span>${temObra ? `<a href="index.html?obra=${encodeURIComponent(id)}" class="mo-cobra"></a>` : '<span class="mo-cobra"></span>'}<span>›</span><span>${esc(nomeF)}</span></nav><div class="mo-acoes"></div>`;
+    const ac = t.querySelector('.mo-acoes');
+    document.querySelectorAll('.hctl [data-barra]').forEach(b => ac.appendChild(b));
+    topo.after(t);
+    const pai = t.parentElement; if (pai && pai.classList.contains('app')) pai.style.gridTemplateRows = 'auto auto 1fr';
+    // nome da obra: o cadastrado no banco; enquanto não chega, o do topo
+    const on = document.getElementById('obraNome'), cob = t.querySelector('.mo-cobra');
+    const provis = x => !x || /^(Carregando|Definir nome|Obra$)/.test(x);
+    let real = '';
+    const copia = () => {
+      const topoTxt = on ? on.textContent.trim() : '';
+      cob.textContent = real || (provis(topoTxt) ? 'Obra' : topoTxt);
+      // o topo também mostra o nome cadastrado quando a página não tem um
+      if (on && real && provis(topoTxt)) on.textContent = real;
+    };
+    copia(); if (on) new MutationObserver(copia).observe(on, { childList: true, characterData: true, subtree: true });
+    Promise.resolve(window.NUVEM_PRONTA).then(nv => nv && nv.obras ? nv.obras.listar() : []).then(l => { const o = (l || []).find(x => x.id === id); if (o) { real = o.nome; copia(); } }).catch(() => {});
+  }
+
   /* ---------------- abas e troca de obra (nas ferramentas) ---------------- */
   async function montarTroca(nv) {
     if (!nv || !nv.obraId || !nv.ferramenta) return;
     const id = nv.obraId, atual = nv.ferramenta;
     // só as ferramentas do perfil (Segurança: Risco e Pendências; Campo: só Pendências)
     const visiveis = FERR.filter(f => (nv.podeVer ? nv.podeVer(f.id) : !(nv.cargo === 'encarregado' && f.id !== 'pendencias')));
-    // "← Obra": página da obra (ou a lista de obras, para quem só tem uma ferramenta)
-    const bo = document.getElementById('bObras');
-    if (bo) { if (visiveis.length > 1) { bo.href = 'index.html?obra=' + encodeURIComponent(id); bo.textContent = '← Obra'; bo.title = 'Página da obra: ferramentas e resumo'; } else { bo.href = 'index.html'; bo.textContent = '← Obras'; } }
+    // caminho "Obras › Obra › Ferramenta" logo abaixo do topo, com as ações principais da página (botões com data-barra)
+    if (!document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
     // abas das ferramentas da mesma obra
     const ttl = document.querySelector('.brand .ttl');
     if (ttl && visiveis.length > 1 && !document.querySelector('.mo-abas')) {

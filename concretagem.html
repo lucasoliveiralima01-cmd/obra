@@ -238,13 +238,13 @@ table.prev th{color:var(--muted);font-weight:600}
 <div class="app">
 <header class="brand"><div class="brand-in">
   <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início" style="color:inherit;text-decoration:none"><img src="icones/concretagem.svg" alt="" width="40" height="40"></a>
-  <div class="ttl"><span class="kick">Rastreabilidade do concreto</span><h1>Mapa de Concretagem</h1><button class="obra" id="obraNome" title="Definir o nome da obra">Definir nome da obra</button></div>
+  <div class="ttl"><h1>Concretagens</h1><button class="obra" id="obraNome" title="Definir o nome da obra">Definir nome da obra</button></div>
   <div class="hctl">
-    <button class="hbtn pendchip" id="hPend" hidden>Pendências <b id="hPendN">0</b></button>
+    <button class="hbtn pendchip" id="hPend" data-barra hidden>Pendências <b id="hPendN">0</b></button>
     <span class="modechip" id="modeChip" hidden>Carregando…</span>
     <a class="hbtn" id="bObras" href="index.html?ferramenta=concretagem" title="Voltar para a lista de obras">← Obras</a>
     <button class="hbtn" id="bIfc" data-menu>Modelo IFC</button><input type="file" id="fIfc" accept=".ifc" hidden>
-    <button class="hbtn solid" id="bPdf" title="Prancha do pavimento com a planta, a legenda dos caminhões e o carimbo">Exportar PDF</button>
+    <button class="hbtn solid" id="bPdf" data-barra title="Prancha do pavimento com a planta, a legenda dos caminhões e o carimbo">Exportar PDF</button>
     <button class="hbtn" id="bImg" data-menu>Exportar imagem</button>
     <button class="hbtn" id="bExp" data-menu>Exportar Excel</button>
     <button class="hbtn" id="bReset" data-menu title="Manda as concretagens e revisões desta obra para a lixeira (só administradores)">Resetar o mapa</button>
