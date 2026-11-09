@@ -133,6 +133,67 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
 .vazio h3{margin:0;font:700 1.15rem var(--f-disp)}
 
+/* ficha da pendência */
+.ficha-ovl .sheet{width:min(1060px,100%)}
+.fi-mais{position:relative}
+.ficha-ovl .sheet>header .x{border:1px solid var(--line);border-radius:8px;min-width:38px;height:38px;display:grid;place-items:center;font-size:1.25rem;color:var(--ink)}
+.ficha-ovl .sheet>header .x:hover{border-color:var(--accent)}
+.ficha-ovl .sheet>header .fi-volta{display:none}
+.fi-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:5;min-width:170px;display:grid;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.25)}
+.fi-menu button{background:none;border:0;border-radius:5px;padding:9px 11px;text-align:left;font:500 .92rem var(--f-body);color:var(--ink)}
+.fi-menu button:hover{background:var(--accent-soft)} .fi-menu button.ruim{color:var(--bad)} .fi-menu button.ruim:hover{background:var(--bad-soft)}
+.fi{display:grid;gap:16px}
+.fi section{display:grid;gap:8px;align-content:start;min-width:0}
+.fi h3{margin:0;font:700 1.15rem var(--f-disp)}
+.fi-top{display:grid;gap:6px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.fi-tit{margin:0;font:700 1.6rem/1.2 var(--f-disp);overflow-wrap:anywhere}
+.fi-loc{margin:0;font:600 1rem var(--f-body);color:var(--accent)}
+.fi-pills{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.88rem;margin:2px 0}
+.fi-pr,.fi-st{font:600 .8rem var(--f-body);padding:3px 10px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.fi-pr.pri-critica{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)} .fi-pr.pri-alta{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.fi-st.st-avaliacao{border-color:var(--accent)} .fi-st.st-aberta{border-color:var(--bad)} .fi-st.st-em_correcao{border-color:var(--warn)} .fi-st.st-corrigida{border-color:var(--info)} .fi-st.st-fechada{border-color:var(--ok)}
+.fi-pills .inc{color:var(--warn);font-weight:600}
+.fi-tipo{margin:0;color:var(--muted)}
+.fi-desc{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fi-resp{display:grid;gap:1px;margin-top:4px}
+.fi-l,.fi-kv dt{font-size:.78rem;color:var(--muted)}
+.fi-resp b{font-weight:600}
+.fi-kv{display:flex;flex-wrap:wrap;gap:6px 22px;margin:2px 0 0}
+.fi-kv div{display:grid;gap:1px;min-width:0;max-width:100%}
+.fi-kv dd{margin:0;font-size:.88rem;overflow-wrap:anywhere;white-space:pre-wrap}
+.fi-meio{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.fi-meio.so,.fi-meio.pl-grande{grid-template-columns:1fr}
+.fi-fotos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fi-fb{display:grid;gap:8px;align-content:start;justify-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px 10px;min-height:110px}
+.fi-fl{justify-self:start;font:600 .8rem var(--f-body);color:var(--muted)}
+.fi-fb .fotos{justify-content:center}
+.fi-sem{align-self:center;margin:auto 0}
+.fi-add{width:100%}
+.fi-sub{margin:-4px 0 0}
+.fi-pl{position:relative}
+.fi-pl .pl-sc{max-height:200px}
+.pl-grande .fi-pl .pl-sc{max-height:min(70vh,640px)}
+.fi-amp{position:absolute;right:10px;bottom:46px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.fi-at .com{grid-template-columns:1fr auto;align-items:stretch}
+.fi-at .com textarea{min-height:42px;resize:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+.fi-hist{display:grid;gap:10px;border-left:2px solid var(--line);margin-left:4px;padding-left:14px}
+.fi-hist div{position:relative;font-size:.9rem}
+.fi-hist div::before{content:"";position:absolute;left:-19px;top:6px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.fi-hist small{display:block;color:var(--muted);font-size:.78rem}
+.fi-hist .cm{display:block;background:var(--bg);border-radius:6px;padding:6px 9px;margin-top:4px}
+.ficha-ovl .sheet>footer .btn{padding:10px 18px}
+.ficha-ovl .sheet>footer:not(:has(.btn)){display:none}
+@media (max-width:640px){
+  .ficha-ovl{padding:0}
+  .ficha-ovl .sheet{max-height:100dvh;height:100dvh;border-radius:0}
+  .ficha-ovl .sheet>header .fi-volta{display:grid}
+  .ficha-ovl #ovlX{display:none}
+  .fi-tit{font-size:1.35rem}
+  .fi-meio{grid-template-columns:1fr}
+  .ficha-ovl .sheet>footer{flex-wrap:nowrap}
+  .ficha-ovl .sheet>footer .btn{flex:1 1 auto}
+  .ficha-ovl .sheet>footer .btn.ghost:first-of-type{flex:0 0 auto}
+}
 /* botão flutuante */
 .fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
 
@@ -748,8 +809,10 @@ async function pintarPlantas(raiz) {
 const uvParaXY = (pl, u, v) => [+(pl.bb[0] + u * (pl.bb[2] - pl.bb[0])).toFixed(3), +(pl.bb[3] - v * (pl.bb[3] - pl.bb[1])).toFixed(3)];
 
 /* ======================= janelas ======================= */
-function openSheet(t, body, foot, form) { delete $('ovl').dataset.det; $('ovl').classList.remove('filtros-ovl'); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; $('ovl').hidden = false; if (form) $('ovl').dataset.form = '1'; else delete $('ovl').dataset.form; $('ovlB').scrollTop = 0; }
-function closeSheet() { $('ovl').hidden = true; $('ovl').classList.remove('filtros-ovl'); $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete $('ovl').dataset.form; delete $('ovl').dataset.det; render(); }
+function limparTopo() { $('ovl').classList.remove('filtros-ovl', 'ficha-ovl'); $('ovl').querySelectorAll('.ovl-extra').forEach(x => x.remove()); }
+document.addEventListener('click', ev => { if (!ev.target.closest('.fi-mais')) document.querySelectorAll('.fi-menu').forEach(m => { m.hidden = true; }); });
+function openSheet(t, body, foot, form) { delete $('ovl').dataset.det; limparTopo(); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; $('ovl').hidden = false; if (form) $('ovl').dataset.form = '1'; else delete $('ovl').dataset.form; $('ovlB').scrollTop = 0; }
+function closeSheet() { $('ovl').hidden = true; limparTopo(); $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete $('ovl').dataset.form; delete $('ovl').dataset.det; render(); }
 $('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
 
@@ -928,29 +991,55 @@ function detalhe(id, mantemRolagem) {
   const aval = p.status === 'avaliacao';
   const pode = { iniciar: tem && p.status === 'aberta', corrigir: tem && (p.status === 'aberta' || p.status === 'em_correcao'), fechar: p.status === 'corrigida' && fecha(p), reprovar: p.status === 'corrigida' && fecha(p), reabrir: p.status === 'fechada' && fecha(p),
     encaminhar: aval && fecha(p), recusar: aval && fecha(p), editar: editor(p) && p.status !== 'fechada' && !(aval && fecha(p)), excluir: editor(p) && !aval };
-  openSheet((p.numero ? 'Pendência #' + p.numero : 'Pendência (nº pendente)'), `
-    <div class="acts"><span class="pill st-${p.status}">${ST[p.status]}</span><span class="pill p-${p.prioridade}">${PRI[p.prioridade][0]}</span>${p.seguranca ? '<span class="tag">segurança</span>' : ''}${vencida(p) ? '<span class="tag venc">vencida</span>' : ''}${incompleta(p) && p.status !== 'fechada' ? '<span class="tag inc">INCOMPLETA</span>' : ''}${p._fila ? '<span class="tag fila">aguardando envio</span>' : ''}</div>
+  // ações: as do status ficam no rodapé; Editar vai junto quando cabe; o resto vai para o "⋯"
+  const BT = { iniciar: ['dIni', 'ghost', 'Iniciar correção'], corrigir: ['dCor', '', 'Marcar como corrigida'], reprovar: ['dRep', 'danger', 'Reprovar'], fechar: ['dFec', 'ok', 'Aprovar e fechar'],
+    reabrir: ['dReab', 'ghost', 'Reabrir'], recusar: ['dRec', 'danger', 'Não aprovar'], encaminhar: ['dEnc', 'ok', 'Encaminhar para correção'] };
+  const doStatus = Object.keys(BT).filter(k => pode[k]);
+  const editarNoRodape = pode.editar && doStatus.length < 2;
+  const menu = [pode.editar && !editarNoRodape ? '<button type="button" role="menuitem" id="dEd">Editar</button>' : '', pode.excluir ? '<button type="button" role="menuitem" class="ruim" id="dDel">Excluir</button>' : ''].filter(Boolean);
+  // título: a descrição curta; sem descrição (ou muito longa), o tipo do problema
+  const desc = String(p.descricao || '').trim(), descTitulo = desc && desc.length <= 90 && !desc.includes('\n');
+  const prazoTxt = p.status === 'fechada' ? '' : vencida(p) ? `<b class="ruim">Venceu em ${fmtD(p.prazo)}</b>` : p.prazo ? `<span>Prazo ${fmtD(p.prazo)}</span>` : '<span class="muted">Sem prazo</span>';
+  const caixaFotos = (t, rot, botao) => { const arr = fotos(t); return `<div class="fi-fb"><span class="fi-fl">${rot}</span>${arr.length ? galeria(arr) : `<span class="muted fi-sem">Sem foto do ${t}</span>`}${botao || ''}</div>`; };
+  const kv = [
+    ['Quem causou', p.causador], ['Bloqueia', (p.bloqueios || []).length ? p.bloqueios.map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') : ''],
+    ['Observações', p.observacoes], ['Registrada', fmtDH(p.criado_em) + ' por ' + nomeDe(p.criado_por)]
+  ].filter(x => x[1]);
+  const temPlanta = p.ponto && PLANTAS[p.ponto.pav];
+  openSheet((p.numero ? 'Pendência #' + p.numero : 'Pendência (nº pendente)'), `<div class="fi">
+    <div class="fi-top">
+      <h2 class="fi-tit">${esc(descTitulo ? desc : p.tipo)}</h2>
+      <p class="fi-loc">${esc(rotLocal(p))}</p>
+      <div class="fi-pills"><span class="fi-pr pri-${p.prioridade}">${PRI[p.prioridade][0]}</span><span class="fi-st st-${p.status}">${ST[p.status]}</span>${p.seguranca ? '<span class="fi-st">Segurança do trabalho</span>' : ''}${prazoTxt}${incompleta(p) && p.status !== 'fechada' ? '<span class="inc">Incompleta</span>' : ''}${p._fila ? '<span class="tag fila">aguardando envio</span>' : ''}</div>
+      ${descTitulo ? `<p class="fi-tipo">${esc(p.tipo)}</p>` : desc ? `<p class="fi-desc">${esc(desc)}</p>` : ''}
+      <div class="fi-resp"><span class="fi-l">Responsável pela correção</span><b>${esc([p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : 'Ofício a definir', rotQuemCorrige(p)].filter(Boolean).join(' · '))}</b></div>
+      ${kv.length ? `<dl class="fi-kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+    </div>
     ${aval ? `<div class="aviso info">${fecha(p) ? (p.seguranca ? 'Pendência de segurança para você avaliar.' : 'Sugestão para você avaliar.') + ' Escolha quem corrige e encaminhe, ou não aprove.' : 'Aguardando ' + quemAvalia(p) + ' avaliar.'}</div>` : ''}
     ${op ? `<div class="aviso">Não foi enviado: ${esc(op.erro)}<div class="acts" style="margin-top:6px"><button class="btn sm" id="dRetry" type="button">Tentar de novo</button><button class="btn sm danger" id="dDescartar" type="button">Descartar esta alteração</button></div></div>` : ''}
-    <div class="fld"><span class="l">Antes</span>${galeria(fotos('antes'))}</div>
-    ${fotos('depois').length || p.status !== 'aberta' ? `<div class="fld"><span class="l">Depois</span>${galeria(fotos('depois'))}</div>` : ''}
-    <dl class="kv"><dt>Local</dt><dd>${esc(rotLocal(p))}</dd><dt>Tipo de problema</dt><dd>${esc(p.tipo)}</dd><dt>Corrige</dt><dd>${esc(rotResp(p))}</dd>
-      <dt>Prazo</dt><dd>${p.prazo ? fmtD(p.prazo) : '—'}</dd><dt>Descrição</dt><dd>${esc(p.descricao || '—')}</dd><dt>Quem causou</dt><dd>${esc(p.causador || '—')}</dd>
-      <dt>Trava</dt><dd>${(p.bloqueios || []).length ? p.bloqueios.map(b => esc(b.servico) + (b.local ? ' (' + esc(b.local) + ')' : '')).join('; ') : '—'}</dd>
-      <dt>Observações</dt><dd>${esc(p.observacoes || '—')}</dd><dt>Registrada</dt><dd>${fmtDH(p.criado_em)} por ${esc(nomeDe(p.criado_por))}</dd></dl>
-    ${p.ponto && PLANTAS[p.ponto.pav] ? `<div class="fld"><span class="l">Local na planta · ${esc(p.pavimento)}</span>${plantaBox(p.ponto.pav, [{ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status] }], 'ficha')}</div>` : ''}
-    ${tem ? `<div class="fld"><label for="dCom">Comentar (sem mudar o status)</label><div class="com"><textarea id="dCom" rows="2" maxlength="2000" placeholder="Ex.: o material chega quinta; precisa de andaime"></textarea><button class="btn sm" id="dComOk" type="button">Enviar</button></div></div>` : ''}
-    <div class="fld"><span class="l">Histórico</span><div class="hist">${evs.map(e => `<div><b>${esc(nomeDe(e.por))}</b> ${esc(evTxt(e))} <small>· ${fmtDH(e.em)}${e.local ? ' · aguardando envio' : ''}</small>${e.comentario ? `<span class="cm">${esc(e.comentario)}</span>` : ''}</div>`).join('')}</div></div>`,
+    <div class="fi-meio${temPlanta ? '' : ' so'}">
+      <section><h3>Fotos</h3><div class="fi-fotos">${caixaFotos('antes', 'Antes')}${caixaFotos('depois', 'Depois', pode.corrigir ? '<button type="button" class="btn ghost fi-add" id="dCor2">+ Adicionar foto</button>' : '')}</div></section>
+      ${temPlanta ? `<section><h3>Local na planta</h3><p class="muted fi-sub">${esc(rotLocal(p))}</p><div class="fi-pl">${plantaBox(p.ponto.pav, [{ u: p.ponto.u, v: p.ponto.v, cor: COR_ST[p.status] }], 'ficha')}<button type="button" class="btn sm fi-amp" id="dAmp">Ampliar planta</button></div></section>` : ''}
+    </div>
+    <section class="fi-at"><h3>Atividade</h3>
+      ${tem ? `<div class="com"><textarea id="dCom" rows="1" maxlength="2000" placeholder="Adicionar comentário" aria-label="Comentário (não muda o status)"></textarea><button class="btn ghost" id="dComOk" type="button">Enviar</button></div>` : ''}
+      <div class="fi-hist">${evs.map(e => `<div><b>${esc(nomeDe(e.por))}</b> ${esc(evTxt(e))}<small>${fmtDH(e.em)}${e.local ? ' · aguardando envio' : ''}</small>${e.comentario ? `<span class="cm">${esc(e.comentario)}</span>` : ''}</div>`).join('')}</div>
+    </section></div>`,
     `<span class="msg" id="dMsg"></span>
-     ${pode.excluir ? '<button class="btn sm danger" id="dDel" type="button" style="margin-right:auto">Excluir</button>' : ''}
-     ${pode.editar ? '<button class="btn sm ghost" id="dEd" type="button">Editar</button>' : ''}
-     ${pode.iniciar ? '<button class="btn sm ghost" id="dIni" type="button">Iniciar correção</button>' : ''}
-     ${pode.corrigir ? '<button class="btn sm" id="dCor" type="button">Marcar como corrigida</button>' : ''}
-     ${pode.reprovar ? '<button class="btn sm danger" id="dRep" type="button">Reprovar</button>' : ''}
-     ${pode.fechar ? '<button class="btn sm ok" id="dFec" type="button">Aprovar e fechar</button>' : ''}
-     ${pode.reabrir ? '<button class="btn sm ghost" id="dReab" type="button">Reabrir</button>' : ''}
-     ${pode.recusar ? '<button class="btn sm danger" id="dRec" type="button">Não aprovar</button>' : ''}
-     ${pode.encaminhar ? '<button class="btn sm ok" id="dEnc" type="button">Encaminhar para correção</button>' : ''}`);
+     ${editarNoRodape ? '<button class="btn ghost" id="dEd" type="button">Editar</button>' : ''}
+     ${doStatus.map(k => `<button class="btn ${BT[k][1]}" id="${BT[k][0]}" type="button">${BT[k][2]}</button>`).join('')}`);
+  // topo da ficha: "⋯" com as outras ações e, no celular, voltar
+  $('ovl').classList.add('ficha-ovl');
+  const hd = $('ovl').querySelector('.sheet>header');
+  hd.insertAdjacentHTML('afterbegin', '<button type="button" class="x ovl-extra fi-volta" aria-label="Voltar para a lista">‹</button>');
+  if (menu.length) { $('ovlX').insertAdjacentHTML('beforebegin', `<div class="ovl-extra fi-mais"><button type="button" class="x fi-mb" aria-haspopup="menu" aria-expanded="false" aria-label="Mais ações">⋯</button><div class="fi-menu" role="menu" hidden>${menu.join('')}</div></div>`);
+    const mb = hd.querySelector('.fi-mb'), mm = hd.querySelector('.fi-menu');
+    mb.onclick = ev => { ev.stopPropagation(); mm.hidden = !mm.hidden; mb.setAttribute('aria-expanded', String(!mm.hidden)); };
+    mm.addEventListener('click', () => { mm.hidden = true; }); }
+  hd.querySelector('.fi-volta').onclick = closeSheet;
+  if ($('dCor2')) $('dCor2').onclick = () => formCorrigida(p);
+  if ($('dAmp')) $('dAmp').onclick = () => { const b = $('ovlB').querySelector('.fi-meio'); const g = b.classList.toggle('pl-grande'); $('dAmp').textContent = g ? 'Reduzir planta' : 'Ampliar planta'; };
+  if ($('dCom')) $('dCom').oninput = e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'; };
   $('ovl').dataset.det = id; if (rol) $('ovlB').scrollTop = rol;
   pintarFotos($('ovlB')); pintarPlantas($('ovlB'));
   if ($('dComOk')) $('dComOk').onclick = async () => { const t = $('dCom').value.trim(); if (!t) { $('dCom').focus(); return; }
