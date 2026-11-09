@@ -400,24 +400,53 @@ const fecha = p => perfil() === 'admin' || (p.seguranca ? perfil() === 'seguranc
 const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
 
 /* ======================= IndexedDB: fila, fotos e cópia para usar sem sinal ======================= */
-function idb() { return new Promise((res, rej) => { const r = indexedDB.open('pendencias_obra', 1);
+// No iPhone (Safari) o IndexedDB às vezes falha (modo privado, Modo de Bloqueio) e um Blob guardado nele
+// pode não ser relido na hora de enviar ("Load failed"). Por isso: as fotos são guardadas como bytes
+// (ArrayBuffer) e, se o IndexedDB não abrir, tudo fica na memória desta página (funciona com sinal).
+let IDB = null, SEM_IDB = false; const MEM = { fila: new Map(), blobs: new Map(), cache: new Map() };
+function idb() { if (IDB) return IDB; IDB = new Promise((res, rej) => { let r; try { r = indexedDB.open('pendencias_obra', 1); } catch (e) { rej(e); return; }
   r.onupgradeneeded = () => { const d = r.result; for (const s of ['fila', 'blobs', 'cache']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); };
-  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
-async function idbPut(st, k, v) { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction(st, 'readwrite'); t.objectStore(st).put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
-async function idbGet(st, k) { const d = await idb(); return new Promise(res => { const r = d.transaction(st).objectStore(st).get(k); r.onsuccess = () => res(r.result ?? null); r.onerror = () => res(null); }); }
-async function idbDel(st, k) { const d = await idb(); return new Promise(res => { const t = d.transaction(st, 'readwrite'); t.objectStore(st).delete(k); t.oncomplete = res; t.onerror = res; }); }
-async function idbAll(st) { const d = await idb(); return new Promise(res => { const out = []; const r = d.transaction(st).objectStore(st).openCursor();
-  r.onsuccess = () => { const c = r.result; if (c) { out.push(c.value); c.continue(); } else res(out); }; r.onerror = () => res(out); }); }
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('IndexedDB bloqueado')); });
+  IDB.catch(e => { console.warn('IndexedDB indisponível; usando a memória', e); SEM_IDB = true; IDB = null; }); return IDB; }
+async function abrir() { if (SEM_IDB) return null; try { return await idb(); } catch (e) { SEM_IDB = true; return null; } }
+const paraBytes = async b => ({ _bytes: b.arrayBuffer ? await b.arrayBuffer() : await new Response(b).arrayBuffer(), type: b.type || 'application/octet-stream' });
+const deBytes = v => v && v._bytes ? new Blob([v._bytes], { type: v.type }) : v;
+async function idbPut(st, k, v) {
+  if (st === 'blobs' && v instanceof Blob) v = await paraBytes(v);
+  const d = await abrir(); if (!d) { MEM[st].set(k, v); return; }
+  try { await new Promise((res, rej) => { const t = d.transaction(st, 'readwrite'); t.objectStore(st).put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); }
+  catch (e) { console.warn('IndexedDB não gravou; usando a memória', e); MEM[st].set(k, v); }
+}
+async function idbGet(st, k) {
+  let v = MEM[st].has(k) ? MEM[st].get(k) : null;
+  if (v == null) { const d = await abrir(); if (d) v = await new Promise(res => { try { const r = d.transaction(st).objectStore(st).get(k); r.onsuccess = () => res(r.result ?? null); r.onerror = () => res(null); } catch (e) { res(null); } }); }
+  return st === 'blobs' ? deBytes(v) : v;
+}
+async function idbDel(st, k) { MEM[st].delete(k); const d = await abrir(); if (!d) return; return new Promise(res => { try { const t = d.transaction(st, 'readwrite'); t.objectStore(st).delete(k); t.oncomplete = res; t.onerror = res; } catch (e) { res(); } }); }
+async function idbAll(st) { const d = await abrir(); const m = new Map();
+  if (d) await new Promise(res => { try { const r = d.transaction(st).objectStore(st).openCursor();
+    r.onsuccess = () => { const c = r.result; if (c) { m.set(c.key, c.value); c.continue(); } else res(); }; r.onerror = () => res(); } catch (e) { res(); } });
+  for (const [k, v] of MEM[st]) m.set(k, v);   // o que só ficou na memória vale por cima
+  return [...m.values()]; }
 
 /* ======================= fotos: reduz para 1600 px e JPEG ======================= */
 async function comprimir(arq) {
   const url = URL.createObjectURL(arq); const img = new Image();
   try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('não foi possível ler a imagem')); img.src = url; }); }
   finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
-  const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
-  const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc);
-  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-  return await new Promise(r => cv.toBlob(r, 'image/jpeg', .75));
+  // o iPhone limita a memória de desenho: libera cada canvas e, se falhar, tenta menor
+  for (const lado of [1600, 1200, 900]) {
+    const sc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.naturalWidth * sc)); cv.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    const ctx = cv.getContext('2d'); if (!ctx) continue;
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .75); } catch (e) { r(null); } });
+    cv.width = cv.height = 0;
+    if (b && b.size) return b;
+  }
+  // último recurso: a própria foto, se já for JPEG e não for enorme
+  if (/jpe?g/i.test(arq.type) && arq.size < 8e6) return arq;
+  throw new Error('não foi possível reduzir a foto');
 }
 const URLS = new Map();   // caminho/fid -> objectURL
 async function urlFoto(f) {
@@ -975,6 +1004,7 @@ function formPend(id, encaminhar) {
       prazo: f.prazo || null, observacoes: String(f.observacoes || '').trim() || null,
       ponto: f.ponto && f.ponto.pav === plantaDe(f.pavimento) ? f.ponto : null };
     $('pOk').disabled = true;
+    try {
     for (const x of novas) await idbPut('blobs', x.fid, x.blob);
     const fotos = novas.map(x => ({ fid: x.fid, tipo: 'antes' }));
     novas.forEach(x => URLS.set(x.fid, x.url));
@@ -982,6 +1012,7 @@ function formPend(id, encaminhar) {
     if (!ed && (m === 'sugestao' || m === 'seg')) row.status = 'avaliacao';
     if (ed) { await enfileirar({ op: 'editar', id: ed.id, campos: row }); if (fotos.length) await enfileirar({ op: 'fotos', id: ed.id, fotos }); if (m === 'enc') await enfileirar({ op: 'status', id: ed.id, para: 'aberta' }); }
     else await enfileirar({ op: 'criar', id: uuid(), row, fotos });
+    } catch (e) { console.error(e); $('pOk').disabled = false; $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Não foi possível registrar: ' + ((e && e.message) || e) + '. Tente de novo.'; return; }
     delete $('ovl').dataset.form; closeSheet();
     const off = navigator.onLine ? '' : ' Fica guardada neste aparelho e é enviada quando o sinal voltar.';
     toast(m === 'enc' ? 'Encaminhada para correção.' : ed ? 'Alterações salvas.' : m === 'sugestao' ? 'Sugestão enviada. A Engenharia vai avaliar.' + off
@@ -1096,9 +1127,11 @@ function formCorrigida(p) {
   $('cOk').onclick = async () => {
     if (!novas.length) { $('cMsg').className = 'msg err'; $('cMsg').textContent = 'Tire ao menos uma foto do depois.'; return; }
     $('cOk').disabled = true;
+    try {
     for (const x of novas) { await idbPut('blobs', x.fid, x.blob); URLS.set(x.fid, x.url); }
     await enfileirar({ op: 'fotos', id: p.id, fotos: novas.map(x => ({ fid: x.fid, tipo: 'depois' })) });
     await enfileirar({ op: 'status', id: p.id, para: 'corrigida', comentario: String(desenhar.c || '').trim() || null });
+    } catch (e) { console.error(e); $('cOk').disabled = false; $('cMsg').className = 'msg err'; $('cMsg').textContent = 'Não foi possível salvar: ' + ((e && e.message) || e) + '. Tente de novo.'; return; }
     delete $('ovl').dataset.form; toast('Marcada como corrigida. ' + (p.seguranca ? 'A Segurança' : 'A Engenharia') + ' vai conferir.', 5000); detalhe(p.id);
   };
 }
