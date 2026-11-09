@@ -29,6 +29,23 @@
   }
   aplicarTema(lerTema());
 
+  /* ---------------- sem zoom de pinça na página ----------------
+     A página inteira não amplia com dois dedos nem com toque duplo. Onde ampliar faz sentido
+     (mapas de desenho, planta da pendência, foto aberta) a própria tela faz o zoom:
+     os canvas dos mapas já tratam a pinça; outras áreas usam o atributo data-pinca. */
+  document.documentElement.style.touchAction = 'pan-x pan-y';
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, ev => ev.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', ev => { if (ev.touches.length > 1 && !(ev.target.closest && ev.target.closest('canvas,[data-pinca]'))) ev.preventDefault(); }, { passive: false });
+  // pinça numa área: chama mudar(fator, x, y) a cada movimento (x, y = ponto entre os dedos)
+  function pinca(el, mudar) {
+    let d0 = 0; el.setAttribute('data-pinca', '');
+    const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    el.addEventListener('touchstart', ev => { if (ev.touches.length === 2) d0 = dist(ev.touches); }, { passive: true });
+    el.addEventListener('touchmove', ev => { if (ev.touches.length !== 2 || !d0) return; ev.preventDefault(); const d = dist(ev.touches);
+      mudar(d / d0, (ev.touches[0].clientX + ev.touches[1].clientX) / 2, (ev.touches[0].clientY + ev.touches[1].clientY) / 2); d0 = d; }, { passive: false });
+    el.addEventListener('touchend', ev => { if (ev.touches.length < 2) d0 = 0; }, { passive: true });
+  }
+
   /* ---------------- estilos das peças ---------------- */
   const css = `
   .mo-btn{line-height:1;padding:5px 8px!important}.mo-btn svg{display:block}
@@ -210,7 +227,7 @@
   window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); pedido = ev; botaoInstalar(); });
   window.addEventListener('appinstalled', () => { pedido = null; const b = document.getElementById('bInstalar'); if (b) b.remove(); });
 
-  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema };
+  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema, pinca };
   if ('serviceWorker' in navigator) window.AppObra.registro = navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw', e); return null; });
 
   function iniciar() {

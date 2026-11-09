@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="description" content="Listas e regras das pendências: por obra ou padrão da empresa.">
 <meta name="theme-color" content="#22425c">
 <title>Listas e regras · Pendências</title>
@@ -145,7 +145,7 @@ const CORES = ['#2f7fb8', '#d9701c', '#2f9a59', '#7b52b0', '#c23b2f', '#11a3a3',
 const ROT = { problema: 'Tipos de problema', comodo: 'Cômodos', servico: 'Serviços que podem ser travados', local: 'Tipos de local', disciplina: 'Ofícios (quem corrige)' };
 const CAMPO = { problema: 'tipo', comodo: 'comodo', servico: 'servico', local: 'local_tipo', disciplina: 'disciplina' };
 const LISTAS4 = ['problema', 'comodo', 'servico', 'local'];
-const OBRIG = [['descricao', 'Descrição'], ['causador', 'Responsável pelo problema'], ['prazo', 'Prazo'], ['observacoes', 'Observações'], ['ponto', 'Local na planta (quando houver planta)'], ['bloqueios', 'Serviços travados']];
+const OBRIG = [['descricao', 'Descrição'], ['prazo', 'Prazo'], ['observacoes', 'Observações'], ['ponto', 'Local na planta (quando houver planta)'], ['bloqueios', 'Serviços travados']];
 const PRI = [['critica', 'Crítica'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']];
 
 let NV = null, sb = null, OBRA = new URLSearchParams(location.search).get('obra') || '', OBRA_NOME = '';

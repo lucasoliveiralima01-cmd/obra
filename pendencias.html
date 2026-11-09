@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="description" content="Pendências de obra: registro com fotos, correção, aprovação, histórico e relatórios.">
 <meta name="theme-color" content="#22425c">
 <title>Pendências de obra</title>
@@ -254,6 +254,8 @@ table.t th{font:600 .72rem var(--f-disp);letter-spacing:.06em;text-transform:upp
 details.mais{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 details.mais summary{cursor:pointer;font:600 .9rem var(--f-body);color:var(--accent)}
 details.mais[open]{display:grid;gap:12px}
+.pri-prazo{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:12px;align-items:start}
+@media (max-width:520px){.pri-prazo{grid-template-columns:1fr}}
 .blq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:center}
 .msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
 dl.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:0;font-size:.92rem}
@@ -278,7 +280,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 .com{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end}
 .com textarea{min-height:44px}
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
-.viewer img{max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);width:auto;height:auto;object-fit:contain;cursor:zoom-out}
+.viewer{touch-action:none}
+.viewer img{transition:transform .05s;max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);width:auto;height:auto;object-fit:contain;cursor:zoom-out}
 .prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.prog i{display:block;height:100%;width:0;background:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
 @media (max-width:640px){
@@ -487,8 +490,14 @@ function pintarFotos(raiz) {
     if (u) { img.src = u; img.hidden = false; const ph = img.parentElement.querySelector('.ph'); if (ph) ph.hidden = true; }
   });
 }
-document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
-$('viewer').onclick = () => { $('viewer').hidden = true; };
+// foto aberta em tela cheia: pinça amplia, um dedo arrasta a foto ampliada, toque fecha
+const VZ = { s: 1, x: 0, y: 0 }; const vzAplica = () => { $('viewerImg').style.transform = `translate(${VZ.x}px,${VZ.y}px) scale(${VZ.s})`; };
+document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; Object.assign(VZ, { s: 1, x: 0, y: 0 }); vzAplica(); $('viewer').hidden = false; });
+let vzMexeu = false;
+$('viewer').onclick = () => { if (vzMexeu) { vzMexeu = false; return; } $('viewer').hidden = true; };
+if (window.AppObra && AppObra.pinca) AppObra.pinca($('viewer'), k => { VZ.s = Math.max(1, Math.min(6, VZ.s * k)); if (VZ.s === 1) { VZ.x = VZ.y = 0; } vzAplica(); vzMexeu = true; });
+{ let p0 = null; $('viewer').addEventListener('touchstart', ev => { p0 = ev.touches.length === 1 && VZ.s > 1 ? [ev.touches[0].clientX - VZ.x, ev.touches[0].clientY - VZ.y] : null; }, { passive: true });
+  $('viewer').addEventListener('touchmove', ev => { if (!p0 || ev.touches.length !== 1) return; ev.preventDefault(); VZ.x = ev.touches[0].clientX - p0[0]; VZ.y = ev.touches[0].clientY - p0[1]; vzAplica(); vzMexeu = true; }, { passive: false }); }
 
 /* ======================= dados: servidor + fila local ======================= */
 /* ---------------- preenchimento condicionado (regras da obra, editáveis em Listas) ---------------- */
@@ -515,7 +524,7 @@ const opcoesDo = local => ((L.local.find(x => x.valor === local) || {}).extra ||
 const EQUIPE = { proprio: 'Próprio', terceiro: 'Terceiro' };
 const rotResp = p => p.disciplina + (p.responsavel_nome ? ' → ' + p.responsavel_nome + (p.equipe ? ' (' + EQUIPE[p.equipe] + ')' : '') : p.equipe ? ' → ' + EQUIPE[p.equipe] : '');
 const rotLocal = p => [p.pavimento, p.local_tipo === 'Apartamento' ? (p.unidade ? 'Apto ' + p.unidade : 'Apartamento') : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo].filter(Boolean).join(' · ');
-const incompleta = p => !String(p.descricao || '').trim() || !String(p.causador || '').trim();
+const incompleta = p => !String(p.descricao || '').trim();
 const vencida = p => !!p.prazo && (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo < hoje();
 // junta o que veio do servidor com o que ainda está na fila deste aparelho
 function itens() {
@@ -829,11 +838,7 @@ function renderResumo(its) {
       ${tile(its.filter(vencida).length, 'Em atraso', 'venc')}${tile(ab.filter(incompleta).length, 'Incompletas', 'inc')}${tile(blq.length, 'Frentes bloqueadas', 'blq')}
     </div>
     <div class="cols"><div class="box"><h3>Por ofício de quem corrige</h3>${tabela(mD, [...mD.keys()].sort(), 'Ofício')}</div><div class="box"><h3>Por pavimento</h3>${tabela(mP, ordP, 'Pavimento')}</div></div>
-    <div class="box"><h3>Por quem causou o problema (retrabalho)</h3>${(() => {
-      const m = new Map(); for (const p of its) { const k = String(p.causador || '').trim() || 'Não informado'; const o = m.get(k) || { n: 0, ab: 0, tipos: new Map() }; o.n++; if (p.status !== 'fechada') o.ab++; o.tipos.set(p.tipo, (o.tipos.get(p.tipo) || 0) + 1); m.set(k, o); }
-      const ord = [...m.entries()].sort((a, b) => (a[0] === 'Não informado') - (b[0] === 'Não informado') || b[1].n - a[1].n);
-      return ord.length ? `<table class="t"><thead><tr><th>Quem causou</th><th>Total</th><th>Não fechadas</th><th>Tipos mais comuns</th></tr></thead><tbody>${ord.map(([k, o]) => `<tr><td>${esc(k)}</td><td>${o.n}</td><td>${o.ab || '·'}</td><td style="white-space:normal;text-align:left">${esc([...o.tipos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => t + ' (' + n + ')').join(', '))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin:0">Nada ainda.</p>'; })()}
-      <p class="muted" style="margin:0">Base para o desconto de retrabalho nas medições. Preencha “Responsável pelo problema” nas pendências para este quadro ficar completo.</p></div>
+
     <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(rotResp(p))} · ${ST[p.status]}${vencida(p) ? ' · em atraso' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
@@ -863,6 +868,12 @@ async function pintarPlantas(raiz) {
     if (u) img.src = u; else { const pl = img.closest('.pl'); if (pl) pl.innerHTML = '<p class="muted" style="margin:0">Planta indisponível sem sinal (abra com internet uma vez).</p>'; }
   }
   raiz.querySelectorAll('.pl').forEach(pl => { const inn = pl.querySelector('.pl-in'); if (!inn) return;
+    // pinça: amplia a planta em volta do ponto entre os dedos
+    const scx = pl.querySelector('.pl-sc');
+    if (window.AppObra && AppObra.pinca && scx && !scx.dataset.pincaOk) { scx.dataset.pincaOk = '1'; AppObra.pinca(scx, (k, x, y) => {
+      const w = parseFloat(inn.style.width) || 100, nw = Math.max(100, Math.min(500, w * k)); if (nw === w) return;
+      const r = scx.getBoundingClientRect(), px = x - r.left, py = y - r.top, fx = (scx.scrollLeft + px) / scx.scrollWidth, fy = (scx.scrollTop + py) / scx.scrollHeight;
+      inn.style.width = nw + '%'; scx.scrollLeft = fx * scx.scrollWidth - px; scx.scrollTop = fy * scx.scrollHeight - py; }); }
     pl.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { const w = parseFloat(inn.style.width) || 100; const sc = pl.querySelector('.pl-sc'); const cx = (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth, cy = (sc.scrollTop + sc.clientHeight / 2) / sc.scrollHeight;
       inn.style.width = Math.max(100, Math.min(500, w * (b.dataset.z === '+' ? 1.6 : 1 / 1.6))) + '%';
       requestAnimationFrame(() => { sc.scrollLeft = cx * sc.scrollWidth - sc.clientWidth / 2; sc.scrollTop = cy * sc.scrollHeight - sc.clientHeight / 2; }); });
@@ -908,6 +919,9 @@ function formPend(id, encaminhar) {
   // trocou o cargo: a pessoa escolhida precisa ter o novo cargo
   const confereResp = () => { if (f.responsavel && f.responsavel !== '*' && !funcsDe(f.disciplina).some(x => x.id === f.responsavel) && !(ed && ed.responsavel === f.responsavel && ed.disciplina === f.disciplina)) f.responsavel = ''; };
   const nomeFunc = id => (FUNC.find(x => x.id === id) || {}).nome || (ed && ed.responsavel === id ? ed.responsavel_nome : '') || 'funcionário';
+  // equipe já cadastrada no funcionário escolhido: não precisa perguntar
+  const equipeDoFunc = () => { if (!f.responsavel || f.responsavel === '*') return ''; const fu = FUNC.find(x => x.id === f.responsavel); return fu && fu.equipe ? fu.equipe : ''; };
+  if (equipeDoFunc()) f.equipe = equipeDoFunc();
   let prazoManual = !!ed;
   const novas = [];   // fotos novas {fid, url}
   const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unidades) || [];
@@ -930,29 +944,28 @@ function formPend(id, encaminhar) {
         : f.local_tipo === 'Outro' ? `<div class="fld"><label for="fUn2">Qual local? <span class="req">*</span></label><input id="fUn2" placeholder="Ex.: casa de máquinas, guarita" value="${esc(f.unidade || '')}"></div>`
         : (f.local_tipo ? `<div class="fld"><label for="fUn2">Detalhe do local (opcional)</label><input id="fUn2" placeholder="Ex.: perto do elevador, shaft 3" value="${esc(f.unidade || '')}"></div>` : '')}
       <div class="fld"><label for="fTipo2">Tipo de problema <span class="req">*</span></label><select id="fTipo2"><option value="">Escolha…</option>${tiposOk.map(t => `<option ${t.valor === f.tipo ? 'selected' : ''}>${esc(t.valor)}</option>`).join('')}</select></div>
+      <div class="fld"><label for="fDesc">Descrição${obrig('descricao') ? ' <span class="req">*</span>' : ' <span class="muted" style="text-transform:none;letter-spacing:0">(sem ela a pendência fica incompleta)</span>'}</label><textarea id="fDesc" placeholder="O que está errado e o que precisa ser feito">${esc(f.descricao || '')}</textarea></div>
       ${engenharia() ? `<label class="chk"><input type="checkbox" id="fSeg" ${f.seg ? 'checked' : ''}> É de segurança do trabalho</label>
         ${f.seg ? `<p class="muted" style="margin:-6px 0 0">${!ed ? 'Vai para a <b>Segurança do Trabalho</b> avaliar e escolher quem corrige.' : 'Quem avalia e dá a baixa final é a Segurança do Trabalho.'}</p>` : ''}` : ''}
       ${modo() === 'sugestao' ? '<p class="muted" style="margin:0">Sua sugestão vai para a <b>Engenharia</b> avaliar. Se ela aprovar, a pendência é aberta e encaminhada para quem corrige.</p>' : ''}
       ${modo() === 'seg' ? '' : `<div class="fld"><span class="l">Ofício de quem corrige ${['sugestao', 'aval'].includes(modo()) ? '<span class="muted" style="text-transform:none;letter-spacing:0">(se souber)</span>' : '<span class="req">*</span>'}</span>${grupo('Ofício', comAtual(ativos('disciplina'), f.disciplina), f.disciplina, 'disciplina', 'small')}</div>`}
       ${f.disciplina && modo() !== 'seg' && modo() !== 'sugestao' ? (() => { const fs = funcsDe(f.disciplina).map(x => x.id); if (f.responsavel && f.responsavel !== '*' && !fs.includes(f.responsavel)) fs.push(f.responsavel);
         return fs.length ? `<div class="fld"><span class="l">Quem vai corrigir <span class="req">*</span> <span class="muted" style="text-transform:none;letter-spacing:0">(o aviso vai só para quem você escolher)</span></span>
-          <div class="opts small" role="group" aria-label="Quem vai corrigir">${fs.map(id => { const fu = FUNC.find(x => x.id === id) || {}; return `<button type="button" class="opt" data-f="responsavel" data-v="${esc(id)}" aria-pressed="${f.responsavel === id}">${esc(nomeFunc(id))}${fu.equipe ? ' · ' + EQUIPE[fu.equipe] : ''}</button>`; }).join('')}
+          <div class="opts small" role="group" aria-label="Quem vai corrigir">${fs.map(id => { const fu = FUNC.find(x => x.id === id) || {}; return `<button type="button" class="opt" data-f="responsavel" data-v="${esc(id)}" aria-pressed="${f.responsavel === id}">${esc(nomeFunc(id))}</button>`; }).join('')}
             <button type="button" class="opt" data-f="responsavel" data-v="*" aria-pressed="${f.responsavel === '*'}">Todos de ${esc(f.disciplina)}</button></div></div>`
           : `<p class="muted" style="margin:0">Ninguém de <b>${esc(f.disciplina)}</b> cadastrado nesta obra: o aviso vai para todos desse ofício no sistema.${NV && NV.admin ? ' Cadastre em <b>Administração</b> (quem usa o sistema) ou em <b>Listas e regras → Funcionários</b> (quem não usa).' : ''}</p>`; })() : ''}
-      ${f.disciplina && modo() !== 'seg' && modo() !== 'sugestao' ? `<div class="fld"><span class="l">${esc(f.disciplina)}${f.responsavel && f.responsavel !== '*' ? ' (' + esc(nomeFunc(f.responsavel)) + ')' : ''} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
-      <div class="fld"><span class="l">Prioridade <span class="req">*</span></span>${grupo('Prioridade', PRI_ORD, f.prioridade, 'prioridade')}</div>
-      <details class="mais" ${ed || incompleta(f) === false ? 'open' : ''}><summary>${['descricao', 'causador', 'prazo', 'observacoes', 'bloqueios'].some(obrig) ? 'Mais detalhes (esta obra exige alguns: ' + [['descricao', 'descrição'], ['causador', 'quem causou'], ['prazo', 'prazo'], ['observacoes', 'observações'], ['bloqueios', 'serviço travado']].filter(x => obrig(x[0])).map(x => x[1]).join(', ') + ')' : 'Mais detalhes (opcional; sem eles a pendência fica INCOMPLETA)'}</summary>
-        <div class="fld"><label for="fDesc">Descrição</label><textarea id="fDesc" placeholder="O que está errado e o que precisa ser feito">${esc(f.descricao || '')}</textarea></div>
-        <div class="fld"><label for="fCaus">Responsável pelo problema (quem causou)</label><input id="fCaus" list="dlCaus" value="${esc(f.causador || '')}" placeholder="Ex.: Hidráulica (empreiteira X)"><datalist id="dlCaus">${ativos('disciplina').map(v => `<option value="${esc(v)}">`).join('')}</datalist></div>
-        <div class="fld"><span class="l">Serviços que esta pendência trava</span>
-          <div id="blqBox" style="display:grid;gap:6px">${(f.bloqueios || []).map((b, i) => `<div class="blq"><select data-bs="${i}"><option value="">Serviço…</option>${comAtual(ativos('servico'), b.servico).map(s => `<option ${s === b.servico ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select><input data-bl="${i}" placeholder="Local (ex.: apto 403)" value="${esc(b.local || '')}"><button type="button" class="btn sm ghost" data-brm="${i}" aria-label="Remover">×</button></div>`).join('')}</div>
-          <button type="button" class="btn sm ghost" id="blqAdd" style="justify-self:start">+ Serviço travado</button></div>
-        <div class="fld"><label for="fPrazo">Prazo ${f.prioridade && !prazoManual ? '<span class="muted" style="text-transform:none;letter-spacing:0">(sugerido: ' + prazoDe(f.prioridade) + ' dia' + (prazoDe(f.prioridade) == 1 ? '' : 's') + ')</span>' : ''}</label><input type="date" id="fPrazo" value="${esc(f.prazo || '')}"></div>
+      ${f.disciplina && modo() !== 'seg' && modo() !== 'sugestao' && !equipeDoFunc() ? `<div class="fld"><span class="l">${esc(f.disciplina)}${f.responsavel && f.responsavel !== '*' ? ' (' + esc(nomeFunc(f.responsavel)) + ')' : ''} → equipe <span class="req">*</span></span>${grupo('Equipe', ['proprio', 'terceiro'], f.equipe, 'equipe')}</div>` : ''}
+      <div class="pri-prazo"><div class="fld"><span class="l">Prioridade <span class="req">*</span></span>${grupo('Prioridade', PRI_ORD, f.prioridade, 'prioridade')}</div>
+        <div class="fld"><label for="fPrazo">Prazo${obrig('prazo') ? ' <span class="req">*</span>' : ''} ${f.prioridade && !prazoManual ? '<span class="muted" style="text-transform:none;letter-spacing:0">(sugerido: ' + prazoDe(f.prioridade) + ' dia' + (prazoDe(f.prioridade) == 1 ? '' : 's') + ')</span>' : ''}</label><input type="date" id="fPrazo" value="${esc(f.prazo || '')}"></div></div>
+      <div class="fld"><span class="l">Serviços que esta pendência trava${obrig('bloqueios') ? ' <span class="req">*</span>' : ''}</span>
+        <div id="blqBox" style="display:grid;gap:6px">${(f.bloqueios || []).map((b, i) => `<div class="blq"><select data-bs="${i}"><option value="">Serviço…</option>${comAtual(ativos('servico'), b.servico).map(s => `<option ${s === b.servico ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select><input data-bl="${i}" placeholder="Local (ex.: apto 403)" value="${esc(b.local || '')}"><button type="button" class="btn sm ghost" data-brm="${i}" aria-label="Remover">×</button></div>`).join('')}</div>
+        <button type="button" class="btn sm ghost" id="blqAdd" style="justify-self:start">+ Serviço travado</button></div>
+      <details class="mais" ${(ed && ed.observacoes) || obrig('observacoes') ? 'open' : ''}><summary>Observações${obrig('observacoes') ? ' (esta obra exige)' : ' (opcional)'}</summary>
         <div class="fld"><label for="fObs">Observações</label><textarea id="fObs">${esc(f.observacoes || '')}</textarea></div>
       </details>`;
     const B = $('ovlB');
     const lerTextos = () => { const g = id => $(id) ? $(id).value : null;
-      if (g('fDesc') != null) f.descricao = g('fDesc'); if (g('fCaus') != null) f.causador = g('fCaus'); if (g('fPrazo') != null) f.prazo = g('fPrazo'); if (g('fObs') != null) f.observacoes = g('fObs');
+      if (g('fDesc') != null) f.descricao = g('fDesc'); if (g('fPrazo') != null) f.prazo = g('fPrazo'); if (g('fObs') != null) f.observacoes = g('fObs');
       if (g('fUn') != null) f.unidade = g('fUn'); if (g('fUn2') != null) f.unidade = g('fUn2');
       B.querySelectorAll('[data-bs]').forEach(s => { f.bloqueios[+s.dataset.bs].servico = s.value; }); B.querySelectorAll('[data-bl]').forEach(s => { f.bloqueios[+s.dataset.bl].local = s.value; }); };
     desenhar.ler = lerTextos;
@@ -965,7 +978,7 @@ function formPend(id, encaminhar) {
       if (k === 'prioridade' && !prazoManual) f.prazo = somaDias(hoje(), prazoDe(v));
       if (k === 'disciplina') confereResp();
       // a equipe vem do cadastro do funcionário (dá para trocar)
-      if (k === 'responsavel' && f.responsavel && f.responsavel !== '*') { const fu = FUNC.find(x => x.id === f.responsavel); if (fu && fu.equipe) f.equipe = fu.equipe; }
+      if (k === 'responsavel') { if (equipeDoFunc()) f.equipe = equipeDoFunc(); else if (f.responsavel === '*' || !f.responsavel) f.equipe = ed && ed.equipe && !ed.responsavel ? ed.equipe : ''; }
       const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; });
     $('fTipo2').onchange = e => { lerTextos(); f.tipo = e.target.value; const s = ((L.problema.find(x => x.valor === f.tipo) || {}).extra || {}).disciplina; if (s) { f.disciplina = s; confereResp(); }
       if (!ed && engenharia()) f.seg = ehSegTipo(f.tipo);
@@ -973,8 +986,8 @@ function formPend(id, encaminhar) {
     if ($('fSeg')) $('fSeg').onchange = e => { lerTextos(); f.seg = e.target.checked; const open = B.querySelector('details.mais').open; desenhar(); B.querySelector('details.mais').open = open; };
     if ($('pOk')) $('pOk').textContent = BOTAO[modo()] || (ed ? 'Salvar' : 'Registrar');
     $('fPrazo').oninput = () => { prazoManual = true; };
-    $('blqAdd').onclick = () => { lerTextos(); f.bloqueios.push({ servico: '', local: f.local_tipo === 'Apartamento' && f.unidade ? 'Apto ' + f.unidade : '' }); desenhar(); B.querySelector('details.mais').open = true; };
-    B.querySelectorAll('[data-brm]').forEach(b => b.onclick = () => { lerTextos(); f.bloqueios.splice(+b.dataset.brm, 1); desenhar(); B.querySelector('details.mais').open = true; });
+    $('blqAdd').onclick = () => { lerTextos(); f.bloqueios.push({ servico: '', local: f.local_tipo === 'Apartamento' && f.unidade ? 'Apto ' + f.unidade : '' }); desenhar(); };
+    B.querySelectorAll('[data-brm]').forEach(b => b.onclick = () => { lerTextos(); f.bloqueios.splice(+b.dataset.brm, 1); desenhar(); });
     B.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { lerTextos(); const x = novas.splice(+b.dataset.rm, 1)[0]; URL.revokeObjectURL(x.url); desenhar(); });
     const addFotos = async files => { lerTextos(); for (const arq of files) { try { const blob = await comprimir(arq); novas.push({ fid: uuid(), blob, url: URL.createObjectURL(blob) }); } catch (e) { toast('Não foi possível ler a foto.'); } } desenhar(); };
     $('fCam').onchange = e => addFotos([...e.target.files]); $('fGal').onchange = e => addFotos([...e.target.files]);
@@ -1012,7 +1025,7 @@ function formPend(id, encaminhar) {
     if (!f.prioridade) falta.push('prioridade');
     // campos que esta obra exige (Listas e regras → Regras); na sugestão de quem é de campo, não
     if (m !== 'sugestao') {
-    if (obrig('descricao') && !String(f.descricao || '').trim()) falta.push('descrição'); if (obrig('causador') && !String(f.causador || '').trim()) falta.push('responsável pelo problema');
+    if (obrig('descricao') && !String(f.descricao || '').trim()) falta.push('descrição');
     if (obrig('prazo') && !f.prazo) falta.push('prazo'); if (obrig('observacoes') && !String(f.observacoes || '').trim()) falta.push('observações');
     if (obrig('ponto') && plantaDe(f.pavimento) && !(f.ponto && f.ponto.pav === plantaDe(f.pavimento))) falta.push('local na planta');
     if (obrig('bloqueios') && !(f.bloqueios || []).some(b => b.servico)) falta.push('serviço travado');
@@ -1072,7 +1085,7 @@ function detalhe(id, mantemRolagem) {
   const prazoTxt = p.status === 'fechada' ? '' : vencida(p) ? `<b class="ruim">Venceu em ${fmtD(p.prazo)}</b>` : p.prazo ? `<span>Prazo ${fmtD(p.prazo)}</span>` : '<span class="muted">Sem prazo</span>';
   const caixaFotos = (t, rot, botao) => { const arr = fotos(t); return `<div class="fi-fb"><span class="fi-fl">${rot}</span>${arr.length ? galeria(arr) : `<span class="muted fi-sem">Sem foto do ${t}</span>`}${botao || ''}</div>`; };
   const kv = [
-    ['Quem causou', p.causador], ['Bloqueia', (p.bloqueios || []).length ? p.bloqueios.map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') : ''],
+    ['Bloqueia', (p.bloqueios || []).length ? p.bloqueios.map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') : ''],
     ['Observações', p.observacoes], ['Registrada', fmtDH(p.criado_em) + ' por ' + nomeDe(p.criado_por)]
   ].filter(x => x[1]);
   const temPlanta = p.ponto && PLANTAS[p.ponto.pav];
@@ -1235,7 +1248,7 @@ async function gerarPdf(arr, g, stTxt, comFotos, prog) {
     for (const p of lst) {
       n++; prog('Montando ' + n + ' de ' + arr.length + '…', n / arr.length);
       const info = [['Local', rotLocal(p)], ['Tipo', p.tipo], ['Corrige', rotResp(p)], ['Prioridade', PRI[p.prioridade][0] + (p.prazo ? ' · prazo ' + fmtD(p.prazo) + (vencida(p) ? ' (VENCIDA)' : '') : '')],
-        ['Descrição', p.descricao || '—'], ['Quem causou', p.causador || '—'], ['Trava', (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') || '—'], ['Observações', p.observacoes || '']].filter(x => x[1]);
+        ['Descrição', p.descricao || '—'], ['Trava', (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; ') || '—'], ['Observações', p.observacoes || '']].filter(x => x[1]);
       const ls = info.map(([a, b]) => linhas(b, W - 2 * M - 30, 9));
       let fimgs = [];
       { const pl = await plantaParaPdf(p).catch(() => null); if (pl) fimgs.push(pl); }
