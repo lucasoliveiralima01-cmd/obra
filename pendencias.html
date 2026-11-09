@@ -79,12 +79,17 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);max-width:100%;min-height:38px}
 .frow .fs{display:contents}.frow .fs>span{display:none}
 .frow .fs .fsel{flex:0 0 auto;width:126px}
-.sitc{display:flex;flex-wrap:wrap;gap:6px}
-.ford{margin-left:auto}
+.fsels{display:contents}
+.frow.f1 .fsel{width:auto;max-width:170px}
+.fsel.on{border-color:var(--accent);background:var(--accent-soft)}
+.lh-d{display:flex;gap:12px;align-items:center}
+.lh-d .lnk{margin:0}
+.lh-d .fsel{min-height:32px;padding:5px 8px;font-size:.84rem}
+.filtros .bFil{color:var(--ink);border-color:var(--line);background:var(--panel)}
 .filtros .frot{margin-right:0}
 .filtros{padding:10px 12px;gap:10px}
 .fsep{width:1px;align-self:stretch;background:var(--line);margin:2px 4px}
-.busca{flex:1 1 240px;max-width:420px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca{flex:1 1 220px;max-width:none;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
 .busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
 .busca:focus-within{border-color:var(--accent)}
 .lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px;margin-left:auto}
@@ -92,7 +97,7 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .bFil b{background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:0 6px;font-size:.75rem;margin-left:4px}
 .so-cel{display:none!important}
 #tabBody{display:grid;gap:12px;min-width:0}
-.lhead{display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-top:2px}
+.lhead{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-top:2px}
 .ruim{color:var(--bad)}
 .lhead h2{margin:0;font:700 1rem var(--f-body)}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -653,11 +658,11 @@ function rapidosHtml(its, so) {
   if (FILA.length) r.push(['fila', 'Aguardando envio', its.filter(p => p._fila).length]);
   return r.filter(([k]) => !so || so.includes(k) || F[k]).map(([k, rot, c]) => `<button type="button" class="chip" data-tg="${k}" aria-pressed="${!!F[k]}">${rot}${c ? ' <b>' + c + '</b>' : ''}</button>`).join('');
 }
-function selectsHtml(its, pre) {
+function selectsHtml(its, pre, so) {
   const usados = k => [...new Set(its.map(p => p[k]).filter(Boolean))];
   const pavs = CFG.pavimentos.map(x => x.nome).filter(n => usados('pavimento').includes(n)).concat(usados('pavimento').filter(n => !CFG.pavimentos.some(x => x.nome === n)));
   const resp = usados('responsavel_nome').sort();
-  const s = (id, rot, html) => `<label class="fs"><span>${rot}</span><select class="fsel" data-f="${id}" aria-label="${rot}">${html}</select></label>`;
+  const s = (id, rot, html) => so && !so.includes(id) ? '' : `<label class="fs"><span>${rot}</span><select class="fsel${F[id] ? ' on' : ''}" data-f="${id}" aria-label="${rot}">${html}</select></label>`;
   return s('pav', 'Pavimento', opcoes(pavs, F.pav, pre ? 'Pavimento' : 'Todos'))
     + s('disc', 'Ofício', opcoes(usados('disciplina').sort(), F.disc, pre ? 'Ofício' : 'Todos'))
     + s('resp', 'Responsável', `<option value="">${pre ? 'Responsável' : 'Todos'}</option>${resp.map(v => `<option ${v === F.resp ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option value="-" ${F.resp === '-' ? 'selected' : ''}>Sem funcionário escolhido</option>`)
@@ -679,21 +684,24 @@ function renderLista(its) {
   const vis = filtrar(its), sit = sitAtual(), ativos = filtrosAtivos();
   const cnt = s => its.filter(p => s[2].includes(p.status)).length;
   const sitChips = SIT.filter(s => s[0] !== 'todas').map(s => `<button type="button" class="chip" data-sit="${s[0]}" aria-pressed="${sit === s[0]}">${s[1]} <b>${cnt(s)}</b></button>`).join('');
+  // filtros que só estão na janela "Mais filtros" (contam no selo do botão)
+  const escondidos = ativos.filter(([k]) => !['st', 'pav', 'disc', 'pri', 'venc'].includes(k)).length;
   const titulo = `${vis.length} ${vis.length === 1 ? 'pendência' : 'pendências'}${SIT_TXT[sit] ? ' ' + (vis.length === 1 ? SIT_TXT[sit].replace(/s$/, '').replace('abertas', 'aberta') : SIT_TXT[sit]) : ''}`;
   $('tabBody').innerHTML = `<div class="filtros">
       <div class="frow f1"><label class="busca"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="fQ" type="search" placeholder="Buscar por nº, apto ou descrição" value="${esc(F.q)}" aria-label="Buscar"></label>
-        <span class="frot so-pc">Situação</span><span class="sitc so-pc">${sitChips}</span>
-        <select class="fsel so-pc ford" data-ord aria-label="Ordenar">${Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>Ordenar por ${v.toLowerCase()}</option>`).join('')}</select>
+        <select class="fsel so-pc${sit !== 'andamento' ? ' on' : ''}" data-sitsel aria-label="Situação">${SIT.map(x => `<option value="${x[0]}" ${sit === x[0] ? 'selected' : ''}>${x[1]} (${cnt(x)})</option>`).join('')}${sit ? '' : '<option selected disabled>Situação personalizada</option>'}</select>
+        <span class="frow so-pc fsels">${selectsHtml(its, true, ['pav', 'disc', 'pri'])}</span>
+        ${rapidosHtml(its, ['venc']).replace(/class="chip"/g, 'class="chip so-pc"')}
+        <button type="button" class="btn ghost so-pc bFil" id="bFilPc">Mais filtros${escondidos ? ' <b>' + escondidos + '</b>' : ''}</button>
         <button type="button" class="btn ghost so-cel bFil" id="bFil">Filtros${ativos.length ? ' <b>' + ativos.length + '</b>' : ''}</button>
 </div>
-      <div class="frow so-pc">${selectsHtml(its, true)}<span class="fsep"></span>${rapidosHtml(its)}</div>
       <div class="frow so-cel rol">${sit !== 'andamento' ? `<button type="button" class="chip" data-tira="st" aria-pressed="true">${(SIT.find(s => s[0] === sit) || [0, 'Situação'])[1]} ✕</button>` : '<span class="chip" aria-pressed="true">Em andamento</span>'}${rapidosHtml(its, ['venc', 'blq', 'meu'])}</div>
     </div>
-    <div class="lhead"><h2>${titulo}</h2>${ativos.length ? '<button type="button" class="lnk so-pc" data-limpar>Limpar filtros</button>' : ''}<button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
+    <div class="lhead"><h2>${titulo}</h2><span class="lh-d so-pc">${ativos.length ? '<button type="button" class="lnk" data-limpar>Limpar filtros</button>' : ''}<select class="fsel ford" data-ord aria-label="Ordenar">${Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>Ordenar: ${v.toLowerCase()}</option>`).join('')}</select></span><button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
     ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude ou limpe os filtros.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências do seu ofício, elas aparecem aqui.'}</p>${ativos.length ? '<button type="button" class="btn ghost" data-limpar>Limpar filtros</button>' : ''}</div>`}`;
   const b = $('tabBody');
   ligarFiltros(b, render);
-  $('bFil').onclick = abrirFiltros; $('bOrd').onclick = abrirFiltros;
+  $('bFil').onclick = $('bFilPc').onclick = abrirFiltros; $('bOrd').onclick = abrirFiltros;
   $('fQ').oninput = e => { F.q = e.target.value; clearTimeout(renderLista.t); renderLista.t = setTimeout(() => { render(); const q = $('fQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); };
   b.querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   pintarFotos(b);
@@ -819,6 +827,7 @@ function limparTopo() { $('ovl').classList.remove('filtros-ovl', 'ficha-ovl'); $
 document.addEventListener('click', ev => { if (!ev.target.closest('.fi-mais')) document.querySelectorAll('.fi-menu').forEach(m => { m.hidden = true; }); });
 function openSheet(t, body, foot, form) { delete $('ovl').dataset.det; limparTopo(); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; $('ovl').hidden = false; if (form) $('ovl').dataset.form = '1'; else delete $('ovl').dataset.form; $('ovlB').scrollTop = 0; }
 function closeSheet() { $('ovl').hidden = true; limparTopo(); $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete $('ovl').dataset.form; delete $('ovl').dataset.det; render(); }
+$('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl').dataset.form && !$('ovl').dataset.ocupado) closeSheet(); });
 $('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
 
