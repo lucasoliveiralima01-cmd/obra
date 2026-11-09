@@ -46,10 +46,17 @@ button{cursor:pointer}
 .modechip.off{border-color:#f0a93a;color:#f7cf8d}
 
 main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.tab{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:6px 14px;font:600 .9rem var(--f-body);color:var(--muted)}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
+.crumbs .lnk{margin-left:auto}
+.crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:8px}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 22px;font:700 .92rem var(--f-body);color:var(--ink);min-width:84px}
+.tab:hover{border-color:var(--accent)}
 .tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .tabs .sp{flex:1}
+.tabs #bPdf{border-radius:9px;padding:9px 18px;color:var(--ink);border-color:var(--line);background:var(--panel)}
+.tabs #bPdf:hover{border-color:var(--accent)}
 .aviso{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:.9rem}
 .aviso.info{background:var(--accent-soft);color:var(--ink)}
 .chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
@@ -62,30 +69,61 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .btn:disabled{opacity:.5;cursor:default}
 
 /* filtros */
-.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:8px}
-.frow{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
-.chip{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:4px 11px;font:600 .82rem var(--f-body);color:var(--muted)}
-.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
-.chip b{font-family:var(--f-mono);font-weight:600;margin-left:4px}
-.fsel{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:.86rem;max-width:100%}
-.busca{flex:1 1 180px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 10px;min-width:0}
+.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:12px}
+.frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.frot{font-size:.88rem;color:var(--muted);margin-right:6px}
+.chip{background:none;border:1px solid var(--line);border-radius:16px;padding:5px 12px;font:500 .84rem var(--f-body);color:var(--ink);white-space:nowrap}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.chip b{font-family:var(--f-body);font-weight:600;margin-left:2px}
+.fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);max-width:100%;min-height:38px}
+.frow .fs{display:contents}.frow .fs>span{display:none}
+.frow .fs .fsel{flex:0 1 auto;max-width:190px}
+.fsep{width:1px;align-self:stretch;background:var(--line);margin:2px 4px}
+.busca{flex:1 1 280px;max-width:600px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
+.busca:focus-within{border-color:var(--accent)}
+.lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px;margin-left:auto}
+.lnk:hover{text-decoration:underline}
+.bFil b{background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:0 6px;font-size:.75rem;margin-left:4px}
+.so-cel{display:none!important}
+#tabBody{display:grid;gap:12px;min-width:0}
+.lhead{display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-top:2px}
+.ruim{color:var(--bad)}
+.lhead h2{margin:0;font:700 1rem var(--f-body)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid .fsel{width:100%}
+.btn.grande{flex:1;padding:11px 14px}
+.filtros-ovl .sheet>footer .btn.ghost{padding:11px 18px}
 
 /* lista */
-.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
-.card{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:left;width:100%;color:inherit}
-.card:hover{border-color:var(--accent)}
-.card.pri-critica{border-left:5px solid var(--bad)} .card.pri-alta{border-left:5px solid var(--warn)}
-.th{width:84px;height:84px;border-radius:7px;background:var(--bg);overflow:hidden;display:grid;place-items:center;color:var(--muted);font-size:.7rem;position:relative}
-.th img{width:100%;height:100%;object-fit:cover}
-.th .n{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;font:600 .68rem var(--f-mono);border-radius:4px;padding:0 4px}
-.cb{display:grid;gap:3px;min-width:0}
-.cb .l1{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
-.num{font:700 1rem var(--f-mono)}
-.cb .loc{font:600 .95rem var(--f-body);overflow-wrap:anywhere}
-.cb .sub{font-size:.84rem;color:var(--muted);overflow-wrap:anywhere}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.card{display:grid;grid-template-columns:76px minmax(0,1fr) auto;grid-template-rows:1fr auto;gap:8px 12px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px 12px 10px;text-align:left;width:100%;color:inherit;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card.pri-critica{border-left-color:var(--bad)} .card.pri-alta{border-left-color:var(--warn)}
+.th{width:76px;height:76px;border-radius:7px;background:var(--bg);overflow:hidden;display:grid;place-items:center;color:var(--muted);font-size:.7rem;position:relative}
+.th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.th .n{position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.62);color:#fff;font:600 .66rem var(--f-body);border-radius:4px;padding:0 4px}
+.cb{display:grid;gap:2px;min-width:0;align-content:start}
+.l0{display:flex;flex-wrap:wrap;gap:2px 5px;align-items:center;font-size:.78rem;color:var(--muted)}
+.l0 .num{font:600 .8rem var(--f-body);color:var(--muted)}
+.l0 .stt{font-weight:600}
+.stt.st-avaliacao{color:var(--accent)} .stt.st-aberta{color:var(--muted)} .stt.st-em_correcao{color:var(--warn)} .stt.st-corrigida{color:var(--info)} .stt.st-fechada{color:var(--ok)}
+.l0 .inc{color:var(--warn);font-weight:600}
+.cb .loc{font:700 .98rem/1.25 var(--f-body);overflow-wrap:anywhere;margin-top:1px}
+.cb .sub{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+.cr{display:flex;gap:6px;align-items:flex-start}
+.prib{font:600 .74rem var(--f-body);padding:2px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.prib.pri-critica{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.prib.pri-alta{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.chev{color:var(--accent);font:600 1.2rem/1 var(--f-body)}
+.cft{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:space-between;align-items:center;font-size:.84rem;border-top:1px solid var(--line-2);padding-top:7px}
+.cft .muted{font-size:.8rem}
+.cft .ok{color:var(--ok);font-weight:600}
 .pill{font:600 .7rem var(--f-body);padding:1px 8px;border-radius:10px;white-space:nowrap;border:1px solid transparent}
 .st-avaliacao{background:var(--accent-soft);color:var(--accent)} .st-aberta{background:var(--bad-soft);color:var(--bad)} .st-em_correcao{background:var(--warn-soft);color:var(--warn)}
 .st-corrigida{background:var(--info-soft);color:var(--info)} .st-fechada{background:var(--ok-soft);color:var(--ok)}
+.stt{background:none!important}
 .p-critica{border-color:var(--bad);color:var(--bad)} .p-alta{border-color:var(--warn);color:var(--warn)} .p-media{border-color:var(--line);color:var(--muted)} .p-baixa{border-color:var(--line-2);color:var(--muted)}
 .tag{font:600 .68rem var(--f-body);padding:1px 7px;border-radius:10px;background:var(--bg);color:var(--muted);border:1px dashed var(--line)}
 .tag.venc{border-style:solid;border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
@@ -176,21 +214,37 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
   .ttl{border-left:0;padding-left:0}
   .hctl{margin-left:0;width:100%}
   .lista{grid-template-columns:1fr}
-  .card{grid-template-columns:112px minmax(0,1fr)}
-  .th{width:112px;height:112px}
+  .so-pc{display:none!important}
+  .so-cel{display:inline-flex!important}
+  .frow.so-cel{display:flex!important}
+  .filtros{background:none;border:0;padding:0;gap:10px}
+  .busca{flex-basis:0;background:var(--panel)}
+  .bFil{min-height:40px;border-color:var(--line);color:var(--ink);background:var(--panel)}
+  .rol{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+  .rol::-webkit-scrollbar{display:none}
+  .lnk{margin-left:0}
+  .tabs{display:grid;grid-template-columns:1fr}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+  .tabs .sp,.tabs #bPdf{display:none}
+  .crumbs{justify-content:flex-start}
+  .card{grid-template-columns:64px minmax(0,1fr) auto;padding:10px 10px 8px}
+  .th{width:64px;height:64px}
+  .fab{left:16px;right:16px;border-radius:10px;padding:13px 16px}
+  .hctl{width:auto;margin-left:auto;order:2}
+  .mo-abas{order:3}
+  #bQuem{display:none}
+  .fgrid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
 <body>
 <header class="brand"><div class="brand-in">
   <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/pendencias.svg" alt="" width="40" height="40"></a>
-  <div class="ttl"><span class="kick">Acabamentos · retrabalhos</span><h1>Pendências de obra</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="ttl"><h1>Pendências</h1><span class="obra" id="obraNome">Carregando…</span></div>
   <div class="hctl">
     <span class="modechip" id="modeChip" hidden>Carregando…</span>
-    <a class="hbtn" id="bObras" href="index.html?ferramenta=pendencias">← Obras</a>
-    <button class="hbtn" id="bAvisos" type="button" data-menu title="Receber avisos neste aparelho">🔔 Avisos</button>
-    <button class="hbtn" id="bPdf" type="button">Relatório PDF</button>
-    <button class="hbtn" id="bListas" type="button" data-menu hidden>Listas</button>
+    <button class="hbtn" id="bAvisos" type="button" data-menu title="Receber avisos neste aparelho">Notificações</button>
+    <button class="hbtn" id="bListas" type="button" data-menu hidden>Listas e regras</button>
   </div>
 </div></header>
 
@@ -244,7 +298,7 @@ let PLANTAS = {};     // pavimento -> planta (imagem gerada pelo Mapa de Risco a
 let FILA = [];        // operações aguardando envio (deste aparelho)
 let FUNC = [];        // funcionários da obra (Listas e regras → Funcionários)
 let TAB = 'lista';
-const F = { st: new Set(['avaliacao', 'aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: false, q: '' };
+const F = { st: new Set(['avaliacao', 'aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: false, ord: 'pri', q: '' };
 const euEmail = () => String((NV && NV.usuario && NV.usuario.email) || '').toLowerCase();
 const minha = p => String(p.criado_por || '').toLowerCase() === euEmail();
 // funcionários que podem corrigir num cargo; e se a pendência foi escolhida para mim
@@ -476,68 +530,138 @@ function render() {
   const its = itens();
   const nf = its.filter(p => p._fila).length;
   const temPlantas = Object.keys(PLANTAS).length > 0; if (TAB === 'planta' && !temPlantas) TAB = 'lista';
-  m.innerHTML = `<div class="tabs"><button class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Lista</button>${temPlantas ? `<button class="tab" data-tab="planta" aria-pressed="${TAB === 'planta'}">Planta</button>` : ''}<button class="tab" data-tab="resumo" aria-pressed="${TAB === 'resumo'}">Resumo</button><span class="sp"></span>
-    ${!navigator.onLine ? '<span class="aviso" style="padding:4px 10px">Sem sinal: o que você registrar fica guardado neste aparelho e é enviado quando a conexão voltar.</span>' : ''}</div>
+  const muitas = NV && NV.podeVer && ['risco', 'concretagem', 'fachada'].some(f => NV.podeVer(f));
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span>${muitas ? `<a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a>` : `<span>${esc(OBRA_NOME)}</span>`}<span>›</span><span>Pendências</span><button type="button" class="lnk so-cel" id="bPdf2">Relatório PDF</button></nav>
+    <div class="tabs"><div class="seg">${[['lista', 'Lista'], temPlantas ? ['planta', 'Planta'] : null, ['resumo', 'Resumo']].filter(Boolean).map(([k, r]) => `<button type="button" class="tab" data-tab="${k}" aria-pressed="${TAB === k}">${r}</button>`).join('')}</div><span class="sp"></span><button type="button" class="btn ghost" id="bPdf">Relatório PDF</button></div>
+    ${!navigator.onLine ? '<div class="aviso">Sem sinal: o que você registrar fica guardado neste aparelho e é enviado quando a conexão voltar.</div>' : ''}
     ${FILA.some(o => o.erro) ? `<div class="aviso">Algumas alterações não foram aceitas pelo banco. Abra a pendência marcada com “erro ao enviar” para ver o motivo.</div>` : ''}
     <div id="tabBody"></div>`;
   m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  $('bPdf').onclick = $('bPdf2').onclick = formRelatorio;
   if (TAB === 'resumo') renderResumo(its); else if (TAB === 'planta') renderPlanta(its); else renderLista(its);
   $('fab').hidden = !podeCriar();
 }
 
+// situação: um grupo por vez ("Em andamento" = tudo que não foi fechado)
+const ANDAMENTO = ['avaliacao', 'aberta', 'em_correcao', 'corrigida'];
+const SIT = [['andamento', 'Em andamento', ANDAMENTO], ['aberta', 'Abertas', ['aberta']], ['em_correcao', 'Em correção', ['em_correcao']], ['avaliacao', 'Em avaliação', ['avaliacao']], ['corrigida', 'Corrigidas', ['corrigida']], ['fechada', 'Fechadas', ['fechada']], ['todas', 'Todas', ST_ORD]];
+const SIT_TXT = { andamento: 'em andamento', aberta: 'abertas', em_correcao: 'em correção', avaliacao: 'em avaliação', corrigida: 'corrigidas', fechada: 'fechadas', todas: '' };
+const sitAtual = () => { const k = SIT.find(s => s[2].length === F.st.size && s[2].every(x => F.st.has(x))); return k ? k[0] : ''; };
+const ORDENS = { pri: 'Prioridade e prazo', prazo: 'Prazo mais próximo', recentes: 'Mais recentes', numero: 'Número' };
+const ORDEM = {
+  pri: (a, b) => (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9')) || (b.numero || 1e9) - (a.numero || 1e9),
+  prazo: (a, b) => String(a.prazo || '9').localeCompare(String(b.prazo || '9')) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade),
+  recentes: (a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')),
+  numero: (a, b) => (b.numero || 1e9) - (a.numero || 1e9)
+};
 function filtrar(its) {
   const q = F.q.trim().toLowerCase();
   return its.filter(p => F.st.has(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.disc || p.disciplina === F.disc) && (!F.resp || (F.resp === '-' ? !p.responsavel_nome : p.responsavel_nome === F.resp)) && (!F.paraMim || paraMim(p)) && (!F.meu || doMeu(p)) && (!F.tipo || p.tipo === F.tipo) && (!F.pri || p.prioridade === F.pri)
     && (!F.blq || (p.bloqueios || []).length) && (!F.inc || incompleta(p)) && (!F.venc || vencida(p)) && (!F.fila || p._fila) && (!F.minhas || minha(p))
     && (!q || [p.numero ? '#' + p.numero : '', p.descricao, p.unidade, p.comodo, p.tipo, p.disciplina, p.responsavel_nome, EQUIPE[p.equipe] || '', p.local_tipo, p.pavimento, p.observacoes].join(' ').toLowerCase().includes(q)))
-    .sort((a, b) => ST_ORD.indexOf(a.status) - ST_ORD.indexOf(b.status) || (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || (b.numero || 1e9) - (a.numero || 1e9));
+    .sort(ORDEM[F.ord] || ORDEM.pri);
 }
 function opcoes(vals, sel, todos) { return `<option value="">${todos}</option>` + vals.map(v => `<option ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join(''); }
-function renderLista(its) {
-  const vis = filtrar(its);
-  const cnt = s => its.filter(p => p.status === s).length;
+const F_PADRAO = () => ({ st: new Set(ANDAMENTO), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: sugere(), ord: 'pri' });
+// o que está diferente do padrão (para "Limpar filtros" e "Filtros selecionados")
+function filtrosAtivos() {
+  const a = [], sel = (k, rot) => { if (F[k]) a.push([k, rot + F[k]]); };
+  if (sitAtual() !== 'andamento') a.push(['st', (SIT.find(s => s[0] === sitAtual()) || [0, 'Situação'])[1]]);
+  for (const [k, rot] of RAPIDOS) if (F[k] && !(k === 'meu' && sugere())) a.push([k, rot]);
+  if (!F.meu && sugere()) a.push(['meu', 'Todas da obra']);
+  sel('pav', ''); sel('disc', ''); if (F.resp) a.push(['resp', F.resp === '-' ? 'Sem funcionário' : F.resp]); sel('tipo', ''); if (F.pri) a.push(['pri', PRI[F.pri][0]]);
+  return a;
+}
+const RAPIDOS = [['venc', 'Em atraso'], ['blq', 'Com bloqueios'], ['minhas', 'Registradas por mim'], ['inc', 'Incompletas'], ['meu', 'Só as minhas'], ['paraMim', 'Escolhidas para mim'], ['fila', 'Aguardando envio']];
+// os botões de filtro rápido (com a contagem)
+function rapidosHtml(its, so) {
+  const n = f => its.filter(p => p.status !== 'fechada' && f(p)).length;
+  const r = [];
+  r.push(['venc', 'Em atraso', its.filter(vencida).length]);
+  r.push(['blq', 'Com bloqueios', n(p => (p.bloqueios || []).length)]);
+  if (sugere()) r.push(['meu', 'Só as minhas', n(doMeu)]);
+  if (podeCriar()) r.push(['minhas', sugere() ? 'Sugeridas por mim' : 'Registradas por mim', its.filter(minha).length]);
+  if (its.some(paraMim)) r.push(['paraMim', 'Escolhidas para mim', n(paraMim)]);
+  r.push(['inc', 'Incompletas', n(incompleta)]);
+  if (FILA.length) r.push(['fila', 'Aguardando envio', its.filter(p => p._fila).length]);
+  return r.filter(([k]) => !so || so.includes(k) || F[k]).map(([k, rot, c]) => `<button type="button" class="chip" data-tg="${k}" aria-pressed="${!!F[k]}">${rot}${c ? ' <b>' + c + '</b>' : ''}</button>`).join('');
+}
+function selectsHtml(its, pre) {
   const usados = k => [...new Set(its.map(p => p[k]).filter(Boolean))];
   const pavs = CFG.pavimentos.map(x => x.nome).filter(n => usados('pavimento').includes(n)).concat(usados('pavimento').filter(n => !CFG.pavimentos.some(x => x.nome === n)));
+  const resp = usados('responsavel_nome').sort();
+  const s = (id, rot, html) => `<label class="fs"><span>${rot}</span><select class="fsel" data-f="${id}" aria-label="${rot}">${html}</select></label>`;
+  return s('pav', 'Pavimento', opcoes(pavs, F.pav, pre ? 'Pavimento' : 'Todos'))
+    + s('disc', 'Ofício', opcoes(usados('disciplina').sort(), F.disc, pre ? 'Ofício' : 'Todos'))
+    + s('resp', 'Responsável', `<option value="">${pre ? 'Responsável' : 'Todos'}</option>${resp.map(v => `<option ${v === F.resp ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option value="-" ${F.resp === '-' ? 'selected' : ''}>Sem funcionário escolhido</option>`)
+    + s('tipo', 'Tipo', opcoes(usados('tipo').sort(), F.tipo, pre ? 'Tipo' : 'Todos'))
+    + s('pri', 'Prioridade', `<option value="">${pre ? 'Prioridade' : 'Todas'}</option>${PRI_ORD.map(k => `<option value="${k}" ${F.pri === k ? 'selected' : ''}>${PRI[k][0]}</option>`).join('')}`);
+}
+const ordemHtml = () => Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>${v}</option>`).join('');
+// liga os controles de filtro de uma caixa (lista ou janela de filtros)
+function ligarFiltros(box, depois) {
+  box.querySelectorAll('[data-sit]').forEach(x => x.onclick = () => { F.st = new Set(SIT.find(s => s[0] === x.dataset.sit)[2]); depois(); });
+  box.querySelectorAll('select[data-sitsel]').forEach(x => x.onchange = () => { F.st = new Set(SIT.find(s => s[0] === x.value)[2]); depois(); });
+  box.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { F[x.dataset.tg] = !F[x.dataset.tg]; depois(); });
+  box.querySelectorAll('select[data-f]').forEach(x => x.onchange = () => { F[x.dataset.f] = x.value; depois(); });
+  box.querySelectorAll('select[data-ord]').forEach(x => x.onchange = () => { F.ord = x.value; depois(); });
+  box.querySelectorAll('[data-limpar]').forEach(x => x.onclick = () => { Object.assign(F, F_PADRAO()); depois(); });
+  box.querySelectorAll('[data-tira]').forEach(x => x.onclick = () => { const k = x.dataset.tira; if (k === 'st') F.st = new Set(ANDAMENTO); else if (k === 'meu') F.meu = !F.meu; else F[k] = typeof F[k] === 'boolean' ? false : ''; depois(); });
+}
+function renderLista(its) {
+  const vis = filtrar(its), sit = sitAtual(), ativos = filtrosAtivos();
+  const cnt = s => its.filter(p => s[2].includes(p.status)).length;
+  const sitChips = SIT.filter(s => s[0] !== 'todas').map(s => `<button type="button" class="chip" data-sit="${s[0]}" aria-pressed="${sit === s[0]}">${s[1]} <b>${cnt(s)}</b></button>`).join('');
+  const titulo = `${vis.length} ${vis.length === 1 ? 'pendência' : 'pendências'}${SIT_TXT[sit] ? ' ' + (vis.length === 1 ? SIT_TXT[sit].replace(/s$/, '').replace('abertas', 'aberta') : SIT_TXT[sit]) : ''}`;
   $('tabBody').innerHTML = `<div class="filtros">
-      <div class="frow">${ST_ORD.map(s => `<button class="chip" data-st="${s}" aria-pressed="${F.st.has(s)}">${ST[s]}<b>${cnt(s)}</b></button>`).join('')}</div>
-      <div class="frow">
-        <select class="fsel" id="fPav" aria-label="Pavimento">${opcoes(pavs, F.pav, 'Todos os pavimentos')}</select>
-        <select class="fsel" id="fDisc" aria-label="Ofício de quem corrige">${opcoes(usados('disciplina').sort(), F.disc, 'Todos os ofícios')}</select>
-        ${usados('responsavel_nome').length ? `<select class="fsel" id="fResp" aria-label="Quem vai corrigir"><option value="">Todos os funcionários</option>${usados('responsavel_nome').sort().map(v => `<option ${v === F.resp ? 'selected' : ''}>${esc(v)}</option>`).join('')}<option value="-" ${F.resp === '-' ? 'selected' : ''}>Sem funcionário escolhido</option></select>` : ''}
-        <select class="fsel" id="fTipo" aria-label="Tipo de problema">${opcoes(usados('tipo').sort(), F.tipo, 'Todos os tipos')}</select>
-        <select class="fsel" id="fPri" aria-label="Prioridade"><option value="">Todas as prioridades</option>${PRI_ORD.map(k => `<option value="${k}" ${F.pri === k ? 'selected' : ''}>${PRI[k][0]}</option>`).join('')}</select>
-      </div>
-      <div class="frow">
-        ${sugere() ? `<button class="chip" data-tg="meu" aria-pressed="${F.meu}">Só as minhas<b>${its.filter(p => doMeu(p) && p.status !== 'fechada').length}</b></button>` : ''}
-        ${podeCriar() ? `<button class="chip" data-tg="minhas" aria-pressed="${F.minhas}">${sugere() ? 'Sugeridas por mim' : 'Registradas por mim'}<b>${its.filter(minha).length}</b></button>` : ''}
-        ${its.some(paraMim) ? `<button class="chip" data-tg="paraMim" aria-pressed="${F.paraMim}">Escolhidas para mim<b>${its.filter(p => paraMim(p) && p.status !== 'fechada').length}</b></button>` : ''}
-        <button class="chip" data-tg="blq" aria-pressed="${F.blq}">Com bloqueios</button>
-        <button class="chip" data-tg="venc" aria-pressed="${F.venc}">Vencidas<b>${its.filter(vencida).length}</b></button>
-        <button class="chip" data-tg="inc" aria-pressed="${F.inc}">Incompletas<b>${its.filter(p => incompleta(p) && p.status !== 'fechada').length}</b></button>
-        ${FILA.length ? `<button class="chip" data-tg="fila" aria-pressed="${F.fila}">Aguardando envio<b>${its.filter(p => p._fila).length}</b></button>` : ''}
-        <input class="busca" id="fQ" type="search" placeholder="Buscar: nº, apto, descrição…" value="${esc(F.q)}" aria-label="Buscar">
-      </div></div>
-    ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude os filtros acima.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências do seu ofício, elas aparecem aqui.'}</p></div>`}`;
+      <div class="frow f1"><label class="busca"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="fQ" type="search" placeholder="Buscar por nº, apto ou descrição" value="${esc(F.q)}" aria-label="Buscar"></label>
+        <select class="fsel so-pc" data-ord aria-label="Ordenar">${Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>Ordenar por ${v.toLowerCase()}</option>`).join('')}</select>
+        <button type="button" class="btn ghost so-cel bFil" id="bFil">Filtros${ativos.length ? ' <b>' + ativos.length + '</b>' : ''}</button>
+        ${ativos.length ? '<button type="button" class="lnk so-pc" data-limpar>Limpar filtros</button>' : ''}</div>
+      <div class="frow so-pc"><span class="frot">Situação</span>${sitChips}</div>
+      <div class="frow so-pc">${selectsHtml(its, true)}<span class="fsep"></span>${rapidosHtml(its)}</div>
+      <div class="frow so-cel rol">${sit !== 'andamento' ? `<button type="button" class="chip" data-tira="st" aria-pressed="true">${(SIT.find(s => s[0] === sit) || [0, 'Situação'])[1]} ✕</button>` : '<span class="chip" aria-pressed="true">Em andamento</span>'}${rapidosHtml(its, ['venc', 'blq', 'meu'])}</div>
+    </div>
+    <div class="lhead"><h2>${titulo}</h2><button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
+    ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude ou limpe os filtros.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências do seu ofício, elas aparecem aqui.'}</p>${ativos.length ? '<button type="button" class="btn ghost" data-limpar>Limpar filtros</button>' : ''}</div>`}`;
   const b = $('tabBody');
-  b.querySelectorAll('[data-st]').forEach(x => x.onclick = () => { const s = x.dataset.st; F.st.has(s) ? F.st.delete(s) : F.st.add(s); render(); });
-  b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { F[x.dataset.tg] = !F[x.dataset.tg]; render(); });
-  $('fPav').onchange = e => { F.pav = e.target.value; render(); }; $('fDisc').onchange = e => { F.disc = e.target.value; render(); };
-  if ($('fResp')) $('fResp').onchange = e => { F.resp = e.target.value; render(); };
-  $('fTipo').onchange = e => { F.tipo = e.target.value; render(); }; $('fPri').onchange = e => { F.pri = e.target.value; render(); };
+  ligarFiltros(b, render);
+  $('bFil').onclick = abrirFiltros; $('bOrd').onclick = abrirFiltros;
   $('fQ').oninput = e => { F.q = e.target.value; clearTimeout(renderLista.t); renderLista.t = setTimeout(() => { render(); const q = $('fQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); };
   b.querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   pintarFotos(b);
 }
+// celular: todos os filtros numa janela; cada mudança já vale para a lista atrás
+function abrirFiltros() {
+  const desenhar = () => {
+    const its = itens(), sit = sitAtual(), ativos = filtrosAtivos(), n = filtrar(its).length;
+    $('ovlB').innerHTML = `<div class="fld"><label for="fSit">Situação</label><select id="fSit" data-sitsel>${SIT.map(s => `<option value="${s[0]}" ${sit === s[0] ? 'selected' : ''}>${s[1]}</option>`).join('')}${sit ? '' : '<option selected disabled>Personalizada</option>'}</select></div>
+      <div class="fld"><span class="l">Filtros rápidos</span><div class="frow">${rapidosHtml(its)}</div></div>
+      <div class="fgrid">${selectsHtml(its, false).replace(/<label class="fs"><span>/g, '<label class="fld fs"><span class="l">')}<label class="fld fs"><span class="l">Ordenar por</span><select class="fsel" data-ord>${ordemHtml()}</select></label></div>
+      ${ativos.length ? `<div class="fld"><span class="l">Filtros selecionados</span><div class="frow">${ativos.map(([k, r]) => `<button type="button" class="chip" aria-pressed="true" data-tira="${k}" aria-label="Tirar o filtro ${esc(r)}">${esc(r)} ✕</button>`).join('')}</div></div>` : ''}`;
+    $('ovlF').innerHTML = `<button type="button" class="btn ghost" data-limpar>Limpar</button><button type="button" class="btn grande" id="fVer">Ver ${n} resultado${n === 1 ? '' : 's'}</button>`;
+    ligarFiltros($('ovl'), () => { render(); desenhar(); });
+    $('fVer').onclick = closeSheet;
+  };
+  openSheet('Filtros', '', ''); $('ovl').classList.add('filtros-ovl'); desenhar();
+}
+// quem corrige: funcionário (e se é de terceiro) ou só a equipe
+const rotQuemCorrige = p => p.responsavel_nome ? p.responsavel_nome + (p.equipe === 'terceiro' ? ' (terceiro)' : '') : p.equipe === 'proprio' ? 'Equipe própria' : p.equipe === 'terceiro' ? 'Terceiro' : '';
 function cardHtml(p) {
-  const ft = (p.fotos || []).find(f => f.tipo === 'antes');
+  const ft = (p.fotos || []).find(f => f.tipo === 'antes'), nb = (p.bloqueios || []).length;
+  const quemC = [p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : '', rotQuemCorrige(p)].filter(Boolean).join(' · ') || 'Ofício a definir';
+  const prazo = p.status === 'fechada' ? '<span class="ok">Fechada</span>' : vencida(p) ? `<b class="ruim">Venceu em ${fmtD(p.prazo)}</b>` : p.prazo ? `Prazo ${fmtD(p.prazo)}` : '<span class="muted">Sem prazo</span>';
   return `<button class="card pri-${p.prioridade}" data-p="${esc(p.id)}">
-    <span class="th"><span class="ph">sem foto</span>${ft ? `<img alt="" hidden data-foto='${esc(JSON.stringify(ft))}'>` : ''}${(p.fotos || []).length > 1 ? `<span class="n">${p.fotos.length} fotos</span>` : ''}</span>
+    <span class="th"><span class="ph">sem foto</span>${ft ? `<img alt="" hidden data-foto='${esc(JSON.stringify(ft))}'>` : ''}${(p.fotos || []).length > 1 ? `<span class="n">${p.fotos.length}</span>` : ''}</span>
     <span class="cb">
-      <span class="l1"><span class="num">${p.numero ? '#' + p.numero : 'nº pendente'}</span><span class="pill st-${p.status}">${ST[p.status]}</span><span class="pill p-${p.prioridade}">${PRI[p.prioridade][0]}</span></span>
+      <span class="l0"><span class="num">${p.numero ? '#' + p.numero : 'nº pendente'}</span><span class="dot">·</span><span class="stt st-${p.status}">${ST[p.status]}</span>${incompleta(p) && p.status !== 'fechada' ? '<span class="dot">·</span><span class="inc">Incompleta</span>' : ''}</span>
       <span class="loc">${esc(rotLocal(p))}</span>
-      <span class="sub">${esc(p.tipo)} · ${esc(rotResp(p))}</span>
-      <span class="l1">${p.prazo ? `<span class="tag ${vencida(p) ? 'venc' : ''}">${vencida(p) ? 'vencida em ' : 'prazo '}${fmtD(p.prazo)}</span>` : ''}${incompleta(p) && p.status !== 'fechada' ? '<span class="tag inc">INCOMPLETA</span>' : ''}${(p.bloqueios || []).length ? `<span class="tag">trava ${p.bloqueios.length} serviço${p.bloqueios.length > 1 ? 's' : ''}</span>` : ''}${p._erro ? '<span class="tag err">erro ao enviar</span>' : p._fila ? '<span class="tag fila">aguardando envio</span>' : ''}</span>
-    </span></button>`;
+      <span class="sub">${esc(p.tipo)}</span>
+      <span class="sub">${esc(quemC)}</span>
+    </span>
+    <span class="cr"><span class="prib pri-${p.prioridade}">${PRI[p.prioridade][0]}</span><span class="chev" aria-hidden="true">›</span></span>
+    <span class="cft"><span>${prazo}${p._erro ? ' <span class="tag err">erro ao enviar</span>' : p._fila ? ' <span class="tag fila">aguardando envio</span>' : ''}</span>${nb ? `<span class="muted">Bloqueia ${nb} serviço${nb > 1 ? 's' : ''}</span>` : ''}</span>
+  </button>`;
 }
 
 // as pendências de um pavimento sobre a planta (com os mesmos filtros de status da lista)
@@ -567,14 +691,14 @@ function renderPlanta(its) {
 function renderResumo(its) {
   const ab = its.filter(p => p.status !== 'fechada');
   const cont = (arr, k) => { const m = new Map(); for (const p of arr) { const o = m.get(p[k]) || { avaliacao: 0, aberta: 0, em_correcao: 0, corrigida: 0, fechada: 0, venc: 0 }; o[p.status]++; if (vencida(p)) o.venc++; m.set(p[k], o); } return m; };
-  const tabela = (m, ordem, titulo) => `<table class="t"><thead><tr><th>${titulo}</th>${ST_ORD.map(s => `<th>${ST[s]}</th>`).join('')}<th>Vencidas</th></tr></thead><tbody>${ordem.filter(k => m.has(k)).map(k => { const o = m.get(k); return `<tr><td>${esc(k)}</td>${ST_ORD.map(s => `<td>${o[s] || '·'}</td>`).join('')}<td>${o.venc ? `<b style="color:var(--bad)">${o.venc}</b>` : '·'}</td></tr>`; }).join('') || `<tr><td colspan="6" class="muted">Nada ainda.</td></tr>`}</tbody></table>`;
+  const tabela = (m, ordem, titulo) => `<table class="t"><thead><tr><th>${titulo}</th>${ST_ORD.map(s => `<th>${ST[s]}</th>`).join('')}<th>Em atraso</th></tr></thead><tbody>${ordem.filter(k => m.has(k)).map(k => { const o = m.get(k); return `<tr><td>${esc(k)}</td>${ST_ORD.map(s => `<td>${o[s] || '·'}</td>`).join('')}<td>${o.venc ? `<b style="color:var(--bad)">${o.venc}</b>` : '·'}</td></tr>`; }).join('') || `<tr><td colspan="6" class="muted">Nada ainda.</td></tr>`}</tbody></table>`;
   const mD = cont(its, 'disciplina'), mP = cont(its, 'pavimento');
   const ordP = CFG.pavimentos.map(x => x.nome).concat([...mP.keys()].filter(k => !CFG.pavimentos.some(x => x.nome === k)));
   const blq = []; for (const p of ab) for (const b of p.bloqueios || []) blq.push({ p, b });
   const tile = (n, t, act) => `<button class="tile" ${act ? `data-res="${act}"` : 'disabled'}><b>${n}</b><span>${t}</span></button>`;
   $('tabBody').innerHTML = `<div class="tiles">
       ${ST_ORD.map(s => tile(its.filter(p => p.status === s).length, ST[s], 'st:' + s)).join('')}
-      ${tile(its.filter(vencida).length, 'Vencidas', 'venc')}${tile(ab.filter(incompleta).length, 'Incompletas', 'inc')}${tile(blq.length, 'Frentes bloqueadas', 'blq')}
+      ${tile(its.filter(vencida).length, 'Em atraso', 'venc')}${tile(ab.filter(incompleta).length, 'Incompletas', 'inc')}${tile(blq.length, 'Frentes bloqueadas', 'blq')}
     </div>
     <div class="cols"><div class="box"><h3>Por ofício de quem corrige</h3>${tabela(mD, [...mD.keys()].sort(), 'Ofício')}</div><div class="box"><h3>Por pavimento</h3>${tabela(mP, ordP, 'Pavimento')}</div></div>
     <div class="box"><h3>Por quem causou o problema (retrabalho)</h3>${(() => {
@@ -582,7 +706,7 @@ function renderResumo(its) {
       const ord = [...m.entries()].sort((a, b) => (a[0] === 'Não informado') - (b[0] === 'Não informado') || b[1].n - a[1].n);
       return ord.length ? `<table class="t"><thead><tr><th>Quem causou</th><th>Total</th><th>Não fechadas</th><th>Tipos mais comuns</th></tr></thead><tbody>${ord.map(([k, o]) => `<tr><td>${esc(k)}</td><td>${o.n}</td><td>${o.ab || '·'}</td><td style="white-space:normal;text-align:left">${esc([...o.tipos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => t + ' (' + n + ')').join(', '))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin:0">Nada ainda.</p>'; })()}
       <p class="muted" style="margin:0">Base para o desconto de retrabalho nas medições. Preencha “Responsável pelo problema” nas pendências para este quadro ficar completo.</p></div>
-    <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(rotResp(p))} · ${ST[p.status]}${vencida(p) ? ' · vencida' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
+    <div class="box"><h3>Frentes bloqueadas (pendências não fechadas)</h3>${blq.length ? `<div class="bl">${blq.sort((a, b) => String(a.b.servico).localeCompare(String(b.b.servico))).map(({ p, b }) => `<button data-p="${esc(p.id)}"><b>${esc(b.servico)}</b><span>${esc(b.local || rotLocal(p))}</span><small>${p.numero ? '#' + p.numero : 'nº pendente'} · ${esc(p.tipo)} · ${esc(rotResp(p))} · ${ST[p.status]}${vencida(p) ? ' · em atraso' : ''}</small></button>`).join('')}</div>` : '<p class="muted" style="margin:0">Nenhum serviço travado por pendência.</p>'}</div>`;
   $('tabBody').querySelectorAll('[data-p]').forEach(x => x.onclick = () => detalhe(x.dataset.p));
   $('tabBody').querySelectorAll('[data-res]').forEach(x => x.onclick = () => {
     const r = x.dataset.res; Object.assign(F, { blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: false, resp: '', pav: '', disc: '', tipo: '', pri: '', q: '' });
@@ -624,8 +748,8 @@ async function pintarPlantas(raiz) {
 const uvParaXY = (pl, u, v) => [+(pl.bb[0] + u * (pl.bb[2] - pl.bb[0])).toFixed(3), +(pl.bb[3] - v * (pl.bb[3] - pl.bb[1])).toFixed(3)];
 
 /* ======================= janelas ======================= */
-function openSheet(t, body, foot, form) { delete $('ovl').dataset.det; $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; $('ovl').hidden = false; if (form) $('ovl').dataset.form = '1'; else delete $('ovl').dataset.form; $('ovlB').scrollTop = 0; }
-function closeSheet() { $('ovl').hidden = true; $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete $('ovl').dataset.form; delete $('ovl').dataset.det; render(); }
+function openSheet(t, body, foot, form) { delete $('ovl').dataset.det; $('ovl').classList.remove('filtros-ovl'); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; $('ovl').hidden = false; if (form) $('ovl').dataset.form = '1'; else delete $('ovl').dataset.form; $('ovlB').scrollTop = 0; }
+function closeSheet() { $('ovl').hidden = true; $('ovl').classList.remove('filtros-ovl'); $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete $('ovl').dataset.form; delete $('ovl').dataset.det; render(); }
 $('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
 
@@ -981,7 +1105,7 @@ async function estadoAvisos() {
   const sub = await reg.pushManager.getSubscription().catch(() => null);
   return { st: sub ? 'ativo' : Notification.permission === 'denied' ? 'negado' : 'inativo', reg, sub };
 }
-async function marcarAvisos() { const e = await estadoAvisos(); $('bAvisos').textContent = e.st === 'ativo' ? '🔔 Avisos ligados' : '🔔 Avisos'; }
+async function marcarAvisos() { const e = await estadoAvisos(); $('bAvisos').innerHTML = 'Notificações' + (e.st === 'ativo' ? '<span class="mo-est">Ligadas</span>' : e.st === 'sem' ? '' : '<span class="mo-est off">Desligadas</span>'); }
 async function formAvisos() {
   const ios = window.AppObra && AppObra.ehIOS, inst = window.AppObra && AppObra.instalado();
   openSheet('Avisos neste aparelho', '<p class="muted" style="margin:0">Verificando…</p>', '<button class="btn ghost" id="avC" type="button">Fechar</button>');
@@ -1054,7 +1178,6 @@ async function formAvisos() {
     toast('Sem sinal: mostrando a cópia de ' + fmtDH(em) + '. O que você registrar será enviado depois.', 6000); }
   $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Pendências';
   if (NV.admin) { $('bListas').hidden = false; $('bListas').textContent = 'Listas e regras'; $('bListas').onclick = () => { location.href = 'listas.html?obra=' + encodeURIComponent(OBRA); }; }
-  $('bPdf').onclick = formRelatorio;
   $('bAvisos').onclick = formAvisos; marcarAvisos();
   $('fab').onclick = () => formPend(null);
   // quem é de campo começa vendo só as suas

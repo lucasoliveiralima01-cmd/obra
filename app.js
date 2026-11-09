@@ -38,6 +38,9 @@
     font:600 .9rem var(--f-body,system-ui,sans-serif);color:var(--ink,#14222e)}
   .mo-painel .hbtn:hover,.mo-painel .hbtn:focus-visible{background:var(--accent-soft,#dcebf2)}
   .mo-painel .hbtn[hidden]{display:none!important}
+  .mo-painel .mo-est{margin-left:auto;padding-left:14px;font:600 .8rem var(--f-body,sans-serif);color:var(--accent,#074669)}
+  .mo-painel .mo-est.off{color:var(--muted,#5a6b78)}
+  .hctl>.hbtn .mo-est{margin-left:6px;opacity:.8}
   .mo-painel .mo-sep{height:1px;background:var(--line,#d3dce3);margin:4px 2px}
   .mo-painel .mo-tit{font:600 .68rem var(--f-disp,sans-serif);letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#5a6b78);padding:4px 10px 2px}
   .mo-tema{display:flex;gap:4px;padding:2px 6px 4px}
@@ -96,7 +99,8 @@
     b.onclick = ev => {
       ev.stopPropagation(); if (aberto && aberto.dataset.menu) { fechar(); return; }
       const box = document.createElement('div'); box.style.display = 'contents';
-      const vis = itens.concat(extras).filter(x => !x.hidden);
+      // "Sair" sempre por último
+      const vis = itens.concat(extras).filter(x => !x.hidden).sort((a, b) => (a.id === 'bSair') - (b.id === 'bSair'));
       vis.forEach(x => { box.appendChild(x); x.addEventListener('click', fechar, { once: true }); });
       if (vis.length) { const s = document.createElement('div'); s.className = 'mo-sep'; box.appendChild(s); }
       const t = document.createElement('div'); t.innerHTML = '<div class="mo-tit">Tema</div><div class="mo-tema"><button type="button" data-tema="">Automático</button><button type="button" data-tema="light">Claro</button><button type="button" data-tema="dark">Escuro</button></div>';
