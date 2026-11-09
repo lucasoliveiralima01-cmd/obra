@@ -45,7 +45,7 @@ button{cursor:pointer}
 .modechip{font:500 .7rem var(--f-mono);color:#d4e4ee;border:1px dashed rgba(255,255,255,.35);border-radius:12px;padding:2px 8px;white-space:nowrap}
 .modechip.off{border-color:#f0a93a;color:#f7cf8d}
 
-main{margin:0;padding:12px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));display:grid;gap:12px}
+main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
 .crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
 .crumbs .lnk{margin-left:auto}
 .crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
@@ -686,10 +686,10 @@ function renderLista(its) {
         <select class="fsel so-pc ford" data-ord aria-label="Ordenar">${Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>Ordenar por ${v.toLowerCase()}</option>`).join('')}</select>
         <button type="button" class="btn ghost so-cel bFil" id="bFil">Filtros${ativos.length ? ' <b>' + ativos.length + '</b>' : ''}</button>
 </div>
-      <div class="frow so-pc">${selectsHtml(its, true)}<span class="fsep"></span>${rapidosHtml(its)}${ativos.length ? '<button type="button" class="lnk" data-limpar title="Limpar filtros">Limpar</button>' : ''}</div>
+      <div class="frow so-pc">${selectsHtml(its, true)}<span class="fsep"></span>${rapidosHtml(its)}</div>
       <div class="frow so-cel rol">${sit !== 'andamento' ? `<button type="button" class="chip" data-tira="st" aria-pressed="true">${(SIT.find(s => s[0] === sit) || [0, 'Situação'])[1]} ✕</button>` : '<span class="chip" aria-pressed="true">Em andamento</span>'}${rapidosHtml(its, ['venc', 'blq', 'meu'])}</div>
     </div>
-    <div class="lhead"><h2>${titulo}</h2><button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
+    <div class="lhead"><h2>${titulo}</h2>${ativos.length ? '<button type="button" class="lnk so-pc" data-limpar>Limpar filtros</button>' : ''}<button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
     ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude ou limpe os filtros.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências do seu ofício, elas aparecem aqui.'}</p>${ativos.length ? '<button type="button" class="btn ghost" data-limpar>Limpar filtros</button>' : ''}</div>`}`;
   const b = $('tabBody');
   ligarFiltros(b, render);
