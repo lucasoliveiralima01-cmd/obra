@@ -195,6 +195,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
     <div class="sbar">
       <div class="fgrp"><span class="lbl">Fachada</span><select class="sel" id="selF" aria-label="Fachada"></select></div>
       <div class="fgrp"><span class="lbl">Mostrar</span><select class="sel" id="selM" aria-label="O que mostrar"></select></div>
+      <div class="fgrp"><span class="lbl">Cores</span><div class="seg" id="segCores" role="group" aria-label="Cores"><button type="button" data-cores="camada">Camada</button><button type="button" data-cores="data">Data</button><button type="button" data-cores="cura">Cura</button></div></div>
       <div class="fgrp"><span class="lbl">Situação em</span><input type="date" class="sel" id="dRef" aria-label="Data da situação"></div>
     </div>
     <div class="views" id="views">
@@ -287,6 +288,20 @@ function estado(a, ref) {
   return { st: 'cura', lib, faltam: dias(ref, lib) };
 }
 const corCam = c => (c && c.cor) || '#888888';
+// cores da fachada: 'camada' (cor da camada), 'data' (cada aplicação de um dia tem uma cor, como os caminhões
+// na Concretagem) ou 'cura' (verde = liberada, vermelho = ainda em cura)
+let CORES = (() => { try { return localStorage.getItem('fach_cores') || 'data'; } catch (e) { return 'data'; } })();
+const PAL_DATA = ['#1f77b4', '#ff7f0e', '#9467bd', '#17becf', '#e377c2', '#bcbd22', '#8c564b', '#3a5fcd', '#d4a017', '#00897b', '#c2185b', '#5d4037', '#7cb342', '#6a1b9a', '#ef6c00', '#455a64'];
+const COR_LIB = '#2e9e57', COR_CURA = '#d93a2b', COR_QUEBRA = '#7b1fa2';
+// a cor de cada "camada + dia" é fixa na obra inteira (a mesma em todas as fachadas)
+let CDATA = null, CDATA_K = '';
+function corData(a) {
+  const k = S.apl.length + ':' + S.cam.length + ':' + (S.apl.length ? S.apl[S.apl.length - 1].id : '');
+  if (!CDATA || CDATA_K !== k) { CDATA_K = k; const ks = [...new Set(S.apl.filter(x => camById(x.camada)).slice().sort((x, y) => x.data < y.data ? -1 : x.data > y.data ? 1 : ((camById(x.camada).ordem || 0) - (camById(y.camada).ordem || 0))).map(x => x.camada + '|' + x.data))];
+    CDATA = new Map(ks.map((q, i) => [q, PAL_DATA[i % PAL_DATA.length]])); }
+  return CDATA.get(a.camada + '|' + a.data) || '#888888';
+}
+const corDe = a => CORES === 'data' ? corData(a) : CORES === 'cura' ? (estado(a).st === 'lib' ? COR_LIB : COR_CURA) : corCam(camById(a.camada));
 const visiveis = fid => S.apl.filter(a => a.fachada === fid && a.data <= S.ref && camById(a.camada));
 
 /* ======================= dados (nuvem) ======================= */
@@ -496,6 +511,12 @@ function centroDe(a) {
 }
 // desenha a fachada atual num contexto (tela ou exportação); FS = escala das letras (maior na exportação)
 let FS = 1;
+function rotDe(a, comCamada) {
+  const cm = camById(a.camada), e = estado(a), pre = comCamada ? cm.nome + ' · ' : '';
+  if (CORES === 'cura') return pre + (e.st === 'lib' ? 'Liberada' : 'Faltam ' + nDias(e.faltam));
+  if (CORES === 'data') return pre + fmtDs(a.data) + (e.st === 'cura' ? ' · faltam ' + nDias(e.faltam) : ' ✓');
+  return comCamada ? cm.nome + (e.st === 'cura' ? ' · faltam ' + nDias(e.faltam) : ' ✓') : (e.st === 'lib' ? 'Liberada' : 'Faltam ' + nDias(e.faltam));
+}
 function desenhar(c, W, H, dpr, v, tela) {
   const T = (u, z) => [(u - v.cu) * v.s + W / 2, H / 2 - (z - v.cz) * v.s];
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
@@ -515,27 +536,26 @@ function desenhar(c, W, H, dpr, v, tela) {
   if (S.modo === 'sit') {
     const ord = vis.slice().sort((a, b) => ((camById(a.camada).ordem || 0) - (camById(b.camada).ordem || 0)) || (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
     porPlano(c, f, I, T, ord, planoDe, (c, L) => { for (const a of L) {
-      const cm = camById(a.camada); const e = estado(a); const cor = corCam(cm);
-      c.beginPath(); caminho(c, T, a.pts); c.globalAlpha = e.st === 'lib' ? 0.62 : 0.4; c.fillStyle = cor; c.fill(); c.globalAlpha = 1;
-      if (e.st === 'cura') { c.fillStyle = hachura(c, cor); c.fill(); }
-      c.lineWidth = 1.6; c.strokeStyle = cor; c.setLineDash(e.st === 'cura' ? [5, 3] : []); c.stroke(); c.setLineDash([]);
+      const e = estado(a); const cor = corDe(a);
+      c.beginPath(); caminho(c, T, a.pts); c.globalAlpha = CORES === 'cura' ? 0.8 : e.st === 'lib' ? 0.62 : 0.4; c.fillStyle = cor; c.fill(); c.globalAlpha = 1;
+      if (e.st === 'cura' && CORES !== 'cura') { c.fillStyle = hachura(c, cor); c.fill(); }
+      c.lineWidth = 1.6; c.strokeStyle = cor; c.setLineDash(e.st === 'cura' && CORES !== 'cura' ? [5, 3] : []); c.stroke(); c.setLineDash([]);
     } });
-    for (const a of ord) { const cm = camById(a.camada); const e = estado(a); rotulo(c, T, a.pts, cm.nome + (e.st === 'cura' ? ' · faltam ' + nDias(e.faltam) : ' ✓'), corCam(cm), centroDe(a)); }
+    for (const a of ord) rotulo(c, T, a.pts, rotDe(a, true), corDe(a), centroDe(a));
   } else {
     const cm = camById(S.modo); if (cm) {
       const seg = vis.filter(a => { const cb = camById(a.camada); return (cb.ordem || 0) > (cm.ordem || 0) && a.camada !== cm.id; });
       porPlano(c, f, I, T, seg, planoDe, (c, L) => { for (const a of L) { c.beginPath(); caminho(c, T, a.pts); c.lineWidth = 1.2; c.strokeStyle = 'rgba(40,50,60,.55)'; c.setLineDash([3, 3]); c.stroke(); c.setLineDash([]); } });
-      const ok = css('--ok') || '#23804a', wn = '#e39b1c';
       const da = vis.filter(a => a.camada === cm.id);
-      porPlano(c, f, I, T, da, planoDe, (c, L) => { for (const a of L) { const e = estado(a); const cor = e.st === 'lib' ? ok : wn;
-        c.beginPath(); caminho(c, T, a.pts); c.globalAlpha = 0.45; c.fillStyle = cor; c.fill(); c.globalAlpha = 1; if (e.st === 'cura') { c.fillStyle = hachura(c, '#b86e00'); c.fill(); }
-        c.lineWidth = 1.8; c.strokeStyle = e.st === 'lib' ? ok : '#b86e00'; c.stroke(); } });
-      for (const a of da) { const e = estado(a); rotulo(c, T, a.pts, e.st === 'lib' ? 'Liberada' : 'Faltam ' + nDias(e.faltam), e.st === 'lib' ? ok : '#b86e00', centroDe(a)); }
+      porPlano(c, f, I, T, da, planoDe, (c, L) => { for (const a of L) { const e = estado(a); const cor = corDe(a);
+        c.beginPath(); caminho(c, T, a.pts); c.globalAlpha = 0.5; c.fillStyle = cor; c.fill(); c.globalAlpha = 1; if (e.st === 'cura' && CORES !== 'cura') { c.fillStyle = hachura(c, cor); c.fill(); }
+        c.lineWidth = 1.8; c.strokeStyle = cor; c.stroke(); } });
+      for (const a of da) rotulo(c, T, a.pts, rotDe(a, false), corDe(a), centroDe(a));
     }
   }
   // quebras de cura nesta fachada
   const qs = quebras().filter(q => q.f.id === f.id && q.B.data <= S.ref);
-  porPlano(c, f, I, T, qs, q => planoDe(q.A), (c, L) => { for (const q of L) for (const pg of q.inter) { c.beginPath(); for (const r of pg) caminho(c, T, r); c.fillStyle = hachura(c, '#c23b2f'); c.fill('evenodd'); c.lineWidth = 2.2; c.strokeStyle = '#c23b2f'; c.stroke(); } });
+  porPlano(c, f, I, T, qs, q => planoDe(q.A), (c, L) => { for (const q of L) for (const pg of q.inter) { const cq = CORES === 'cura' ? COR_QUEBRA : '#c23b2f'; c.beginPath(); for (const r of pg) caminho(c, T, r); c.fillStyle = hachura(c, cq); c.fill('evenodd'); c.lineWidth = 2.2; c.strokeStyle = cq; c.stroke(); } });
   // selecionada (realce na parte que fica no pano + contorno fino do que foi desenhado)
   const sel = S.sel && aplById(S.sel);
   if (sel && sel.fachada === f.id) {
@@ -822,7 +842,7 @@ function renderLista() {
   ap.sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : ((camById(b.camada).ordem || 0) - (camById(a.camada).ordem || 0)));
   if (!S.cam.length) { L.innerHTML = `<div class="muted" style="display:grid;gap:8px;justify-items:start">Cadastre as camadas (chapisco, reboco, textura, pintura…) com o tempo de cura de cada uma.${S.ro ? '' : '<button class="btn sm" id="eCam">Cadastrar camadas</button>'}</div>`; if ($('eCam')) $('eCam').onclick = formCamadas; return; }
   if (!ap.length) { L.innerHTML = `<span class="muted">Nenhuma aplicação ${S.modo === 'sit' ? '' : 'de ' + esc(camById(S.modo).nome) + ' '}nesta fachada ainda.${S.ro ? '' : ' Toque em “+ Registrar aplicação” e desenhe a área sobre a fachada.'}</span>`; return; }
-  L.innerHTML = ap.slice(0, 200).map(a => { const c = camById(a.camada); return `<button class="ap" data-a="${esc(a.id)}" aria-current="${S.sel === a.id}"><span class="sw" style="background:${esc(corCam(c))}"></span><span class="m"><b>${esc(c.nome)}</b> · ${fmtD(a.data)}<small>${f1(areaDe(a))} m²${a.equipe ? ' · ' + esc(a.equipe) : ''}</small></span>${pillDe(a)}</button>`; }).join('') + (ap.length > 200 ? `<span class="muted">Mostrando as 200 mais recentes.</span>` : '');
+  L.innerHTML = ap.slice(0, 200).map(a => { const c = camById(a.camada); return `<button class="ap" data-a="${esc(a.id)}" aria-current="${S.sel === a.id}"><span class="sw" style="background:${esc(corDe(a))}"></span><span class="m"><b>${esc(c.nome)}</b> · ${fmtD(a.data)}<small>${f1(areaDe(a))} m²${a.equipe ? ' · ' + esc(a.equipe) : ''}</small></span>${pillDe(a)}</button>`; }).join('') + (ap.length > 200 ? `<span class="muted">Mostrando as 200 mais recentes.</span>` : '');
   L.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = aplById(b.dataset.a); if (!a) return; S.sel = a.id; renderSide(); req(); });
 }
 function renderResumo() {
@@ -845,8 +865,14 @@ function renderResumo() {
 }
 function renderLegenda() {
   const L = $('legend'); const f = fachAtual(); if (!f || !S.cam.length) { L.hidden = true; return; } L.hidden = false;
-  if (S.modo === 'sit') L.innerHTML = camsOrd().map(c => `<span><i style="background:${esc(corCam(c))}"></i>${esc(c.nome)}</span>`).join('') + '<span><i class="hach" style="background:#888"></i>em cura</span><span><i style="background:#c23b2f"></i>quebra</span>';
-  else { const c = camById(S.modo); const nx = c && proxima(c); L.innerHTML = `<span><i style="background:var(--ok)"></i>liberada${nx ? ' para ' + esc(nx.nome) : ''}</span><span><i class="hach" style="background:#e39b1c"></i>em cura</span><span><i style="background:none;border:1px dashed #555"></i>camadas seguintes</span><span><i style="background:#c23b2f"></i>quebra</span>`; }
+  const vis = visiveis(f.id).filter(a => S.modo === 'sit' || a.camada === S.modo);
+  const qb = `<span><i class="hach" style="background:${CORES === 'cura' ? COR_QUEBRA : '#c23b2f'}"></i>quebra de cura</span>`;
+  if (CORES === 'cura') L.innerHTML = `<span><i style="background:${COR_LIB}"></i>liberada</span><span><i style="background:${COR_CURA}"></i>em cura (ainda não liberada)</span>${qb}`;
+  else if (CORES === 'data') { const ks = new Map(); vis.slice().sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0).forEach(a => ks.set(a.camada + '|' + a.data, a));
+    const it = [...ks.values()]; L.innerHTML = (it.length ? it.slice(0, 16).map(a => `<span><i style="background:${corData(a)}"></i>${S.modo === 'sit' ? esc(camById(a.camada).nome) + ' ' : ''}${fmtDs(a.data)}</span>`).join('') + (it.length > 16 ? `<span>e mais ${it.length - 16}…</span>` : '') : '<span>Nenhuma aplicação</span>')
+      + '<span><i class="hach" style="background:#888"></i>em cura</span>' + qb; }
+  else if (S.modo === 'sit') L.innerHTML = camsOrd().map(c => `<span><i style="background:${esc(corCam(c))}"></i>${esc(c.nome)}</span>`).join('') + '<span><i class="hach" style="background:#888"></i>em cura</span>' + qb;
+  else { const c = camById(S.modo); const nx = c && proxima(c); L.innerHTML = `<span><i style="background:${esc(corCam(c))}"></i>${esc(c.nome)}</span><span><i class="hach" style="background:#888"></i>em cura</span><span><i style="background:none;border:1px dashed #555"></i>camadas seguintes${nx ? ' (' + esc(nx.nome) + '…)' : ''}</span>` + qb; }
 }
 function renderSelects() {
   const sf = $('selF'); sf.innerHTML = S.fach.map(f => `<option value="${esc(f.id)}">${esc(f.nome)}</option>`).join(''); if (S.fid) sf.value = S.fid;
@@ -1105,6 +1131,9 @@ function exportarCsv() {
 /* ======================= ligações ======================= */
 $('selF').onchange = () => { S.fid = $('selF').value; S.sel = null; const f = fachAtual(); if (f) carregarImg(f); fitted = null; fit(); CACHE.imas = null; renderSide(); req(); };
 $('selM').onchange = () => { S.modo = $('selM').value; renderSide(); req(); };
+const marcarCores = () => document.querySelectorAll('[data-cores]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cores === CORES)));
+document.querySelectorAll('[data-cores]').forEach(b => b.onclick = () => { CORES = b.dataset.cores; try { localStorage.setItem('fach_cores', CORES); } catch (e) {} marcarCores(); renderSide(); req(); });
+marcarCores();
 $('dRef').value = S.ref; $('dRef').onchange = () => { S.ref = $('dRef').value || today(); if (!$('dRef').value) $('dRef').value = S.ref; mudou(); renderSide(); req(); };
 $('bFit').onclick = fit;
 $('bNiv').onclick = () => { S.niv = !S.niv; $('bNiv').setAttribute('aria-pressed', S.niv); CACHE.imas = null; req(); };
