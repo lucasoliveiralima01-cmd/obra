@@ -235,6 +235,8 @@
   function gerar(modelo, pends, o) {
     const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true });
     const layout = []; const nomeModelo = modelo === 'individual' ? 'Individual' : 'Consolidado';
+    // propriedades do arquivo (aparecem no leitor de PDF e na busca do computador)
+    pdf.setProperties({ title: 'Relatório de pendências · ' + nomeModelo + ' · ' + o.obra, subject: 'Pendências da obra ' + o.obra + ' (' + pends.length + ')', author: o.empresa || '', creator: 'Ferramentas da Obra' });
     if (modelo === 'individual') {
       pends.forEach((p, i) => {
         if (i) pdf.addPage();
