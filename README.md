@@ -175,6 +175,6 @@ O endereço da obra (`residencial-x`) é criado a partir do nome e não muda qua
 - **E-mails do Supabase** (convite, "esqueci minha senha"): o envio gratuito tem limite baixo por hora. Se a equipe for grande, prefira **Create new user**.
 - **Projetos gratuitos do Supabase** ficam pausados depois de um tempo sem uso. Se o site parar de conectar, entre no Supabase e reative o projeto.
 - **Logo no carimbo**: na janela **Exportar PDF**, use o campo **Logo da empresa ou da obra no carimbo**.
-- **Zoom no celular**: a página não amplia com pinça nem com toque duplo, para não desmontar a tela. Ampliam só os mapas de desenho, a planta da pendência e a foto aberta em tela cheia.
+- **Zoom no celular**: a página não amplia com pinça nem com toque duplo, para a tela não sair do lugar. Ampliam só os mapas de desenho, a planta da pendência e a foto aberta em tela cheia.
 - **Pendências no iPhone**: a pendência fica guardada no aparelho até subir. Se o Safari não deixar guardar (modo privado, ou ao voltar da câmera), ela sobe direto, desde que haja sinal.
 - **Relatórios de pendências em PDF** (botão **Relatório PDF** e, na ficha, **⋯ → Exportar PDF**): *Consolidado* (duas pendências por página, blocos de tamanho fixo), *Individual* (uma página por pendência, com a planta e o encerramento), *Fotográfico* e *Lista detalhada*. Fotos além de quatro por categoria e textos longos vão para os anexos. O desenho fica em `relatorio-pdf.js`; o logo, a empresa e o endereço ficam guardados em cada aparelho.
