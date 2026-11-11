@@ -8,8 +8,8 @@
 // As páginas e scripts do site são sempre conferidos na internet (sem esperar o
 // cache do navegador), então publicar uma versão nova não exige mexer aqui.
 // Só troque o número se mudar a lista BASICO (o que fica guardado para usar sem sinal).
-const CACHE = 'obra-v11';
-const BASICO = ['./', 'index.html', 'pendencias.html', 'estilo.css', 'listas-comum.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png', 'icones/principal.svg', 'icones/pendencias.svg',
+const CACHE = 'obra-v12';
+const BASICO = ['./', 'index.html', 'pendencias.html', 'estilo.css', 'listas-comum.js', 'relatorio-pdf.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png', 'icones/principal.svg', 'icones/pendencias.svg',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
 

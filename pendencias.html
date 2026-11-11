@@ -350,6 +350,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="app.js"></script>
+<script src="relatorio-pdf.js"></script>
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'pendencias';</script>
 <script src="nuvem.js"></script>
@@ -1169,7 +1170,7 @@ function detalhe(id, mantemRolagem) {
     reabrir: ['dReab', 'ghost', 'Reabrir'], recusar: ['dRec', 'danger', 'Não aprovar'], encaminhar: ['dEnc', 'ok', 'Encaminhar para correção'] };
   const doStatus = Object.keys(BT).filter(k => pode[k]);
   const editarNoRodape = pode.editar && doStatus.length < 2;
-  const menu = [pode.editar && !editarNoRodape ? '<button type="button" role="menuitem" id="dEd">Editar</button>' : '', pode.excluir ? '<button type="button" role="menuitem" class="ruim" id="dDel">Excluir</button>' : ''].filter(Boolean);
+  const menu = [pode.editar && !editarNoRodape ? '<button type="button" role="menuitem" id="dEd">Editar</button>' : '', '<button type="button" role="menuitem" id="dPdf">Exportar PDF (individual)</button>', pode.excluir ? '<button type="button" role="menuitem" class="ruim" id="dDel">Excluir</button>' : ''].filter(Boolean);
   // título: a descrição curta; sem descrição (ou muito longa), o tipo do problema
   const desc = String(p.descricao || '').trim(), descTitulo = desc && desc.length <= 90 && !desc.includes('\n');
   const prazoTxt = p.status === 'fechada' ? '' : vencida(p) ? `<b class="ruim">Venceu em ${fmtD(p.prazo)}</b>` : p.prazo ? `<span>Prazo ${fmtD(p.prazo)}</span>` : '<span class="muted">Sem prazo</span>';
@@ -1221,6 +1222,7 @@ function detalhe(id, mantemRolagem) {
   if (op) { B('dRetry').onclick = async () => { delete op.erro; await idbPut('fila', op.k, op); await carregarFila(); sincronizar(); closeSheet(); };
     B('dDescartar').onclick = async () => { if (!confirm('Descartar esta alteração? Ela não será enviada.')) return; const ops = FILA.filter(o => o.id === id && o.seq >= op.seq); for (const o of ops) { for (const f of o.fotos || []) await idbDel('blobs', f.fid); await idbDel('fila', o.k); } await carregarFila(); closeSheet(); }; }
   if (B('dEd')) B('dEd').onclick = () => formPend(id);
+  if (B('dPdf')) B('dPdf').onclick = () => exportarIndividual(p);
   if (B('dIni')) B('dIni').onclick = async () => { await enfileirar({ op: 'status', id, para: 'em_correcao' }); toast('Correção iniciada.'); detalhe(id); };
   if (B('dCor')) B('dCor').onclick = () => formCorrigida(p);
   if (B('dFec')) B('dFec').onclick = async () => { await enfileirar({ op: 'status', id, para: 'fechada' }); toast('Pendência aprovada e fechada.'); detalhe(id); };
@@ -1291,17 +1293,23 @@ async function lerLogo(arq) {
 function formRelatorio() {
   if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
   let logo = lsLer('pend_logo');
-  openSheet('Relatório em PDF', `<div class="fld"><span class="l">Modelo</span><div class="opts small" id="rgMod"><button type="button" class="opt" data-mod="foto" aria-pressed="true">Relatório fotográfico</button><button type="button" class="opt" data-mod="lista" aria-pressed="false">Lista detalhada</button></div></div>
+  openSheet('Relatório em PDF', `<div class="fld"><span class="l">Modelo</span><div class="opts small" id="rgMod"><button type="button" class="opt" data-mod="consolidado">Consolidado (2 por página)</button><button type="button" class="opt" data-mod="individual">Individual (1 por página)</button><button type="button" class="opt" data-mod="foto">Fotográfico (não conformidade)</button><button type="button" class="opt" data-mod="lista">Lista detalhada</button></div><p class="muted" id="rgModD" style="margin:0"></p></div>
     <div class="fld"><label for="rgS">Status</label><select id="rgS">${Object.entries(FSTATUS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div>
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgL"> Usar também os filtros da lista (pavimento, ofício, tipo, prioridade, busca)</label>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgL" checked> Usar também os filtros da lista (pavimento, ofício, tipo, prioridade, busca)</label>
+    <div id="rgPav" style="display:grid;gap:12px">
+      <div class="fld"><label for="rgEmp">Empresa (aparece no rodapé)</label><input id="rgEmp" value="${esc(lsLer('pend_empresa') || 'PAVEI Empreendimentos')}"></div>
+      <div class="fld"><label for="rgEnd2">Endereço da obra</label><input id="rgEnd2" value="${esc(lsLer('pend_end_' + OBRA))}" placeholder="Ex.: Av. Osvaldo Aranha, 576 – Bom Fim – Porto Alegre/RS"></div>
+    </div>
     <div id="rgFoto" style="display:grid;gap:12px">
       <div class="fld"><label for="rgTit">Título</label><input id="rgTit" value="${esc(lsLer('pend_rel_tit') || 'RELATÓRIO DE NÃO CONFORMIDADE')}"></div>
       <div class="fld"><label for="rgEnd">Endereço da obra</label><input id="rgEnd" value="${esc(lsLer('pend_end_' + OBRA))}" placeholder="Ex.: Av. Osvaldo Aranha, 576 – Bom Fim – Porto Alegre/RS"></div>
       <div class="fld"><label for="rgObj">Objeto</label><textarea id="rgObj" rows="2" placeholder="Ex.: Identificação de vazios de concretagem entre o Térreo e o 3º pavimento"></textarea></div>
-      <div class="fld"><span class="l">Logo da empresa (aparece no topo de cada página)</span><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><img id="rgLogoV" alt="Logo" style="max-height:44px;max-width:180px;${logo ? '' : 'display:none'}" ${logo ? `src="${logo}"` : ''}>
-        <label class="btn sm ghost" style="cursor:pointer">${logo ? 'Trocar logo' : 'Escolher imagem'}<input type="file" accept="image/*" id="rgLogo" hidden></label><button type="button" class="btn sm ghost" id="rgLogoX" ${logo ? '' : 'hidden'}>Tirar</button></div></div>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgDep" checked> Incluir as fotos do depois (quando houver)</label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgPl"> Incluir o local marcado na planta</label>
+    </div>
+    <div id="rgLogoBox">
+      <div class="fld"><span class="l">Logo da empresa (aparece no topo de cada página)</span><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><img id="rgLogoV" alt="Logo" style="max-height:44px;max-width:180px;${logo ? '' : 'display:none'}" ${logo ? `src="${logo}"` : ''}>
+        <label class="btn sm ghost" style="cursor:pointer">${logo ? 'Trocar logo' : 'Escolher imagem'}<input type="file" accept="image/*" id="rgLogo" hidden></label><button type="button" class="btn sm ghost" id="rgLogoX" ${logo ? '' : 'hidden'}>Tirar</button></div></div>
     </div>
     <div id="rgLista" hidden style="display:grid;gap:12px">
       <div class="fld"><label for="rgG">Agrupar por</label><select id="rgG">${Object.entries(GRUPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
@@ -1309,8 +1317,11 @@ function formRelatorio() {
     </div>
     <div id="rgP" hidden><div class="muted" id="rgPT"></div><div class="prog"><i id="rgPB"></i></div></div>`,
     '<span class="msg" id="rgM"></span><button class="btn ghost" id="rgC" type="button">Fechar</button><button class="btn" id="rgOk" type="button">Gerar PDF</button>');
-  let mod = lsLer('pend_rel_mod') || 'foto';
-  const marcaMod = () => { $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mod === mod))); $('rgFoto').hidden = mod !== 'foto'; $('rgLista').hidden = mod !== 'lista'; $('rgFoto').style.display = mod === 'foto' ? 'grid' : 'none'; $('rgLista').style.display = mod === 'lista' ? 'grid' : 'none'; };
+  let mod = lsLer('pend_rel_mod2') || 'consolidado';
+  const DESC = { consolidado: 'Duas pendências por página, com fotos do antes e do depois e a correção. Fotos extras e textos longos vão para os anexos no fim.', individual: 'Uma página por pendência: dados completos, fotos do antes e do depois, local na planta, correção e encerramento.', foto: 'Fotos em duas colunas com legenda numerada, no modelo do relatório de não conformidade.', lista: 'Lista agrupada, com os dados de cada pendência e fotos pequenas.' };
+  const vis = (id, on) => { $(id).hidden = !on; $(id).style.display = on ? 'grid' : 'none'; };
+  const marcaMod = () => { $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mod === mod))); $('rgModD').textContent = DESC[mod];
+    vis('rgFoto', mod === 'foto'); vis('rgLista', mod === 'lista'); vis('rgPav', mod === 'consolidado' || mod === 'individual'); vis('rgLogoBox', mod !== 'lista'); };
   $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { mod = b.dataset.mod; marcaMod(); }); marcaMod();
   $('rgLogo').onchange = async e => { const a = e.target.files[0]; if (!a) return; try { logo = await lerLogo(a); if (!lsGravar('pend_logo', logo)) toast('O logo vale só para este relatório (o aparelho não deixou guardar).'); $('rgLogoV').src = logo; $('rgLogoV').style.display = ''; $('rgLogoX').hidden = false; } catch (er) { toast('Não foi possível ler a imagem.'); } };
   $('rgLogoX').onclick = () => { logo = ''; lsGravar('pend_logo', ''); $('rgLogoV').style.display = 'none'; $('rgLogoX').hidden = true; };
@@ -1320,11 +1331,15 @@ function formRelatorio() {
     let arr = itens().filter(FSTATUS[s][1]);
     if ($('rgL').checked) { const st0 = F.st; F.st = new Set(ST_ORD); arr = filtrar(arr); F.st = st0; }
     if (!arr.length) { $('rgM').className = 'msg err'; $('rgM').textContent = 'Nenhuma pendência com essas opções.'; return; }
-    lsGravar('pend_rel_mod', mod);
+    lsGravar('pend_rel_mod2', mod);
     $('rgOk').disabled = true; $('rgP').hidden = false;
     const prog = (t, f) => { $('rgPT').textContent = t; $('rgPB').style.width = Math.round(f * 100) + '%'; };
     try {
-      if (mod === 'foto') {
+      if (mod === 'consolidado' || mod === 'individual') {
+        const end = $('rgEnd2').value.trim(), emp = $('rgEmp').value.trim(); lsGravar('pend_end_' + OBRA, end); lsGravar('pend_empresa', emp);
+        const r = await gerarRelPadrao(mod, arr, { endereco: end, empresa: emp, logo, resumo: FSTATUS[s][0] + ($('rgL').checked ? ' · com os filtros da lista' : '') }, prog);
+        if (r.falhas) { $('rgM').className = 'msg err'; $('rgM').textContent = 'PDF gerado, mas ' + r.falhas + ' imagem(ns) não carregaram (aparecem como "Foto não carregada"). Confira a conexão e gere de novo.'; $('rgOk').disabled = false; return; }
+      } else if (mod === 'foto') {
         const end = $('rgEnd').value.trim(), tit = $('rgTit').value.trim() || 'RELATÓRIO DE NÃO CONFORMIDADE';
         lsGravar('pend_end_' + OBRA, end); lsGravar('pend_rel_tit', tit === 'RELATÓRIO DE NÃO CONFORMIDADE' ? '' : tit);
         await gerarRelFoto(arr, { tit, end, obj: $('rgObj').value.trim(), logo, depois: $('rgDep').checked, planta: $('rgPl').checked }, prog);
@@ -1400,6 +1415,68 @@ async function gerarRelFoto(arr, o, prog) {
   const tot = pdf.getNumberOfPages(); for (let k = 1; k <= tot; k++) { pdf.setPage(k); rodape(k, tot); }
   const nome = 'Relatorio_' + String(OBRA_NOME).replace(/[^\wÀ-ú]+/g, '_') + '_' + hoje().replace(/-/g, '') + '.pdf';
   const b = pdf.output('blob'); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+}
+/* ---------------- relatórios Individual e Consolidado (desenho em relatorio-pdf.js) ---------------- */
+// planta inteira do pavimento, com o alfinete no local (para o relatório individual)
+async function plantaInteira(p) {
+  const pl = p.ponto && PLANTAS[p.ponto.pav]; if (!pl) return null;
+  const u = await urlPlanta(pl); if (!u) return { erro: true };
+  const img = new Image(); await new Promise(r => { img.onload = r; img.onerror = r; img.src = u; }); if (!img.naturalWidth) return { erro: true };
+  const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas');
+  cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc); const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+  const px = p.ponto.u * cv.width, py = p.ponto.v * cv.height, rr = Math.max(9, cv.width / 70);
+  g.fillStyle = COR_ST[p.status] || '#c23b2f'; g.strokeStyle = '#fff'; g.lineWidth = rr / 3.5;
+  g.beginPath(); g.arc(px, py - rr * 1.35, rr, 0, Math.PI * 2); g.moveTo(px - rr * .75, py - rr * .7); g.lineTo(px, py); g.lineTo(px + rr * .75, py - rr * .7); g.fill(); g.stroke();
+  const d = cv.toDataURL('image/jpeg', .85), w = cv.width, h = cv.height; cv.width = cv.height = 0; return { d, w, h };
+}
+// junta tudo o que o relatório precisa de uma pendência, com as imagens já carregadas
+async function prepararPend(p, comPlanta, contar) {
+  const ord = (a, b) => String(a.em || '').localeCompare(String(b.em || ''));
+  const carregar = async f => { const im = await fotoParaPdf(f, 1200).catch(() => null); if (!im) { contar(); return { erro: true }; } return im; };
+  const antes = p.fotos.filter(f => f.tipo === 'antes').sort(ord), depois = p.fotos.filter(f => f.tipo === 'depois').sort(ord);
+  // o que vale é o que aconteceu depois da última reabertura ou reprovação
+  const evs = (p.eventos || []).slice().sort(ord); let ini = 0;
+  evs.forEach((e, i) => { if (e.acao === 'status' && e.para === 'aberta' && (e.de === 'corrigida' || e.de === 'fechada')) ini = i + 1; });
+  const depoisDe = evs.slice(ini);
+  const cor = depoisDe.filter(e => e.para === 'corrigida').pop(), fec = depoisDe.filter(e => e.para === 'fechada').pop();
+  const desc = String(p.descricao || '').trim(), descTitulo = desc && desc.length <= 90 && !desc.includes('\n');
+  const planta = comPlanta ? await plantaInteira(p).catch(() => ({ erro: true })) : null; if (planta && planta.erro) contar();
+  return {
+    numeroTxt: p.numero ? '#' + p.numero : '(nº pendente)', titulo: descTitulo ? desc : p.tipo, descricao: desc,
+    localTxt: [p.pavimento, p.local_tipo === 'Apartamento' && p.unidade ? 'Apto ' + p.unidade : [p.local_tipo, p.unidade].filter(Boolean).join(' '), p.comodo].filter(Boolean).join('  /  '),
+    status: p.status, statusTxt: ST[p.status] || p.status, prioridade: p.prioridade, prioridadeTxt: (PRI[p.prioridade] || ['—'])[0],
+    servico: p.tipo, responsavel: [p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : '', p.responsavel_nome || (p.equipe ? EQUIPE[p.equipe] : '')].filter(Boolean).join(' · ') || 'A definir',
+    bloqueia: (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; '),
+    registrada: fmtDH(p.criado_em) + ' · ' + nomeDe(p.criado_por),
+    fotos: { antes: await Promise.all(antes.map(carregar)), depois: await Promise.all(depois.map(carregar)) },
+    dataAntes: antes.length && antes[0].em ? fmtD(antes[0].em) : '', dataDepois: depois.length && depois[0].em ? fmtD(depois[0].em) : '',
+    planta, plantaMsg: p.ponto ? 'Planta indisponível' : 'Local não marcado na planta',
+    correcao: cor ? { texto: String(cor.comentario || '').trim(), por: nomeDe(cor.por), em: fmtDH(cor.em) } : null,
+    fechamento: fec ? { por: nomeDe(fec.por), em: fmtDH(fec.em) } : null
+  };
+}
+async function gerarRelPadrao(modelo, arr, o, prog) {
+  if (!window.RelatorioPDF) throw new Error('o módulo de relatório não carregou; recarregue a página');
+  const ordPav = n => { const i = CFG.pavimentos.findIndex(x => x.nome === n); return i < 0 ? 999 : i; };
+  arr = arr.slice().sort((a, b) => ordPav(a.pavimento) - ordPav(b.pavimento) || (a.numero || 1e9) - (b.numero || 1e9));
+  let falhas = 0; const dados = [];
+  for (let i = 0; i < arr.length; i++) { prog('Carregando fotos ' + (i + 1) + ' de ' + arr.length + '…', i / arr.length * .9); dados.push(await prepararPend(arr[i], modelo === 'individual', () => falhas++)); }
+  let logo = null; if (o.logo) { const im = new Image(); await new Promise(r => { im.onload = r; im.onerror = r; im.src = o.logo; }); if (im.naturalWidth) logo = { d: o.logo, r: im.naturalWidth / im.naturalHeight, tipo: /^data:image\/jpe?g/.test(o.logo) ? 'JPEG' : 'PNG' }; }
+  prog('Montando o PDF…', .95);
+  const { pdf, layout } = RelatorioPDF.gerar(modelo, dados, { obra: OBRA_NOME, endereco: o.endereco, empresa: o.empresa, logo, emissao: fmtD(hoje()), resumo: o.resumo });
+  const nome = 'Pendencias_' + (modelo === 'individual' ? 'individual' : 'consolidado') + '_' + String(OBRA_NOME).replace(/[^\wÀ-ú]+/g, '_') + (arr.length === 1 && arr[0].numero ? '_' + arr[0].numero : '') + '_' + hoje().replace(/-/g, '') + '.pdf';
+  const b = pdf.output('blob'); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+  window.__ultimoRelatorio = { modelo, layout, paginas: pdf.getNumberOfPages() };   // para conferir as posições nos testes
+  return { falhas, layout };
+}
+// ficha: exportar só esta pendência (relatório individual)
+async function exportarIndividual(p) {
+  if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
+  toast('Gerando o PDF…', 15000);
+  try { const r = await gerarRelPadrao('individual', [p], { endereco: lsLer('pend_end_' + OBRA), empresa: lsLer('pend_empresa') || 'PAVEI Empreendimentos', logo: lsLer('pend_logo') }, () => {});
+    toast(r.falhas ? 'PDF gerado, mas ' + r.falhas + ' imagem(ns) não carregaram. Confira a conexão.' : 'PDF gerado.', 6000); }
+  catch (e) { console.error(e); toast('Não foi possível gerar: ' + (e.message || e), 7000); }
 }
 async function fotoParaPdf(f, lado) {
   const u = await urlFoto(f); if (!u) return null;
