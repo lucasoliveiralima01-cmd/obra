@@ -1277,31 +1277,135 @@ function formComentario(p, titulo, rotulo, botao, para) {
 /* ---------------- relatório em PDF ---------------- */
 const GRUPOS = { disciplina: 'Ofício de quem corrige', tipo: 'Tipo de problema', pavimento: 'Pavimento' };
 const FSTATUS = { nfechadas: ['Não fechadas', p => p.status !== 'fechada'], avaliacao: ['Em avaliação', p => p.status === 'avaliacao'], abertas: ['Abertas e em correção', p => p.status === 'aberta' || p.status === 'em_correcao'], corrigidas: ['Corrigidas (aguardando aprovação)', p => p.status === 'corrigida'], fechadas: ['Fechadas', p => p.status === 'fechada'], todas: ['Todas', () => true] };
+// opções do relatório fotográfico guardadas neste aparelho (logo da empresa e endereço de cada obra)
+const lsLer = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const lsGravar = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; } catch (e) { return false; } };
+// reduz o logo (até 600 px) e mantém a transparência
+async function lerLogo(arq) {
+  const u = URL.createObjectURL(arq); const img = new Image();
+  try { await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = u; }); } finally { setTimeout(() => URL.revokeObjectURL(u), 2000); }
+  const sc = Math.min(1, 600 / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas');
+  cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  return cv.toDataURL('image/png');
+}
 function formRelatorio() {
   if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
-  openSheet('Relatório em PDF', `<div class="fld"><label for="rgG">Agrupar por</label><select id="rgG">${Object.entries(GRUPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+  let logo = lsLer('pend_logo');
+  openSheet('Relatório em PDF', `<div class="fld"><span class="l">Modelo</span><div class="opts small" id="rgMod"><button type="button" class="opt" data-mod="foto" aria-pressed="true">Relatório fotográfico</button><button type="button" class="opt" data-mod="lista" aria-pressed="false">Lista detalhada</button></div></div>
     <div class="fld"><label for="rgS">Status</label><select id="rgS">${Object.entries(FSTATUS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div>
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgF" checked> Incluir as fotos (antes e depois)</label>
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgL"> Usar também os filtros da lista (pavimento, ofício, tipo, prioridade, busca)</label>
+    <div id="rgFoto" style="display:grid;gap:12px">
+      <div class="fld"><label for="rgTit">Título</label><input id="rgTit" value="${esc(lsLer('pend_rel_tit') || 'RELATÓRIO DE NÃO CONFORMIDADE')}"></div>
+      <div class="fld"><label for="rgEnd">Endereço da obra</label><input id="rgEnd" value="${esc(lsLer('pend_end_' + OBRA))}" placeholder="Ex.: Av. Osvaldo Aranha, 576 – Bom Fim – Porto Alegre/RS"></div>
+      <div class="fld"><label for="rgObj">Objeto</label><textarea id="rgObj" rows="2" placeholder="Ex.: Identificação de vazios de concretagem entre o Térreo e o 3º pavimento"></textarea></div>
+      <div class="fld"><span class="l">Logo da empresa (aparece no topo de cada página)</span><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><img id="rgLogoV" alt="Logo" style="max-height:44px;max-width:180px;${logo ? '' : 'display:none'}" ${logo ? `src="${logo}"` : ''}>
+        <label class="btn sm ghost" style="cursor:pointer">${logo ? 'Trocar logo' : 'Escolher imagem'}<input type="file" accept="image/*" id="rgLogo" hidden></label><button type="button" class="btn sm ghost" id="rgLogoX" ${logo ? '' : 'hidden'}>Tirar</button></div></div>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgDep" checked> Incluir as fotos do depois (quando houver)</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgPl"> Incluir o local marcado na planta</label>
+    </div>
+    <div id="rgLista" hidden style="display:grid;gap:12px">
+      <div class="fld"><label for="rgG">Agrupar por</label><select id="rgG">${Object.entries(GRUPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgF" checked> Incluir as fotos (antes e depois)</label>
+    </div>
     <div id="rgP" hidden><div class="muted" id="rgPT"></div><div class="prog"><i id="rgPB"></i></div></div>`,
     '<span class="msg" id="rgM"></span><button class="btn ghost" id="rgC" type="button">Fechar</button><button class="btn" id="rgOk" type="button">Gerar PDF</button>');
+  let mod = lsLer('pend_rel_mod') || 'foto';
+  const marcaMod = () => { $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mod === mod))); $('rgFoto').hidden = mod !== 'foto'; $('rgLista').hidden = mod !== 'lista'; $('rgFoto').style.display = mod === 'foto' ? 'grid' : 'none'; $('rgLista').style.display = mod === 'lista' ? 'grid' : 'none'; };
+  $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { mod = b.dataset.mod; marcaMod(); }); marcaMod();
+  $('rgLogo').onchange = async e => { const a = e.target.files[0]; if (!a) return; try { logo = await lerLogo(a); if (!lsGravar('pend_logo', logo)) toast('O logo vale só para este relatório (o aparelho não deixou guardar).'); $('rgLogoV').src = logo; $('rgLogoV').style.display = ''; $('rgLogoX').hidden = false; } catch (er) { toast('Não foi possível ler a imagem.'); } };
+  $('rgLogoX').onclick = () => { logo = ''; lsGravar('pend_logo', ''); $('rgLogoV').style.display = 'none'; $('rgLogoX').hidden = true; };
   $('rgC').onclick = closeSheet;
   $('rgOk').onclick = async () => {
-    const g = $('rgG').value, s = $('rgS').value, comFotos = $('rgF').checked;
+    const s = $('rgS').value;
     let arr = itens().filter(FSTATUS[s][1]);
     if ($('rgL').checked) { const st0 = F.st; F.st = new Set(ST_ORD); arr = filtrar(arr); F.st = st0; }
     if (!arr.length) { $('rgM').className = 'msg err'; $('rgM').textContent = 'Nenhuma pendência com essas opções.'; return; }
+    lsGravar('pend_rel_mod', mod);
     $('rgOk').disabled = true; $('rgP').hidden = false;
-    try { await gerarPdf(arr, g, FSTATUS[s][0], comFotos, (t, f) => { $('rgPT').textContent = t; $('rgPB').style.width = Math.round(f * 100) + '%'; }); $('rgM').className = 'msg ok'; $('rgM').textContent = 'PDF gerado.'; }
-    catch (e) { console.error(e); $('rgM').className = 'msg err'; $('rgM').textContent = 'Não foi possível gerar: ' + (e.message || e); }
+    const prog = (t, f) => { $('rgPT').textContent = t; $('rgPB').style.width = Math.round(f * 100) + '%'; };
+    try {
+      if (mod === 'foto') {
+        const end = $('rgEnd').value.trim(), tit = $('rgTit').value.trim() || 'RELATÓRIO DE NÃO CONFORMIDADE';
+        lsGravar('pend_end_' + OBRA, end); lsGravar('pend_rel_tit', tit === 'RELATÓRIO DE NÃO CONFORMIDADE' ? '' : tit);
+        await gerarRelFoto(arr, { tit, end, obj: $('rgObj').value.trim(), logo, depois: $('rgDep').checked, planta: $('rgPl').checked }, prog);
+      } else await gerarPdf(arr, $('rgG').value, FSTATUS[s][0], $('rgF').checked, prog);
+      $('rgM').className = 'msg ok'; $('rgM').textContent = 'PDF gerado.';
+    } catch (e) { console.error(e); $('rgM').className = 'msg err'; $('rgM').textContent = 'Não foi possível gerar: ' + (e.message || e); }
     $('rgOk').disabled = false;
   };
 }
-async function fotoParaPdf(f) {
+// relatório fotográfico (modelo de não conformidade): logo, faixa azul, cabeçalho da obra
+// e as fotos em duas colunas com a legenda numerada de cada pendência
+async function gerarRelFoto(arr, o, prog) {
+  const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true }); const W = 210, H = 297, M = 15;
+  const AZUL = [16, 58, 92], CINZA = [96, 110, 122], TINTA = [20, 30, 40];
+  const quando = new Date(); const dataTxt = fmtD(iso(quando));
+  // ordem: pavimento (na ordem da obra) e número
+  const ordPav = n => { const i = CFG.pavimentos.findIndex(x => x.nome === n); return i < 0 ? 999 : i; };
+  arr = arr.slice().sort((a, b) => ordPav(a.pavimento) - ordPav(b.pavimento) || (a.numero || 1e9) - (b.numero || 1e9));
+  let logoInfo = null; if (o.logo) { const im = new Image(); await new Promise(r => { im.onload = r; im.onerror = r; im.src = o.logo; }); if (im.naturalWidth) logoInfo = { d: o.logo, r: im.naturalWidth / im.naturalHeight }; }
+  // cabeçalho de cada página; devolve onde começa o conteúdo
+  const cab = () => {
+    let y = 8;
+    if (logoInfo) { let h = 22, w = h * logoInfo.r; if (w > 80) { w = 80; h = w / logoInfo.r; } pdf.addImage(logoInfo.d, 'PNG', (W - w) / 2, y + (22 - h) / 2, w, h); y += 25; }
+    else { pdf.setFont('helvetica', 'bold'); pdf.setFontSize(15); pdf.setTextColor(...AZUL); pdf.text(String(OBRA_NOME), W / 2, y + 12, { align: 'center' }); y += 18; }
+    pdf.setFillColor(...AZUL); pdf.rect(M - 3, y, W - 2 * M + 6, 1.4, 'F'); y += 9;
+    pdf.setTextColor(...TINTA); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12.5); pdf.text(o.tit.toUpperCase(), W / 2, y, { align: 'center' }); y += 8;
+    const linha = (rot, val, yy) => { pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5); pdf.text(rot, M, yy); const w0 = pdf.getTextWidth(rot + ' '); pdf.setFont('helvetica', 'normal');
+      const ls = pdf.splitTextToSize(String(val), W - 2 * M - w0 - (rot === 'Obra:' ? 40 : 0)); pdf.text(ls, M + w0, yy); return ls.length; };
+    linha('Obra:', OBRA_NOME, y);
+    pdf.setFont('helvetica', 'bold'); const dw = pdf.getTextWidth(dataTxt); pdf.setFont('helvetica', 'normal'); pdf.text(dataTxt, W - M, y, { align: 'right' }); pdf.setFont('helvetica', 'bold'); pdf.text('Data:', W - M - dw - 1.5, y, { align: 'right' });
+    y += 6;
+    if (o.end) { y += (linha('Endereço:', o.end, y) - 1) * 4.2 + 6; }
+    if (o.obj) { y += (linha('Objeto:', o.obj, y) - 1) * 4.2 + 6; }
+    return y + 4;
+  };
+  const rodape = (pag, tot) => { pdf.setFillColor(...AZUL); pdf.rect(M - 3, H - 14, W - 2 * M + 6, 1.4, 'F');
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7.5); pdf.setTextColor(...CINZA);
+    pdf.text('Gerado em ' + fmtDH(quando.toISOString()) + ' por ' + nomeDe(NV.usuario.email), M, H - 9); pdf.text('Página ' + pag + ' de ' + tot, W - M, H - 9, { align: 'right' }); };
+  // monta as "células": cada foto da pendência é uma célula; pendência sem foto também ganha uma
+  const celulas = []; let n = 0;
+  for (const p of arr) {
+    n++; prog('Preparando ' + n + ' de ' + arr.length + '…', n / arr.length * .8);
+    const fotos = p.fotos.filter(f => f.tipo === 'antes').concat(o.depois ? p.fotos.filter(f => f.tipo === 'depois') : []);
+    const ims = [];
+    for (const f of fotos) { const im = await fotoParaPdf(f, 1000).catch(() => null); if (im) ims.push(Object.assign(im, { tipo: f.tipo })); }
+    if (o.planta) { const pl = await plantaParaPdf(p).catch(() => null); if (pl) ims.push(pl); }
+    const tit = n + '. ' + rotLocal(p) + ' - ' + (String(p.descricao || '').trim() || p.tipo);
+    const info = [(p.numero ? 'Pendência #' + p.numero : 'Pendência') + ' · ' + p.tipo + ' · ' + PRI[p.prioridade][0] + ' · ' + ST[p.status],
+      [p.prazo && p.status !== 'fechada' ? (vencida(p) ? 'Venceu em ' : 'Prazo ') + fmtD(p.prazo) : '', p.disciplina && p.disciplina !== A_DEFINIR ? 'Corrige: ' + [p.disciplina, rotQuemCorrige(p)].filter(Boolean).join(' – ') : ''].filter(Boolean).join(' · ')].filter(Boolean);
+    if (!ims.length) celulas.push({ tit, info, im: null });
+    ims.forEach((im, i) => celulas.push({ tit: tit + (i ? ' (' + (im.tipo === 'depois' ? 'depois' : im.tipo === 'planta' ? 'local na planta' : i + 1) + ')' : ''), info: i ? [] : info, im }));
+  }
+  // 2 colunas × 2 linhas por página
+  const CW = (W - 2 * M - 10) / 2, FH = 80;
+  let pag = 0, y0 = 0, i = 0;
+  while (i < celulas.length) {
+    if (pag) pdf.addPage(); pag++; y0 = cab();
+    const alt = (H - 18 - y0) / 2;
+    for (let lin = 0; lin < 2 && i < celulas.length; lin++) {
+      for (let col = 0; col < 2 && i < celulas.length; col++, i++) {
+        const c = celulas[i], x = M + col * (CW + 10), yt = y0 + lin * alt;
+        pdf.setTextColor(...TINTA); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
+        const lt = pdf.splitTextToSize(c.tit, CW).slice(0, 2); pdf.text(lt, x + CW / 2, yt + 4, { align: 'center' });
+        const yf = yt + 4 + lt.length * 4.4, hf = Math.min(FH, alt - (yf - yt) - 12);
+        if (c.im) { const r = c.im.w / c.im.h; let w = CW, h = w / r; if (h > hf) { h = hf; w = h * r; } pdf.addImage(c.im.d, 'JPEG', x + (CW - w) / 2, yf, w, h); }
+        else { pdf.setDrawColor(200, 207, 213); pdf.setLineDashPattern([1.5, 1.5], 0); pdf.rect(x + CW * .15, yf, CW * .7, Math.min(30, hf)); pdf.setLineDashPattern([], 0); pdf.setFontSize(8.5); pdf.setTextColor(...CINZA); pdf.text('sem foto', x + CW / 2, yf + Math.min(30, hf) / 2 + 1, { align: 'center' }); }
+        if (c.info.length) { pdf.setFontSize(7.8); pdf.setTextColor(...CINZA); let yi = yf + (c.im ? Math.min(hf, (CW / (c.im.w / c.im.h))) : Math.min(30, hf)) + 4;
+          for (const l of c.info) { const ls = pdf.splitTextToSize(l, CW).slice(0, 2); pdf.text(ls, x + CW / 2, yi, { align: 'center' }); yi += ls.length * 3.4; } }
+      }
+    }
+    prog('Montando a página ' + pag + '…', .8 + .2 * i / celulas.length);
+  }
+  const tot = pdf.getNumberOfPages(); for (let k = 1; k <= tot; k++) { pdf.setPage(k); rodape(k, tot); }
+  const nome = 'Relatorio_' + String(OBRA_NOME).replace(/[^\wÀ-ú]+/g, '_') + '_' + hoje().replace(/-/g, '') + '.pdf';
+  const b = pdf.output('blob'); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+}
+async function fotoParaPdf(f, lado) {
   const u = await urlFoto(f); if (!u) return null;
   const img = new Image(); await new Promise(r => { img.onload = r; img.onerror = r; img.src = u; }); if (!img.naturalWidth) return null;
-  const sc = Math.min(1, 700 / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc);
-  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); return { d: cv.toDataURL('image/jpeg', .78), w: cv.width, h: cv.height };
+  const sc = Math.min(1, (lado || 700) / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); const d = cv.toDataURL('image/jpeg', .8); cv.width = cv.height = 0; return { d, w: Math.round(img.naturalWidth * sc), h: Math.round(img.naturalHeight * sc) };
 }
 // recorte da planta em volta do local marcado, com o alfinete
 async function plantaParaPdf(p) {
