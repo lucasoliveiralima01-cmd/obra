@@ -147,7 +147,7 @@ a.tool:hover{background:var(--accent-soft)}
 .vers{display:grid;gap:4px;margin-top:6px}
 .vers div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.86rem;border-top:1px solid var(--line-2);padding-top:5px}
 /* ferramentas da obra: ícones como apps de celular */
-.apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin:2px -6px}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:2px;margin:2px -6px}
 .app{display:grid;justify-items:center;gap:5px;padding:6px 2px;border-radius:12px;color:var(--ink);text-decoration:none;min-width:0}
 .app:hover,.app:focus-visible{background:var(--accent-soft)}
 .app .ap-ic{position:relative;width:60px;height:60px;display:grid;place-items:center;filter:drop-shadow(0 2px 4px rgba(10,30,45,.18))}
@@ -238,7 +238,11 @@ const FERRAMENTAS = [
   { id: 'fachada', nome: 'Mapa de Fachadas', curto: 'Fachadas', pagina: 'fachadas.html', soOnline: true,
     resumo: 'Acompanhe as etapas de revestimento e os prazos de cura.',
     desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
-    icone: '<img src=\"icones/fachadas.svg\" alt=\"\">' }
+    icone: '<img src=\"icones/fachadas.svg\" alt=\"\">' },
+  { id: 'personalizacao', nome: 'Personalizações', curto: 'Personalizações', pagina: 'personalizacoes.html', soOnline: true,
+    resumo: 'Modificações dos compradores, ciência das equipes e liberação das frentes.',
+    desc: 'Modificações pedidas pelos compradores por apartamento, com os serviços afetados, o “Estou ciente” de cada equipe e a liberação das frentes de trabalho.',
+    icone: '<img src=\"icones/personalizacoes.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));
@@ -273,7 +277,7 @@ const obraAtual = () => new URLSearchParams(location.search).get('obra');
 function redesenhar() { if (obraAtual()) telaObra(obraAtual()); else desenharLista(); }
 
 /* ---------------- resumo de cada obra (pendências, concretagens, mapa de risco) ---------------- */
-let RESUMO = {}, PENDS = [], ROMP = [], FACH = [];
+let RESUMO = {}, PENDS = [], ROMP = [], FACH = [], PERSZ = [], FRENTESZ = [];
 /* ---------------- "Meu dia": o que é de cada pessoa, em todas as obras ---------------- */
 const PRI_MD = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' }, PRI_ORD_MD = ['critica', 'alta', 'media', 'baixa'];
 let mdAba = '';   // lista mostrada no "Meu dia" ('' = a principal)
@@ -309,6 +313,18 @@ function meuDiaHtml() {
   // fachadas: áreas que terminam a cura hoje (liberadas para a próxima camada) e nos próximos 3 dias
   const fs = FACH.filter(x => x.hoje || x.breve);
   if (fs.length && NV.podeVer('fachada')) extras.push(`<div class="md-o"><h3>Fachadas</h3><div class="md-l">${fs.map(x => `<a class="md-c" href="fachadas.html?obra=${encodeURIComponent(x.obra)}"><span class="md-t"><b>${esc(nomeObra(x.obra))}</b><small>${[x.hoje ? '<b class="bom">' + x.hoje + ' liberada' + (x.hoje > 1 ? 's' : '') + ' hoje</b>' + (x.prox ? ' para ' + esc(x.prox) : '') : '', x.breve ? x.breve + ' libera' + (x.breve > 1 ? 'm' : '') + ' em até 3 dias' : ''].filter(Boolean).join(' · ')}</small></span><span class="md-ch" aria-hidden="true">›</span></a>`).join('')}</div></div>`);
+  // personalizações: frentes que começam em até 7 dias com ciência faltando (Engenharia) e as que esperam o meu "Estou ciente" (Campo)
+  if (NV.podeVer('personalizacao')) {
+    const lim = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+    const cards = [];
+    if (NV.perfil !== 'campo') for (const f of FRENTESZ.filter(x => x.previsto <= lim).sort((a, b) => a.previsto.localeCompare(b.previsto))) {
+      const fa = PERSZ.filter(p => p.obra === f.obra && p.pavimento === f.pavimento && persFaltas(p).some(i => i.servico === f.servico)); if (!fa.length) continue;
+      cards.push(`<a class="md-c" href="personalizacoes.html?obra=${encodeURIComponent(f.obra)}&aba=frentes"><span class="md-t"><b>${esc(f.servico)} · ${esc(f.pavimento)}</b><small>${esc(nomeObra(f.obra))} · ${f.previsto < hoje ? '<b class="ruim">devia ter começado em ' + fmtD(f.previsto) + '</b>' : 'começa em ' + fmtD(f.previsto)} · <b class="ruim">falta ciência em ${fa.length}</b></small></span><span class="md-ch" aria-hidden="true">›</span></a>`); }
+    const meus = NV.oficios || [];
+    for (const p of PERSZ.filter(p => persFaltas(p).some(i => NV.perfil === 'campo' ? meus.includes(i.oficio) : false)))
+      cards.push(`<a class="md-c" href="personalizacoes.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span class="md-t"><b>Apto ${esc(p.unidade)} · ${esc(p.titulo)}</b><small>${esc(nomeObra(p.obra))} · ${esc(p.pavimento)} · <b class="ruim">confirme que está ciente</b></small></span><span class="md-ch" aria-hidden="true">›</span></a>`);
+    if (cards.length) extras.unshift(`<div class="md-o"><h3>Personalizações</h3><div class="md-l">${cards.slice(0, 8).join('')}</div></div>`);
+  }
   if (!listas.length && !extras.length) return '';
   if (!listas.some(l => l.id === mdAba && (l.id === '' || l.arr.length))) mdAba = '';
   const atual = listas.find(l => l.id === mdAba);
@@ -366,6 +382,16 @@ async function carregarResumo() {
       else if (p.status === 'avaliacao') r.pend.aval++;
       else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }
   } catch (e) {}
+  // personalizações: faltas de ciência (de todos, para a Engenharia; as dos meus ofícios, para Campo) e frentes previstas
+  PERSZ = []; FRENTESZ = [];
+  if (NV.podeVer('personalizacao')) try {
+    const [lp, lf] = await Promise.all([sb.from('personalizacoes').select('id,obra,numero,pavimento,unidade,titulo,status,itens,pers_ciencias(servico)').in('status', ['solicitada', 'aprovada', 'executada']),
+      sb.from('frentes').select('obra,servico,pavimento,previsto,liberada_em').is('liberada_em', null).not('previsto', 'is', null)]);
+    if (!lp.error) PERSZ = lp.data || []; if (!lf.error) FRENTESZ = lf.data || [];
+    const meus = NV.oficios || [];
+    for (const p of PERSZ) { const r = g(p.obra); r.pers = r.pers || { ativas: 0, faltas: 0, sol: 0 }; r.pers.ativas++; if (p.status === 'solicitada') r.pers.sol++;
+      if (p.status === 'aprovada' && persFaltas(p).some(i => NV.perfil !== 'campo' || meus.includes(i.oficio))) r.pers.faltas++; }
+  } catch (e) {}
   if (NV.perfil !== 'campo') try {
     const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas', 'aplicacoes']);
     if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
@@ -383,12 +409,16 @@ function resumoDe(id, fid) {
     return [p.abertas ? p.abertas + ' aberta' + (p.abertas > 1 ? 's' : '') : 'Nenhuma aberta', p.venc ? `<b class="ruim">${p.abertas === 1 ? 'em atraso' : (p.venc === 1 ? 'uma delas' : p.venc + ' delas') + ' em atraso'}</b>` : '', p.corrigidas ? p.corrigidas + ' para aprovar' : '', p.aval ? p.aval + ' em avaliação' : ''].filter(Boolean).join(' · '); }
   if (fid === 'concretagem') { const c = r.conc; return c ? c.n + ' concretage' + (c.n > 1 ? 'ns' : 'm') + (c.ultima ? ' · Última em ' + fmtD(c.ultima) : '') : 'Nenhuma concretagem'; }
   if (fid === 'fachada') { const c = r.fach; return c ? c.n + ' área' + (c.n > 1 ? 's' : '') + ' aplicada' + (c.n > 1 ? 's' : '') + (c.ultima ? ' · Última aplicação em ' + fmtD(c.ultima) : '') : 'Nenhuma aplicação'; }
+  if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma personalização'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · Revisão R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }
 // selo no ícone (como notificação de app): pendências abertas, em vermelho se alguma venceu
+// serviços de uma personalização aprovada que ainda não têm o "Estou ciente"
+const persFaltas = p => p.status === 'aprovada' ? (p.itens || []).filter(i => !(p.pers_ciencias || []).some(c => c.servico === i.servico)) : [];
 function seloDe(id, fid) {
   const r = RESUMO[id] || {};
+  if (fid === 'personalizacao' && r.pers && r.pers.faltas) return `<span class="badge ruim" aria-label="${r.pers.faltas} sem ciência">${r.pers.faltas}</span>`;
   if (fid === 'pendencias' && r.pend && r.pend.abertas) return `<span class="badge${r.pend.venc ? ' ruim' : ''}" aria-label="${r.pend.abertas} abertas">${r.pend.abertas > 99 ? '99+' : r.pend.abertas}</span>`;
   return '';
 }

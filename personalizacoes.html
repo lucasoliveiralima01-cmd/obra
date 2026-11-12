@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="description" content="Personalizações dos apartamentos: modificações pedidas pelos compradores, ciência das equipes e liberação das frentes de trabalho.">
+<meta name="theme-color" content="#22425c">
+<title>Personalizações</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icones/personalizacoes.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
+<style>
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
+/* faixa da marca */
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px))}
+.logo{display:block;color:inherit}
+.logo img{height:40px;width:40px;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
+.ttl .obra{font-size:.82rem;color:#d4e4ee}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+
+main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
+.crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:8px}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 18px;font:700 .92rem var(--f-body);color:var(--ink)}
+.tab:hover{border-color:var(--accent)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab b{font-family:var(--f-body);margin-left:4px;opacity:.85}
+.muted{color:var(--muted);font-size:.88rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:.82rem}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px}
+.lnk:hover{text-decoration:underline}
+
+/* avisos no topo */
+.alertas{display:grid;gap:8px}
+.alerta{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r);padding:10px 12px;color:var(--ink)}
+.alerta.info{background:var(--warn-soft);border-color:var(--warn)}
+.alerta .ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--bad);color:#fff;font:700 .9rem var(--f-body)}
+.alerta.info .ic{background:var(--warn)}
+.alerta b{font-weight:700}
+.alerta small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+
+/* filtros */
+.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.busca{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
+.fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);min-height:40px;max-width:100%}
+.fsel.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip{background:none;border:1px solid var(--line);border-radius:16px;padding:6px 11px;font:500 .84rem var(--f-body);color:var(--ink);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+
+/* lista */
+.grupo{display:grid;gap:8px}
+.grupo>h2{margin:4px 0 0;font:700 1rem var(--f-disp);color:var(--muted);letter-spacing:.02em}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.card{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;width:100%;color:inherit;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card.falta{border-left-color:var(--bad)} .card.ok{border-left-color:var(--ok)} .card.sol{border-left-color:var(--warn)}
+.c-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.c-loc{font-size:.8rem;color:var(--muted)}
+.c-tit{font:700 1rem/1.25 var(--f-body);overflow-wrap:anywhere}
+.st{flex:none;font:600 .74rem var(--f-body);padding:2px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st-solicitada{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.st-aprovada{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.st-executada,.st-conferida{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.st-cancelada{text-decoration:line-through}
+.svs{display:flex;flex-wrap:wrap;gap:5px}
+.sv{font:600 .76rem var(--f-body);padding:2px 8px;border-radius:12px;border:1px solid var(--line);color:var(--muted)}
+.sv.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.sv.falta{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
+.vazio h3{margin:0;font:700 1.15rem var(--f-disp)}
+
+/* frentes */
+.fr-wrap{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.fr{border-collapse:separate;border-spacing:0;width:100%;font-size:.86rem}
+table.fr th,table.fr td{padding:6px;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);text-align:center;vertical-align:middle}
+table.fr th{font:700 .8rem var(--f-disp);color:var(--muted);background:var(--panel);position:sticky;top:0}
+table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600;min-width:120px;z-index:1}
+.fc{display:grid;gap:2px;justify-items:center;width:100%;min-width:104px;background:none;border:1px solid transparent;border-radius:7px;padding:6px 4px;color:inherit}
+.fc:hover{border-color:var(--accent);background:var(--accent-soft)}
+.fc .s{font:600 .76rem var(--f-body);padding:1px 7px;border-radius:10px}
+.fc .d{font-size:.74rem;color:var(--muted)}
+.s-lib{background:var(--ok-soft);color:var(--ok)} .s-sol{background:var(--warn-soft);color:var(--warn)} .s-falta{background:var(--bad-soft);color:var(--bad)} .s-pronta{background:var(--accent-soft);color:var(--accent)} .s-nada{color:var(--muted)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+
+/* botão flutuante */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+
+/* janelas */
+.overlay{position:fixed;inset:0;background:rgba(6,20,30,.5);display:grid;place-items:center;padding:12px;z-index:20}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(760px,100%);max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.sheet>header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.sheet>header h3{margin:0;font:700 1.2rem var(--f-disp);flex:1}
+.sheet>header .x{background:none;border:1px solid var(--line);border-radius:8px;min-width:36px;height:36px;font-size:1.2rem;line-height:1;color:var(--ink)}
+.sheet .body{overflow:auto;padding:14px 16px;display:grid;gap:14px;align-content:start}
+.sheet>footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.sheet>footer:not(:has(.btn)){display:none}
+.fld{display:grid;gap:5px}
+.fld>label,.fld>.l{font:600 .72rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.req{color:var(--bad)}
+.fld input:not([type=file]):not([type=checkbox]),.fld select,.fld textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+.fld textarea{min-height:64px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font:600 .86rem var(--f-body);color:var(--ink);min-height:36px}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
+.msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.itens{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:8px}
+.item textarea{grid-column:1/-1;min-height:46px}
+.item select,.item textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 9px;width:100%;min-width:0}
+.arqs{display:flex;flex-wrap:wrap;gap:8px}
+.arq{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:.72rem;color:var(--muted);text-align:center;padding:4px}
+.arq img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.arq .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;line-height:22px;padding:0}
+.addarq{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:8px;padding:9px 13px;font:600 .9rem var(--f-body);color:var(--ink);cursor:pointer}
+.addarq input{display:none}
+/* ficha */
+.fi-tit{margin:0;font:700 1.4rem/1.2 var(--f-disp);overflow-wrap:anywhere}
+.fi-loc{margin:0;font:600 .98rem var(--f-body);color:var(--accent)}
+.fi-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.86rem;color:var(--muted)}
+.fi-desc{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fi h4{margin:0;font:700 1.02rem var(--f-disp)}
+.svc{display:grid;gap:6px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:10px 12px}
+.svc.ok{border-left-color:var(--ok)} .svc.falta{border-left-color:var(--bad)}
+.svc .h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between}
+.svc .h b{font:700 .98rem var(--f-body)}
+.svc .ins{margin:0;font-weight:600;white-space:pre-wrap}
+.svc .ci{font-size:.84rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.svc .ci.ok{color:var(--ok)} .svc .ci.falta{color:var(--bad)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
+.viewer img{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);object-fit:contain}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+@media (max-width:640px){
+  .brand::after{display:none}
+  .ttl{border-left:0;padding-left:0}
+  .hctl{width:auto;margin-left:auto;order:2}
+  #bQuem{display:none}
+  .lista{grid-template-columns:1fr}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;width:100%}
+  .tabs{display:grid}
+  .overlay{padding:0;place-items:end stretch}
+  .sheet{border-radius:14px 14px 0 0;max-height:94dvh;width:100%}
+  .item{grid-template-columns:1fr auto}
+  .item select:nth-of-type(2){grid-column:1/2}
+}
+</style>
+</head>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/personalizacoes.svg" alt="" width="40" height="40"></a>
+  <div class="ttl"><h1>Personalizações</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="hctl"></div>
+</div></header>
+
+<main id="main"><p class="muted">Carregando…</p></main>
+<button class="fab" id="fab" type="button" hidden>+ Nova personalização</button>
+
+<div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
+<div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Arquivo ampliado"></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script>window.NUVEM_FERRAMENTA = 'personalizacao';</script>
+<script src="nuvem.js"></script>
+<script src="listas-comum.js"></script>
+<script>
+/* =====================================================================
+   Personalizações dos apartamentos
+   - A Engenharia registra a modificação pedida pelo comprador e diz quais
+     serviços ela afeta (com a instrução para a equipe de cada ofício).
+   - Aprovada, a equipe de cada ofício dá "Estou ciente" (ou a Engenharia
+     registra que avisou pessoalmente).
+   - Frentes de trabalho (serviço × pavimento): data prevista para avisar
+     antes, e a liberação só sai com todas as ciências (ou com justificativa).
+   As regras de quem vê e quem pode o quê ficam no banco (banco.sql, passo 17).
+   ===================================================================== */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const pad = n => String(n).padStart(2, '0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const hoje = () => iso(new Date());
+const somaDias = (s, n) => { const [y, m, d] = s.split('-').map(Number); const x = new Date(y, m - 1, d); x.setDate(x.getDate() + n); return iso(x); };
+const fmtD = s => { if (!s) return '—'; const [y, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
+const fmtDs = s => { if (!s) return ''; const [, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m; };
+const fmtDH = s => { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const LO = window.ListasObra;
+const AVISO_DIAS = 7;   // frentes previstas para os próximos dias entram nos avisos
+const nPers = n => n + ' personaliza' + (n > 1 ? 'ções' : 'ção');
+
+const ST = { solicitada: 'Aguardando aprovação', aprovada: 'Aprovada', executada: 'Executada', conferida: 'Conferida', cancelada: 'Cancelada' };
+const SIT = [['ativas', 'Ativas', ['solicitada', 'aprovada', 'executada']], ['solicitada', 'Aguardando aprovação', ['solicitada']], ['aprovada', 'Aprovadas', ['aprovada']],
+  ['executada', 'Executadas', ['executada']], ['conferida', 'Conferidas', ['conferida']], ['cancelada', 'Canceladas', ['cancelada']], ['todas', 'Todas', Object.keys(ST)]];
+const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', 'Pavimento 05', 'Pavimento 06', 'Cobertura'].map(n => ({ nome: n, unidades: [] }));
+
+let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
+let L = { servico: [], disciplina: [], comodo: [] }, CFG = { pavimentos: [] };
+let PERS = [], FRENTES = [], TAB = 'lista', COLS_EXTRA = [];
+const F = { q: '', pav: '', sit: 'ativas', falta: false };
+
+/* ---------------- quem pode o quê (o banco confere de novo) ---------------- */
+const edita = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
+const meusOficios = () => (NV && (NV.oficios || NV.disciplinas)) || [];
+const ativos = t => LO.ativos(L[t] || []).map(x => x.valor);
+const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
+const ciencia = (p, sv) => (p.pers_ciencias || []).find(c => c.servico === sv);
+const faltas = p => p.status === 'aprovada' ? (p.itens || []).filter(i => !ciencia(p, i.servico)) : [];
+const minhaFalta = p => faltas(p).some(i => meusOficios().includes(i.oficio));
+const podeCiente = (p, i) => p.status === 'aprovada' && !ciencia(p, i.servico) && (edita() || meusOficios().includes(i.oficio));
+const rotLocal = p => [p.pavimento, 'Apto ' + p.unidade, p.comodo].filter(Boolean).join(' · ');
+const ordPav = n => { const i = CFG.pavimentos.findIndex(x => x.nome === n); return i < 0 ? 999 : i; };
+const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unidades) || [];
+const comodosDe = u => { const r = u ? LO.tipologiaDe(CFG.regras || {}, u) : null; return r ? r.comodos.slice() : ativos('comodo'); };
+const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
+
+/* ---------------- dados ---------------- */
+async function carregar() {
+  const [lp, lc, lo, lpe, lfr] = await Promise.all([
+    sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
+    sb.from('pend_config').select('pavimentos,regras,listas').eq('obra', OBRA).maybeSingle(),
+    NV.obras.obter(OBRA),
+    sb.from('personalizacoes').select('*, pers_ciencias(*)').eq('obra', OBRA).order('numero', { ascending: false }),
+    sb.from('frentes').select('*').eq('obra', OBRA)
+  ]);
+  if (lpe.error) { const e = new Error(lpe.error.message); e.banco = /personalizacoes|relation|schema cache/i.test(lpe.error.message || ''); throw e; }
+  if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
+  let cfg = lc; if (cfg.error) cfg = await sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle();
+  const c = cfg.data || {};
+  L = LO.efetivas(LO.deTabela(lp.data || []), c.listas || null);
+  CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO, regras: LO.normRegras ? LO.normRegras(c.regras) : (c.regras || {}) };
+  OBRA_NOME = lo.nome; PERS = lpe.data || []; FRENTES = lfr.error ? [] : (lfr.data || []);
+}
+async function recarregar() { try { await carregar(); render(); const o = $('ovl'); if (!o.hidden && o.dataset.det) ficha(o.dataset.det, true); if (!o.hidden && o.dataset.fr) { const [s, p] = JSON.parse(o.dataset.fr); fichaFrente(s, p); } } catch (e) { console.warn(e); } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && NV) recarregar(); });
+
+/* ---------------- frentes: o que falta em cada serviço × pavimento ---------------- */
+const frenteDe = (sv, pav) => FRENTES.find(f => f.servico === sv && f.pavimento === pav) || null;
+const persDaFrente = (sv, pav) => PERS.filter(p => p.pavimento === pav && ['aprovada', 'executada', 'conferida', 'solicitada'].includes(p.status) && (p.itens || []).some(i => i.servico === sv));
+const faltasFrente = (sv, pav) => persDaFrente(sv, pav).filter(p => p.status === 'aprovada' && !ciencia(p, sv));
+// serviços que aparecem nas personalizações ou nas frentes (as colunas da tabela)
+function servicosUsados() {
+  const s = new Set(); PERS.forEach(p => p.status !== 'cancelada' && (p.itens || []).forEach(i => i.servico && s.add(i.servico))); FRENTES.forEach(f => s.add(f.servico)); COLS_EXTRA.forEach(x => s.add(x));
+  const ord = ativos('servico'); return [...s].sort((a, b) => (ord.indexOf(a) < 0 ? 999 : ord.indexOf(a)) - (ord.indexOf(b) < 0 ? 999 : ord.indexOf(b)) || a.localeCompare(b));
+}
+// frentes que começam em breve (ou já deviam ter começado) e ainda têm ciência faltando
+function frentesEmRisco() {
+  const lim = somaDias(hoje(), AVISO_DIAS), r = [];
+  for (const f of FRENTES) { if (f.liberada_em || !f.previsto || f.previsto > lim) continue; const fa = faltasFrente(f.servico, f.pavimento); if (fa.length) r.push({ f, fa }); }
+  return r.sort((a, b) => a.f.previsto.localeCompare(b.f.previsto));
+}
+
+/* ======================= telas ======================= */
+function render() {
+  const m = $('main'), risco = frentesEmRisco(), minhas = PERS.filter(minhaFalta);
+  const nAtivas = PERS.filter(p => ['solicitada', 'aprovada', 'executada'].includes(p.status)).length;
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Personalizações</span></nav>
+    <div class="tabs"><div class="seg"><button type="button" class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Personalizações<b>${nAtivas}</b></button><button type="button" class="tab" data-tab="frentes" aria-pressed="${TAB === 'frentes'}">Frentes de trabalho</button></div></div>
+    ${risco.length || minhas.length ? `<div class="alertas">${risco.slice(0, 6).map(({ f, fa }) => `<button type="button" class="alerta" data-fr='${esc(JSON.stringify([f.servico, f.pavimento]))}'><span class="ic">!</span><span><b>${esc(f.servico)} · ${esc(f.pavimento)}</b> ${f.previsto < hoje() ? 'devia ter começado em' : 'começa em'} ${fmtD(f.previsto)} e falta a ciência da equipe em ${nPers(fa.length)}<small>${fa.map(p => 'Apto ' + esc(p.unidade) + ': ' + esc(p.titulo)).join(' · ')}</small></span></button>`).join('')}
+      ${minhas.length && !edita() ? `<button type="button" class="alerta info" data-minhas><span class="ic">✓</span><span><b>${nPers(minhas.length)} ${minhas.length > 1 ? 'aguardam' : 'aguarda'} o seu “Estou ciente”</b><small>Leia o que muda em cada apartamento antes de montar.</small></span></button>` : ''}</div>` : ''}
+    <div id="tabBody"></div>`;
+  m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  m.querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
+  if (m.querySelector('[data-minhas]')) m.querySelector('[data-minhas]').onclick = () => { TAB = 'lista'; F.falta = true; F.sit = 'ativas'; render(); };
+  if (TAB === 'frentes') renderFrentes(); else renderLista();
+  $('fab').hidden = !edita() || TAB !== 'lista';
+}
+
+function filtrar() {
+  const sts = (SIT.find(s => s[0] === F.sit) || SIT[0])[2], q = F.q.trim().toLowerCase();
+  return PERS.filter(p => sts.includes(p.status) && (!F.pav || p.pavimento === F.pav) && (!F.falta || (edita() ? faltas(p).length : minhaFalta(p)))
+    && (!q || [p.numero ? '#' + p.numero : '', p.unidade, p.comodo, p.titulo, p.descricao, p.solicitante, ...(p.itens || []).map(i => i.servico + ' ' + i.oficio + ' ' + i.instrucao)].join(' ').toLowerCase().includes(q)));
+}
+function cardHtml(p) {
+  const fa = faltas(p), cls = p.status === 'solicitada' ? 'sol' : fa.length ? 'falta' : p.status === 'aprovada' || p.status === 'executada' || p.status === 'conferida' ? 'ok' : '';
+  return `<button type="button" class="card ${cls}" data-p="${esc(p.id)}">
+    <span class="c-top"><span class="c-loc">#${p.numero || '—'} · Apto ${esc(p.unidade)}${p.comodo ? ' · ' + esc(p.comodo) : ''}</span><span class="st st-${p.status}">${ST[p.status]}</span></span>
+    <span class="c-tit">${esc(p.titulo)}</span>
+    <span class="svs">${(p.itens || []).map(i => { const c = ciencia(p, i.servico); const k = p.status !== 'aprovada' ? '' : c ? 'ok' : 'falta';
+      return `<span class="sv ${k}" title="${esc(i.oficio || '')}">${k === 'ok' ? '✓ ' : ''}${esc(i.servico)}${k === 'falta' ? ': falta ciência' : ''}</span>`; }).join('')}</span>
+  </button>`;
+}
+function renderLista() {
+  const vis = filtrar(), cnt = s => PERS.filter(p => s[2].includes(p.status)).length;
+  const nFalta = PERS.filter(p => edita() ? faltas(p).length : minhaFalta(p)).length;
+  const pavs = [...new Set(PERS.map(p => p.pavimento))].sort((a, b) => ordPav(a) - ordPav(b));
+  const grupos = new Map(); vis.slice().sort((a, b) => ordPav(a.pavimento) - ordPav(b.pavimento) || String(a.unidade).localeCompare(String(b.unidade), 'pt', { numeric: true }) || (a.numero || 0) - (b.numero || 0))
+    .forEach(p => { if (!grupos.has(p.pavimento)) grupos.set(p.pavimento, []); grupos.get(p.pavimento).push(p); });
+  $('tabBody').innerHTML = `<div class="filtros">
+      <label class="busca"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="fQ" type="search" placeholder="Buscar apto, serviço ou o que muda" value="${esc(F.q)}" aria-label="Buscar"></label>
+      <select class="fsel${F.sit !== 'ativas' ? ' on' : ''}" id="fSit" aria-label="Situação">${SIT.map(s => `<option value="${s[0]}" ${F.sit === s[0] ? 'selected' : ''}>${s[1]} (${cnt(s)})</option>`).join('')}</select>
+      <select class="fsel${F.pav ? ' on' : ''}" id="fPav" aria-label="Pavimento"><option value="">Todos os pavimentos</option>${pavs.map(n => `<option ${n === F.pav ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      <button type="button" class="chip" id="fFalta" aria-pressed="${F.falta}">${edita() ? 'Falta ciência' : 'Aguardando meu “ciente”'} <b>${nFalta}</b></button>
+    </div>
+    ${vis.length ? [...grupos.entries()].map(([pav, L2]) => `<section class="grupo"><h2>${esc(pav)}</h2><div class="lista">${L2.map(cardHtml).join('')}</div></section>`).join('')
+      : `<div class="vazio"><h3>${PERS.length ? 'Nenhuma personalização com estes filtros' : 'Nenhuma personalização registrada'}</h3><p class="muted" style="margin:0">${PERS.length ? 'Mude os filtros acima.' : edita() ? 'Registre aqui as modificações pedidas pelos compradores (ex.: fechar uma porta, mudar um ponto elétrico). As equipes de cada serviço afetado precisam confirmar que estão cientes antes de montar.' : 'Quando houver personalizações que afetam o seu ofício, elas aparecem aqui.'}</p>${!PERS.length && edita() ? '<button class="btn" type="button" id="bNova2">+ Nova personalização</button>' : ''}</div>`}`;
+  const b = $('tabBody');
+  $('fQ').oninput = e => { F.q = e.target.value; clearTimeout(renderLista.t); renderLista.t = setTimeout(() => { renderLista(); const q = $('fQ'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); };
+  $('fSit').onchange = e => { F.sit = e.target.value; renderLista(); };
+  $('fPav').onchange = e => { F.pav = e.target.value; renderLista(); };
+  $('fFalta').onclick = () => { F.falta = !F.falta; renderLista(); };
+  if ($('bNova2')) $('bNova2').onclick = () => formPers(null);
+  b.querySelectorAll('[data-p]').forEach(x => x.onclick = () => ficha(x.dataset.p));
+}
+
+function renderFrentes() {
+  const svs = servicosUsados(), pavs = CFG.pavimentos.map(x => x.nome).concat([...new Set(PERS.map(p => p.pavimento))].filter(n => !CFG.pavimentos.some(x => x.nome === n)));
+  const resto = ativos('servico').filter(s => !svs.includes(s));
+  if (!svs.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhuma frente ainda</h3><p class="muted" style="margin:0">As colunas aparecem com os serviços das personalizações. ${edita() ? 'Você também pode acrescentar um serviço para já marcar as datas previstas.' : ''}</p>${edita() && resto.length ? `<select class="fsel" id="fAdd"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
+    if ($('fAdd')) $('fAdd').onchange = e => { if (e.target.value) { COLS_EXTRA.push(e.target.value); renderFrentes(); } }; return; }
+  const cel = (sv, pav) => {
+    const fr = frenteDe(sv, pav), ps = persDaFrente(sv, pav), fa = faltasFrente(sv, pav);
+    let s;
+    if (fr && fr.liberada_em) s = `<span class="s s-lib">Liberada${fr.justificativa ? ' ⚠' : ''}</span><span class="d">${fmtDs(fr.liberada_em)}</span>`;
+    else if (fa.length) s = `<span class="s s-falta">Falta ${fa.length} ciência${fa.length > 1 ? 's' : ''}</span>`;
+    else if (ps.some(p => p.status !== 'solicitada')) s = `<span class="s s-pronta">Pronta para liberar</span>`;
+    else if (ps.length) s = `<span class="s s-sol">Aguardando aprovação</span>`;
+    else s = `<span class="s s-nada">—</span>`;
+    const prev = fr && fr.previsto && !fr.liberada_em ? `<span class="d">prev. ${fmtDs(fr.previsto)}</span>` : '';
+    return `<button type="button" class="fc" data-fr='${esc(JSON.stringify([sv, pav]))}'>${s}${prev}${ps.length ? `<span class="d">${ps.length} personaliz.</span>` : ''}</button>`;
+  };
+  $('tabBody').innerHTML = `<p class="muted" style="margin:0">Cada célula é um serviço num pavimento. Marque a <b>data prevista</b> para receber o aviso com antecedência, e <b>libere a frente</b> antes de a equipe começar: a liberação só sai com o “Estou ciente” de todas as personalizações daquele trecho.</p>
+    <div class="fr-wrap"><table class="fr"><thead><tr><th>Pavimento</th>${svs.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
+    <tbody>${pavs.map(pav => `<tr><td>${esc(pav)}</td>${svs.map(sv => `<td>${cel(sv, pav)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="leg"><span><span class="s s-lib" style="padding:1px 7px;border-radius:10px">Liberada</span> pode começar</span><span><span class="s s-falta" style="padding:1px 7px;border-radius:10px">Falta ciência</span> equipe ainda não confirmou</span><span><span class="s s-pronta" style="padding:1px 7px;border-radius:10px">Pronta</span> tudo confirmado, falta liberar</span><span>⚠ liberada com justificativa</span>
+      ${edita() && resto.length ? `<select class="fsel" id="fAdd" style="margin-left:auto"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
+  $('tabBody').querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
+  if ($('fAdd')) $('fAdd').onchange = e => { if (e.target.value) { COLS_EXTRA.push(e.target.value); renderFrentes(); } };
+}
+
+/* ======================= janelas ======================= */
+function openSheet(t, body, foot, form) { const o = $('ovl'); delete o.dataset.det; delete o.dataset.fr; $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; o.hidden = false; if (form) o.dataset.form = '1'; else delete o.dataset.form; $('ovlB').scrollTop = 0; }
+function closeSheet() { const o = $('ovl'); o.hidden = true; $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete o.dataset.form; delete o.dataset.det; delete o.dataset.fr; render(); }
+$('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl').dataset.form) closeSheet(); });
+$('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
+$('viewer').onclick = () => { $('viewer').hidden = true; };
+document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
+const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=Falta|Só|Você)/, '');
+
+/* ---------------- ficha da personalização ---------------- */
+function ficha(id, manter) {
+  const p = PERS.find(x => x.id === id); if (!p) { closeSheet(); return; }
+  const rol = manter ? $('ovlB').scrollTop : 0;
+  const imgs = (p.arquivos || []);
+  const prox = { solicitada: ['aprovada', 'Aprovar e avisar as equipes'], aprovada: ['executada', 'Marcar como executada'], executada: ['conferida', 'Conferir (feito conforme)'] }[p.status];
+  openSheet('Personalização #' + (p.numero || '—'), `<div class="fi" style="display:grid;gap:14px">
+    <div style="display:grid;gap:6px"><h2 class="fi-tit">${esc(p.titulo)}</h2><p class="fi-loc">${esc(rotLocal(p))}</p>
+      <div class="fi-meta"><span class="st st-${p.status}">${ST[p.status]}</span>${p.solicitante ? `<span>Pedido de: <b>${esc(p.solicitante)}</b></span>` : ''}<span>Registrada em ${fmtDH(p.criado_em)} por ${esc(nomeDe(p.criado_por))}</span></div>
+      ${p.descricao ? `<p class="fi-desc">${esc(p.descricao)}</p>` : ''}</div>
+    ${p.status === 'solicitada' ? '<div class="alerta info"><span class="ic">i</span><span><b>Aguardando aprovação da Engenharia.</b><small>As equipes só são avisadas depois de aprovada.</small></span></div>' : ''}
+    <h4>Serviços afetados</h4>
+    ${(p.itens || []).map(i => { const c = ciencia(p, i.servico), k = p.status !== 'aprovada' && !c ? '' : c ? 'ok' : 'falta';
+      return `<div class="svc ${k}"><div class="h"><b>${esc(i.servico)}</b><span class="muted">equipe: ${esc(i.oficio || '—')}</span></div>
+        ${i.instrucao ? `<p class="ins">${esc(i.instrucao)}</p>` : ''}
+        <div class="ci ${k}">${c ? `✓ Ciente: ${esc(nomeDe(c.por))} · ${fmtDH(c.em)}${c.obs ? ' · ' + esc(c.obs) : ''}${edita() ? ` <button type="button" class="lnk" data-desf="${esc(i.servico)}">desfazer</button>` : ''}`
+          : p.status === 'aprovada' ? `Falta a ciência da equipe${podeCiente(p, i) ? ` <button type="button" class="btn sm ${edita() ? 'ghost' : 'ok'}" data-ci="${esc(i.servico)}">${edita() ? 'Registrar que a equipe foi avisada' : 'Estou ciente'}</button>` : ''}` : '<span>A ciência é pedida depois da aprovação.</span>'}</div></div>`; }).join('')}
+    ${imgs.length ? `<h4>Arquivos</h4><div class="arqs">${imgs.map(a => /^image\//.test(a.tipo || '') ? `<span class="arq"><img data-zoom data-arq="${esc(a.caminho)}" alt="${esc(a.nome || 'imagem')}"></span>` : `<button type="button" class="arq" data-abrir="${esc(a.caminho)}">📄<br>${esc(a.nome || 'arquivo')}</button>`).join('')}</div>` : ''}
+    <p class="muted" style="margin:0">Alterada em ${fmtDH(p.atualizado_em)} por ${esc(nomeDe(p.atualizado_por))}</p></div>`,
+    edita() ? `<span class="msg" id="dMsg"></span>${p.status !== 'cancelada' && p.status !== 'conferida' ? '<button class="btn ghost danger" id="dCanc" type="button">Cancelar</button>' : ''}${['solicitada', 'cancelada'].includes(p.status) ? '<button class="btn ghost danger" id="dDel" type="button">Excluir</button>' : ''}${p.status === 'cancelada' ? '<button class="btn ghost" id="dReat" type="button">Reativar</button>' : ''}<button class="btn ghost" id="dEd" type="button">Editar</button>${prox ? `<button class="btn ${prox[0] === 'aprovada' ? '' : 'ok'}" id="dProx" type="button">${prox[1]}</button>` : ''}` : '<span class="msg" id="dMsg"></span>');
+  $('ovl').dataset.det = id; if (rol) $('ovlB').scrollTop = rol;
+  $('ovlB').querySelectorAll('img[data-arq]').forEach(img => NV.blobUrl(img.dataset.arq).then(u => { img.src = u; }).catch(() => { img.replaceWith(Object.assign(document.createElement('span'), { textContent: 'não carregou' })); }));
+  $('ovlB').querySelectorAll('[data-abrir]').forEach(b => b.onclick = async () => { try { const u = await NV.blobUrl(b.dataset.abrir); window.open(u, '_blank'); } catch (e) { toast('Não foi possível abrir o arquivo.'); } });
+  const msg = t => { $('dMsg').className = 'msg err'; $('dMsg').textContent = t; };
+  $('ovlB').querySelectorAll('[data-ci]').forEach(b => b.onclick = async () => {
+    let obs = null; if (edita()) { obs = prompt('Quem da equipe foi avisado, e como? (ex.: “Mestre João, na reunião de segunda”)'); if (obs === null) return; if (!obs.trim()) { toast('Escreva quem foi avisado.'); return; } }
+    b.disabled = true; const { error } = await sb.rpc('pers_ciente', { p_id: p.id, p_servico: b.dataset.ci, p_obs: obs });
+    if (error) { b.disabled = false; msg('Não foi possível: ' + erroMsg(error)); return; } toast(edita() ? 'Ciência registrada.' : 'Obrigado! Ciência registrada.'); await recarregar(); });
+  $('ovlB').querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => { if (!confirm('Desfazer a ciência de ' + b.dataset.desf + '? A equipe vai precisar confirmar de novo.')) return;
+    const { error } = await sb.rpc('pers_ciente_desfazer', { p_id: p.id, p_servico: b.dataset.desf }); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } await recarregar(); });
+  const mudar = async (st, txt) => { const { error } = await sb.from('personalizacoes').update({ status: st }).eq('id', p.id); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } toast(txt); await recarregar(); };
+  if ($('dProx')) $('dProx').onclick = () => mudar(prox[0], prox[0] === 'aprovada' ? 'Aprovada. As equipes dos serviços afetados foram avisadas.' : 'Situação atualizada.');
+  if ($('dEd')) $('dEd').onclick = () => formPers(p.id);
+  if ($('dCanc')) $('dCanc').onclick = () => { if (confirm('Cancelar esta personalização? Ela deixa de cobrar ciência e de travar as frentes.')) mudar('cancelada', 'Personalização cancelada.'); };
+  if ($('dReat')) $('dReat').onclick = () => mudar('solicitada', 'Reativada: aguardando aprovação.');
+  if ($('dDel')) $('dDel').onclick = async () => { if (!confirm('Excluir de vez a personalização #' + p.numero + '?')) return;
+    const { error } = await sb.from('personalizacoes').delete().eq('id', p.id); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; }
+    const cam = (p.arquivos || []).map(a => a.caminho); if (cam.length) sb.storage.from('arquivos').remove(cam).catch(() => {});
+    closeSheet(); toast('Personalização excluída.'); await recarregar(); };
+}
+
+/* ---------------- cadastro / edição ---------------- */
+async function reduzir(arq) {
+  const u = URL.createObjectURL(arq), img = new Image();
+  try { await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = u; }); } finally { setTimeout(() => URL.revokeObjectURL(u), 2000); }
+  for (const lado of [1800, 1200]) { const sc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas');
+    cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .82); } catch (e) { r(null); } }); cv.width = cv.height = 0; if (b) return b; }
+  return arq;
+}
+function formPers(id) {
+  const ed = id ? PERS.find(x => x.id === id) : null;
+  const f = ed ? JSON.parse(JSON.stringify(ed)) : { pavimento: F.pav || '', unidade: '', comodo: '', titulo: '', descricao: '', solicitante: '', itens: [{ servico: '', oficio: '', instrucao: '' }], arquivos: [] };
+  if (!f.itens || !f.itens.length) f.itens = [{ servico: '', oficio: '', instrucao: '' }];
+  let aprovar = !ed; const novos = [], tirar = [];
+  const grupo = (lista, val, attr) => `<div class="opts" role="group">${lista.map(v => `<button type="button" class="opt" data-f="${attr}" data-v="${esc(v)}" aria-pressed="${val === v}">${esc(v)}</button>`).join('')}</div>`;
+  const desenhar = () => {
+    const uns = (f.pavimento && unidadesDe(f.pavimento)) || [];
+    $('ovlB').innerHTML = `<div class="fld"><span class="l">Pavimento <span class="req">*</span></span>${grupo(comAtual(CFG.pavimentos.map(x => x.nome), f.pavimento), f.pavimento, 'pavimento')}</div>
+      <div class="fld"><span class="l">Apartamento <span class="req">*</span></span>${uns.length ? grupo(comAtual(uns, f.unidade), f.unidade, 'unidade') : `<input id="pUn" placeholder="Número do apartamento" value="${esc(f.unidade || '')}">`}</div>
+      <div class="fld"><label for="pCom">Cômodo</label><input id="pCom" list="dlCom" value="${esc(f.comodo || '')}" placeholder="Ex.: Banheiro suíte"><datalist id="dlCom">${comodosDe(f.unidade).map(v => `<option value="${esc(v)}">`).join('')}</datalist></div>
+      <div class="fld"><label for="pTit">O que muda <span class="req">*</span></label><input id="pTit" maxlength="140" value="${esc(f.titulo || '')}" placeholder="Ex.: Fechar uma das duas portas do banheiro"></div>
+      <div class="fld"><label for="pDesc">Detalhes</label><textarea id="pDesc" placeholder="Medidas, posição, o que fica e o que sai">${esc(f.descricao || '')}</textarea></div>
+      <div class="fld"><label for="pSol">Pedido de (comprador / contrato)</label><input id="pSol" value="${esc(f.solicitante || '')}" placeholder="Ex.: Maria Souza · aditivo nº 12"></div>
+      <div class="fld"><span class="l">Serviços afetados <span class="req">*</span> <span class="muted" style="text-transform:none;letter-spacing:0">(cada equipe recebe a instrução e confirma que está ciente)</span></span>
+        <div class="itens">${f.itens.map((i, k) => `<div class="item">
+          <select data-is="${k}" aria-label="Serviço"><option value="">Serviço…</option>${comAtual(ativos('servico'), i.servico).map(s => `<option ${s === i.servico ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+          <select data-io="${k}" aria-label="Equipe (ofício)"><option value="">Equipe (ofício)…</option>${comAtual(ativos('disciplina'), i.oficio).map(s => `<option ${s === i.oficio ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+          <button type="button" class="btn sm ghost" data-irm="${k}" aria-label="Tirar este serviço" ${f.itens.length < 2 ? 'disabled' : ''}>×</button>
+          <textarea data-ii="${k}" placeholder="Instrução para a equipe (ex.: montar a estrutura e as placas já com a porta 2 fechada)">${esc(i.instrucao || '')}</textarea></div>`).join('')}</div>
+        <button type="button" class="btn sm ghost" id="pIAdd" style="justify-self:start">+ Serviço afetado</button></div>
+      <div class="fld"><span class="l">Croqui, fotos e pedido do comprador</span>
+        <div class="arqs">${(f.arquivos || []).map((a, k) => `<span class="arq">${/^image\//.test(a.tipo || '') ? `<img data-arq="${esc(a.caminho)}" alt="">` : '📄<br>' + esc(a.nome || 'arquivo')}<button type="button" class="rm" data-arm="${k}" aria-label="Tirar">×</button></span>`).join('')}
+          ${novos.map((a, k) => `<span class="arq">${a.url ? `<img src="${a.url}" alt="">` : '📄<br>' + esc(a.nome)}<button type="button" class="rm" data-nrm="${k}" aria-label="Tirar">×</button></span>`).join('')}</div>
+        <label class="addarq" style="justify-self:start">📎 Adicionar arquivos<input type="file" id="pArq" accept="image/*,application/pdf" multiple></label></div>
+      ${!ed ? `<label class="chk"><input type="checkbox" id="pApr" ${aprovar ? 'checked' : ''}> Já aprovada: avisar as equipes agora</label>` : ''}`;
+    const B = $('ovlB');
+    B.querySelectorAll('img[data-arq]').forEach(img => NV.blobUrl(img.dataset.arq).then(u => { img.src = u; }).catch(() => {}));
+    B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { ler(); const k = b.dataset.f, v = b.dataset.v; if (k === 'pavimento' && f.pavimento !== v) f.unidade = ''; f[k] = f[k] === v ? '' : v; desenhar(); });
+    $('pIAdd').onclick = () => { ler(); f.itens.push({ servico: '', oficio: '', instrucao: '' }); desenhar(); };
+    B.querySelectorAll('[data-irm]').forEach(b => b.onclick = () => { ler(); f.itens.splice(+b.dataset.irm, 1); desenhar(); });
+    B.querySelectorAll('[data-arm]').forEach(b => b.onclick = () => { ler(); tirar.push(f.arquivos.splice(+b.dataset.arm, 1)[0]); desenhar(); });
+    B.querySelectorAll('[data-nrm]').forEach(b => b.onclick = () => { ler(); const a = novos.splice(+b.dataset.nrm, 1)[0]; if (a.url) URL.revokeObjectURL(a.url); desenhar(); });
+    // escolher o serviço sugere a equipe (pelo nome parecido) se ainda não houver
+    B.querySelectorAll('[data-is]').forEach(s => s.onchange = () => { ler(); const i = f.itens[+s.dataset.is]; if (i.servico && !i.oficio) { const t = i.servico.toLowerCase(); const o = ativos('disciplina').find(d => t.includes(d.toLowerCase().slice(0, 5)) || d.toLowerCase().includes(t.slice(0, 5))); if (o) i.oficio = o; } desenhar(); });
+    $('pArq').onchange = async e => { ler(); for (const a of [...e.target.files]) { if (/^image\//.test(a.type)) { const b = await reduzir(a); novos.push({ blob: b, nome: a.name, tipo: 'image/jpeg', url: URL.createObjectURL(b) }); } else novos.push({ blob: a, nome: a.name, tipo: a.type || 'application/pdf' }); } desenhar(); };
+    if ($('pApr')) $('pApr').onchange = e => { aprovar = e.target.checked; };
+  };
+  const ler = () => { const g = i => $(i) ? $(i).value : null;
+    if (g('pUn') != null) f.unidade = g('pUn').trim(); if (g('pCom') != null) f.comodo = g('pCom').trim(); if (g('pTit') != null) f.titulo = g('pTit'); if (g('pDesc') != null) f.descricao = g('pDesc'); if (g('pSol') != null) f.solicitante = g('pSol');
+    $('ovlB').querySelectorAll('[data-is]').forEach(s => { f.itens[+s.dataset.is].servico = s.value; }); $('ovlB').querySelectorAll('[data-io]').forEach(s => { f.itens[+s.dataset.io].oficio = s.value; });
+    $('ovlB').querySelectorAll('[data-ii]').forEach(s => { f.itens[+s.dataset.ii].instrucao = s.value; }); };
+  openSheet(ed ? 'Editar personalização #' + ed.numero : 'Nova personalização', '', `<span class="msg" id="pMsg"></span><button class="btn ghost" id="pC" type="button">Cancelar</button><button class="btn" id="pOk" type="button">${ed ? 'Salvar' : 'Registrar'}</button>`, true);
+  desenhar();
+  $('pC').onclick = () => { if (ed) { delete $('ovl').dataset.form; ficha(ed.id); } else closeSheet(); };
+  $('pOk').onclick = async () => {
+    ler(); const msg = t => { $('pMsg').className = 'msg err'; $('pMsg').textContent = t; };
+    const itens = f.itens.map(i => ({ servico: i.servico, oficio: i.oficio, instrucao: String(i.instrucao || '').trim() })).filter(i => i.servico || i.oficio || i.instrucao);
+    const falta = []; if (!f.pavimento) falta.push('pavimento'); if (!String(f.unidade || '').trim()) falta.push('apartamento'); if (!String(f.titulo || '').trim()) falta.push('o que muda');
+    if (!itens.length) falta.push('ao menos um serviço afetado'); else if (itens.some(i => !i.servico || !i.oficio)) falta.push('serviço e equipe de cada item');
+    if (new Set(itens.map(i => i.servico)).size < itens.length) falta.push('o mesmo serviço aparece duas vezes');
+    if (falta.length) { msg('Falta: ' + falta.join(', ') + '.'); return; }
+    $('pOk').disabled = true; $('pMsg').className = 'msg'; $('pMsg').textContent = 'Salvando…';
+    const pid = ed ? ed.id : uuid(); const arquivos = (f.arquivos || []).slice();
+    try {
+      for (const a of novos) { const ext = a.tipo === 'application/pdf' ? 'pdf' : 'jpg'; const caminho = 'personalizacoes/' + OBRA + '/' + pid + '/' + uuid() + '.' + ext;
+        const { error } = await sb.storage.from('arquivos').upload(caminho, a.blob, { contentType: a.tipo, upsert: false }); if (error) throw error;
+        arquivos.push({ caminho, nome: a.nome, tipo: a.tipo }); }
+      const row = { pavimento: f.pavimento, unidade: String(f.unidade).trim(), comodo: f.comodo || null, titulo: String(f.titulo).trim(), descricao: String(f.descricao || '').trim() || null, solicitante: String(f.solicitante || '').trim() || null, itens, arquivos };
+      const r = ed ? await sb.from('personalizacoes').update(row).eq('id', pid) : await sb.from('personalizacoes').insert(Object.assign({ id: pid, obra: OBRA, status: aprovar ? 'aprovada' : 'solicitada' }, row));
+      if (r.error) throw r.error;
+      const cam = tirar.map(a => a.caminho); if (cam.length) sb.storage.from('arquivos').remove(cam).catch(() => {});
+      novos.forEach(a => a.url && URL.revokeObjectURL(a.url));
+      delete $('ovl').dataset.form; await carregar(); render(); ficha(pid);
+      toast(ed ? 'Personalização salva.' : aprovar ? 'Registrada e aprovada: as equipes foram avisadas.' : 'Registrada: aguardando aprovação.', 5000);
+    } catch (e) { console.error(e); $('pOk').disabled = false; msg('Não foi possível salvar: ' + erroMsg(e)); }
+  };
+}
+
+/* ---------------- uma frente: serviço × pavimento ---------------- */
+function fichaFrente(sv, pav) {
+  const fr = frenteDe(sv, pav), ps = persDaFrente(sv, pav), fa = faltasFrente(sv, pav);
+  const lib = fr && fr.liberada_em;
+  openSheet(sv + ' · ' + pav, `<div style="display:grid;gap:12px">
+    ${lib ? `<div class="alerta" style="background:var(--ok-soft);border-color:var(--ok)"><span class="ic" style="background:var(--ok)">✓</span><span><b>Frente liberada</b> em ${fmtDH(fr.liberada_em)} por ${esc(nomeDe(fr.liberada_por))}${fr.justificativa ? `<small>Liberada com ciência faltando. Justificativa: ${esc(fr.justificativa)}</small>` : ''}</span></div>`
+      : fa.length ? `<div class="alerta"><span class="ic">!</span><span><b>Falta a ciência da equipe em ${nPers(fa.length)}.</b><small>Confirme com a equipe antes de liberar a frente.</small></span></div>` : ''}
+    <div class="fld"><label for="frPrev">Data prevista para começar</label>${edita() && !lib ? `<input type="date" id="frPrev" value="${esc((fr && fr.previsto) || '')}">` : `<span>${fr && fr.previsto ? fmtD(fr.previsto) : '—'}</span>`}
+      <span class="muted">O aviso aparece ${AVISO_DIAS} dias antes, enquanto houver ciência faltando.</span></div>
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Personalizações neste trecho (${ps.length})</h4>
+    ${ps.length ? ps.sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), 'pt', { numeric: true })).map(p => { const i = (p.itens || []).find(x => x.servico === sv) || {}, c = ciencia(p, sv);
+      const k = p.status === 'aprovada' ? (c ? 'ok' : 'falta') : '';
+      return `<button type="button" class="svc ${k}" data-p="${esc(p.id)}" style="text-align:left;background:none;color:inherit;width:100%"><span class="h"><b>Apto ${esc(p.unidade)} · ${esc(p.titulo)}</b><span class="st st-${p.status}">${ST[p.status]}</span></span>
+        ${i.instrucao ? `<span class="ins">${esc(i.instrucao)}</span>` : ''}<span class="ci ${k}">${c ? '✓ Ciente: ' + esc(nomeDe(c.por)) + ' · ' + fmtDH(c.em) : p.status === 'aprovada' ? 'Falta a ciência da equipe (' + esc(i.oficio || '') + ')' : p.status === 'solicitada' ? 'Ainda não aprovada' : ''}</span></button>`; }).join('')
+      : '<p class="muted" style="margin:0">Nenhuma personalização afeta este serviço neste pavimento.</p>'}
+    ${edita() && !lib && fa.length ? `<div class="fld"><label for="frJus">Liberar mesmo assim (justificativa)</label><textarea id="frJus" placeholder="Ex.: equipe avisada por telefone pelo mestre João"></textarea></div>` : ''}</div>`,
+    edita() ? `<span class="msg" id="frMsg"></span>${lib ? '<button class="btn ghost danger" id="frDesf" type="button">Desfazer liberação</button>' : '<button class="btn ghost" id="frSalvar" type="button">Salvar data</button><button class="btn ok" id="frLib" type="button">Liberar a frente</button>'}` : '');
+  $('ovl').dataset.fr = JSON.stringify([sv, pav]);
+  $('ovlB').querySelectorAll('[data-p]').forEach(b => b.onclick = () => ficha(b.dataset.p));
+  const msg = (t, ok) => { $('frMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('frMsg').textContent = t; };
+  if ($('frSalvar')) $('frSalvar').onclick = async () => {
+    const v = $('frPrev').value || null; const { error } = await sb.from('frentes').upsert({ obra: OBRA, servico: sv, pavimento: pav, previsto: v, atualizado_em: new Date().toISOString() }, { onConflict: 'obra,servico,pavimento' });
+    if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } toast('Data salva.'); await recarregar(); };
+  if ($('frLib')) $('frLib').onclick = async () => {
+    const jus = $('frJus') ? $('frJus').value.trim() : '';
+    if (fa.length && !jus) { msg('Falta a ciência da equipe. Para liberar mesmo assim, escreva a justificativa.'); $('frJus').focus(); return; }
+    if ($('frPrev') && $('frPrev').value !== ((fr && fr.previsto) || '')) await sb.from('frentes').upsert({ obra: OBRA, servico: sv, pavimento: pav, previsto: $('frPrev').value || null }, { onConflict: 'obra,servico,pavimento' });
+    const { error } = await sb.rpc('frente_liberar', { p_obra: OBRA, p_servico: sv, p_pavimento: pav, p_justificativa: jus || null });
+    if (error) { msg(erroMsg(error)); return; } toast('Frente liberada: ' + sv + ' · ' + pav + '.'); await recarregar(); };
+  if ($('frDesf')) $('frDesf').onclick = async () => { if (!confirm('Desfazer a liberação desta frente?')) return;
+    const { error } = await sb.from('frentes').update({ liberada_em: null, liberada_por: null, justificativa: null }).eq('id', fr.id); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } await recarregar(); };
+}
+
+/* ======================= início ======================= */
+(async function iniciar() {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">As personalizações são compartilhadas pela equipe e precisam do Supabase configurado no config.js.</p></div>'; return; }
+  sb = NV.cliente; OBRA = NV.obraId;
+  try { await carregar(); }
+  catch (e) {
+    if (e.naoTem) { $('main').innerHTML = '<div class="vazio"><h3>Obra não encontrada</h3><a class="btn" href="index.html" style="text-decoration:none">Ver as obras</a></div>'; return; }
+    if (e.banco) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
+    $('main').innerHTML = `<div class="vazio"><h3>Não foi possível carregar</h3><p class="muted" style="margin:0">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return;
+  }
+  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Personalizações';
+  $('fab').onclick = () => formPers(null);
+  const q = new URLSearchParams(location.search);
+  if (q.get('aba') === 'frentes') TAB = 'frentes';
+  render();
+  if (q.get('p')) { if (PERS.some(x => x.id === q.get('p'))) ficha(q.get('p')); history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA)); }
+  try { sb.channel('pers-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'personalizacoes', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pers_ciencias' }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'frentes', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); }).subscribe(); } catch (e) {}
+})();
+})();
+</script>
+</body>
+</html>

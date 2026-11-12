@@ -41,10 +41,11 @@
 
   /* ---------------- perfis: o que cada um vê e edita ---------------- */
   const PERFIS = { admin: 'Administrador', engenharia: 'Engenharia', seguranca: 'Segurança', campo: 'Campo', consulta: 'Consulta' };
-  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências']];
-  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias'],
-    seguranca: ['risco', 'pendencias'], campo: ['pendencias'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias'] };
-  const EDITA = { admin: ['risco', 'concretagem', 'fachada'], engenharia: ['risco', 'concretagem', 'fachada'], seguranca: ['risco'], campo: [], consulta: [] };
+  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Personalizações']];
+  // personalizacao: Campo vê as que afetam os seus ofícios (para dar "Estou ciente")
+  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao'],
+    seguranca: ['risco', 'pendencias'], campo: ['pendencias', 'personalizacao'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao'] };
+  const EDITA = { admin: ['risco', 'concretagem', 'fachada', 'personalizacao'], engenharia: ['risco', 'concretagem', 'fachada', 'personalizacao'], seguranca: ['risco'], campo: [], consulta: [] };
   const podeVer = f => (VE[perfil] || []).includes(f);
   const podeEditar = f => (EDITA[perfil] || []).includes(f);
   const temObra = id => obrasLib === null || obrasLib.includes(id);

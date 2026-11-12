@@ -132,14 +132,14 @@ const iniciais = n => String(n || '').trim().split(/[\s.@_-]+/).filter(Boolean).
 // perfis: um por pessoa; diz o que ela vê e faz em todo o sistema
 const PERFIS = [
   ['admin', 'Administrador', 'Tudo, em todas as obras, e esta Administração.'],
-  ['engenharia', 'Engenharia', 'Edita Risco, Concretagem e Fachadas. Abre, aprova e fecha pendências.'],
+  ['engenharia', 'Engenharia', 'Edita Risco, Concretagem e Fachadas. Abre, aprova e fecha pendências. Registra as personalizações e libera as frentes.'],
   ['seguranca', 'Segurança', 'Técnicos de segurança do trabalho. Edita o Mapa de Risco e registra pendências oficiais direto, sem passar pela Engenharia; avalia e fecha as de segurança. Não vê Concretagem nem Fachadas.'],
-  ['campo', 'Campo', 'Equipes que corrigem. Só Pendências: vê as dos seus ofícios, marca como corrigida e sugere novas (a Engenharia aprova).'],
+  ['campo', 'Campo', 'Equipes que corrigem. Pendências dos seus ofícios (marca como corrigida e sugere novas) e as personalizações que afetam o seu serviço, para dar “Estou ciente”.'],
   ['consulta', 'Consulta', 'Só visualiza os mapas e as pendências, sem alterar nada.']
 ];
 const rotPerfil = v => (PERFIS.find(p => p[0] === v) || [, v || 'Sem acesso'])[1];
 const descPerfil = v => (PERFIS.find(p => p[0] === v) || [, , ''])[2];
-const BANCO_ESPERADO = 16;   // versão do banco.sql que esta tela espera
+const BANCO_ESPERADO = 17;   // versão do banco.sql que esta tela espera
 
 let NV = null, sb = null, LISTA = [], DISC = [], OBRAS = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '', VERSAO = null;
 const nomeDe = e => { const u = LISTA.find(x => x.email === String(e || '').toLowerCase()); return (u && u.nome) || (NV ? NV.pessoas.nome(e) : String(e || '').split('@')[0]); };

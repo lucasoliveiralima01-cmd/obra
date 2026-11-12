@@ -2672,6 +2672,216 @@ $p16$;
   raise notice 'Passo 16 aplicado: Segurança com ofício';
 end $passo$;
 
+
+-- =====================================================================
+-- Passo 17: Personalizações dos apartamentos
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 17 then return; end if;
+  execute $p17$
+-- Modificações pedidas pelos compradores (ex.: fechar uma porta do banheiro do 402).
+-- Cada uma diz quais serviços ela afeta, com a instrução para a equipe daquele ofício.
+create table if not exists public.personalizacoes (
+  id            uuid primary key default gen_random_uuid(),
+  obra          text not null references public.obras(id) on delete cascade,
+  numero        int,
+  pavimento     text not null,
+  unidade       text not null,                 -- apartamento
+  comodo        text,
+  titulo        text not null,
+  descricao     text,
+  solicitante   text,                          -- comprador / origem do pedido
+  itens         jsonb not null default '[]',   -- [{servico, oficio, instrucao}]
+  arquivos      jsonb not null default '[]',   -- [{caminho, nome, tipo}]
+  status        text not null default 'solicitada'
+                check (status in ('solicitada', 'aprovada', 'executada', 'conferida', 'cancelada')),
+  criado_por    text,
+  criado_em     timestamptz not null default now(),
+  atualizado_por text,
+  atualizado_em timestamptz not null default now()
+);
+create unique index if not exists personalizacoes_obra_numero on public.personalizacoes (obra, numero);
+create index if not exists personalizacoes_obra_pav on public.personalizacoes (obra, pavimento);
+alter table public.personalizacoes enable row level security;
+
+-- "estou ciente": a equipe do serviço confirmou que sabe da modificação
+create table if not exists public.pers_ciencias (
+  id             bigserial primary key,
+  personalizacao uuid not null references public.personalizacoes(id) on delete cascade,
+  servico        text not null,
+  por            text not null,
+  em             timestamptz not null default now(),
+  obs            text,
+  unique (personalizacao, servico)
+);
+alter table public.pers_ciencias enable row level security;
+
+-- frentes de trabalho: serviço × pavimento, com data prevista e a liberação para começar
+create table if not exists public.frentes (
+  id            uuid primary key default gen_random_uuid(),
+  obra          text not null references public.obras(id) on delete cascade,
+  servico       text not null,
+  pavimento     text not null,
+  previsto      date,
+  liberada_em   timestamptz,
+  liberada_por  text,
+  justificativa text,                          -- liberada mesmo com ciência faltando
+  atualizado_em timestamptz not null default now(),
+  unique (obra, servico, pavimento)
+);
+alter table public.frentes enable row level security;
+
+-- quem vê: Administrador, Engenharia e Consulta veem todas da obra;
+-- Campo (e Segurança com ofício) veem as aprovadas que afetam um dos seus ofícios
+create or replace function public.pers_ve(p_obra text, p_status text, p_itens jsonb) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select case
+      when not public.obra_ok(p_obra) then false
+      when m.perfil in ('admin', 'engenharia', 'consulta') then true
+      when m.perfil in ('campo', 'seguranca') then p_status in ('aprovada', 'executada', 'conferida')
+        and exists (select 1 from jsonb_array_elements(coalesce(p_itens, '[]')) i where i ->> 'oficio' = any(m.disciplinas))
+      else false end
+    from public.membros m where lower(m.email) = lower(auth.jwt() ->> 'email') limit 1), false)
+$$;
+create or replace function public.pers_edita(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia'), false)
+$$;
+create or replace function public.pers_visivel_id(p_id text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.personalizacoes p where p.id::text = p_id and public.pers_ve(p.obra, p.status, p.itens))
+$$;
+grant execute on function public.pers_ve(text, text, jsonb), public.pers_edita(text), public.pers_visivel_id(text) to authenticated;
+
+drop policy if exists "ve personalizacoes" on public.personalizacoes;
+drop policy if exists "cria personalizacoes" on public.personalizacoes;
+drop policy if exists "edita personalizacoes" on public.personalizacoes;
+drop policy if exists "apaga personalizacoes" on public.personalizacoes;
+create policy "ve personalizacoes" on public.personalizacoes for select to authenticated using (public.pers_ve(obra, status, itens));
+create policy "cria personalizacoes" on public.personalizacoes for insert to authenticated with check (public.pers_edita(obra));
+create policy "edita personalizacoes" on public.personalizacoes for update to authenticated using (public.pers_edita(obra)) with check (public.pers_edita(obra));
+create policy "apaga personalizacoes" on public.personalizacoes for delete to authenticated using (public.pers_edita(obra));
+
+drop policy if exists "ve ciencias" on public.pers_ciencias;
+create policy "ve ciencias" on public.pers_ciencias for select to authenticated
+  using (exists (select 1 from public.personalizacoes p where p.id = personalizacao and public.pers_ve(p.obra, p.status, p.itens)));
+
+drop policy if exists "ve frentes" on public.frentes;
+drop policy if exists "grava frentes" on public.frentes;
+create policy "ve frentes" on public.frentes for select to authenticated
+  using (public.obra_ok(obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'consulta', 'campo'), false));
+create policy "grava frentes" on public.frentes for all to authenticated using (public.pers_edita(obra)) with check (public.pers_edita(obra));
+
+-- número sequencial por obra, autoria e datas
+create or replace function public.pers_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    perform pg_advisory_xact_lock(hashtext('pers:' || new.obra));
+    select coalesce(max(numero), 0) + 1 into new.numero from public.personalizacoes where obra = new.obra;
+    new.criado_por := lower(coalesce(auth.jwt() ->> 'email', new.criado_por)); new.criado_em := now();
+  else
+    new.numero := old.numero; new.obra := old.obra; new.criado_por := old.criado_por; new.criado_em := old.criado_em;
+  end if;
+  new.atualizado_por := lower(coalesce(auth.jwt() ->> 'email', new.atualizado_por)); new.atualizado_em := now();
+  return new;
+end $$;
+drop trigger if exists pers_ao_gravar on public.personalizacoes;
+create trigger pers_ao_gravar before insert or update on public.personalizacoes for each row execute function public.pers_ao_gravar();
+
+-- "estou ciente": a equipe do ofício daquele serviço (ou a Engenharia, quando a equipe foi avisada pessoalmente)
+create or replace function public.pers_ciente(p_id uuid, p_servico text, p_obs text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare p public.personalizacoes; m public.membros; ok boolean;
+begin
+  select * into p from public.personalizacoes where id = p_id;
+  if not found then raise exception 'Personalização não encontrada.'; end if;
+  if p.status <> 'aprovada' then raise exception 'Só dá para confirmar ciência de personalização aprovada.'; end if;
+  if not exists (select 1 from jsonb_array_elements(p.itens) i where i ->> 'servico' = p_servico) then raise exception 'Este serviço não está na personalização.'; end if;
+  select * into m from public.membros where lower(email) = lower(auth.jwt() ->> 'email');
+  ok := public.pers_edita(p.obra) or (public.obra_ok(p.obra) and m.perfil in ('campo', 'seguranca')
+        and exists (select 1 from jsonb_array_elements(p.itens) i where i ->> 'servico' = p_servico and i ->> 'oficio' = any(m.disciplinas)));
+  if not ok then raise exception 'Você não é da equipe deste serviço.' using errcode = '42501'; end if;
+  insert into public.pers_ciencias (personalizacao, servico, por, obs)
+  values (p_id, p_servico, lower(auth.jwt() ->> 'email'), nullif(trim(coalesce(p_obs, '')), ''))
+  on conflict (personalizacao, servico) do nothing;
+end $$;
+create or replace function public.pers_ciente_desfazer(p_id uuid, p_servico text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.personalizacoes where id = p_id and public.pers_edita(obra)) then
+    raise exception 'Só a Engenharia desfaz uma ciência.' using errcode = '42501'; end if;
+  delete from public.pers_ciencias where personalizacao = p_id and servico = p_servico;
+end $$;
+grant execute on function public.pers_ciente(uuid, text, text), public.pers_ciente_desfazer(uuid, text) to authenticated;
+
+-- personalizações aprovadas de um pavimento que afetam o serviço e ainda não têm o "ciente"
+create or replace function public.frente_faltas(p_obra text, p_servico text, p_pavimento text)
+returns table (id uuid, numero int, unidade text, titulo text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.numero, p.unidade, p.titulo from public.personalizacoes p
+  where p.obra = p_obra and p.pavimento = p_pavimento and p.status = 'aprovada'
+    and exists (select 1 from jsonb_array_elements(p.itens) i where i ->> 'servico' = p_servico)
+    and not exists (select 1 from public.pers_ciencias c where c.personalizacao = p.id and c.servico = p_servico)
+    and public.obra_ok(p_obra)
+  order by p.numero
+$$;
+grant execute on function public.frente_faltas(text, text, text) to authenticated;
+-- liberar a frente: só com todas as ciências, ou com justificativa (fica registrada)
+create or replace function public.frente_liberar(p_obra text, p_servico text, p_pavimento text, p_justificativa text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare n int; lista text;
+begin
+  if not public.pers_edita(p_obra) then raise exception 'Só a Engenharia libera frentes.' using errcode = '42501'; end if;
+  select count(*), string_agg('#' || numero || ' (apto ' || unidade || ')', ', ') into n, lista from public.frente_faltas(p_obra, p_servico, p_pavimento);
+  if n > 0 and coalesce(trim(p_justificativa), '') = '' then
+    raise exception 'Falta a ciência da equipe em % personalização(ões): %.', n, lista;
+  end if;
+  insert into public.frentes (obra, servico, pavimento, liberada_em, liberada_por, justificativa)
+  values (p_obra, p_servico, p_pavimento, now(), lower(auth.jwt() ->> 'email'), case when n > 0 then trim(p_justificativa) end)
+  on conflict (obra, servico, pavimento) do update set liberada_em = now(), liberada_por = excluded.liberada_por,
+    justificativa = excluded.justificativa, atualizado_em = now();
+end $$;
+grant execute on function public.frente_liberar(text, text, text, text) to authenticated;
+
+-- arquivos: personalizacoes/<obra>/<id>/… (croqui, foto marcada, pedido do comprador)
+create or replace function public.arquivo_ok(p_nome text, p_editar boolean) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when split_part(p_nome, '/', 1) in ('risco', 'concretagem', 'fachada')
+      then public.painel_ok(split_part(p_nome, '/', 1) || ':' || split_part(p_nome, '/', 2), p_editar)
+    when split_part(p_nome, '/', 1) = 'obras'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'seguranca') or (not p_editar and public.perfil_atual() is not null), false)
+    when p_nome like 'pendencias/%/plantas/%'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and (not p_editar or public.ferramenta_ok('risco', true))
+    when split_part(p_nome, '/', 1) = 'pendencias'
+      then public.pend_visivel_id(split_part(p_nome, '/', 3))
+           and (not p_editar or coalesce(public.perfil_atual() <> 'consulta', false))
+    when split_part(p_nome, '/', 1) = 'personalizacoes'
+      then case when p_editar then public.pers_edita(split_part(p_nome, '/', 2))
+                else public.pers_edita(split_part(p_nome, '/', 2)) or public.pers_visivel_id(split_part(p_nome, '/', 3)) end
+    else false end
+$$;
+
+-- aviso: personalização aprovada → equipes dos ofícios afetados
+create or replace function public.push_pers() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'aprovada' and (tg_op = 'INSERT' or old.status is distinct from 'aprovada') then
+    perform public.push_chamar(jsonb_build_object('tipo', 'personalizacao', 'p', to_jsonb(new)));
+  end if;
+  return null;
+end $$;
+drop trigger if exists push_pers on public.personalizacoes;
+create trigger push_pers after insert or update on public.personalizacoes for each row execute function public.push_pers();
+$p17$;
+  update public.banco_versao set versao = 17, atualizado_em = now();
+  raise notice 'Passo 17 aplicado: Personalizações dos apartamentos';
+end $passo$;
+
 -- =====================================================================
 -- Conferência final
 -- =====================================================================

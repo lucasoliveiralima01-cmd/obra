@@ -388,6 +388,7 @@ let PEND = [];        // pendências do servidor (com fotos e eventos)
 let PLANTAS = {};     // pavimento -> planta (imagem gerada pelo Mapa de Risco a partir do IFC)
 let FILA = [];        // operações aguardando envio (deste aparelho)
 let FUNC = [];        // funcionários da obra (Listas e regras → Funcionários)
+let PERSZ = [];       // personalizações dos apartamentos (aviso na ficha e no cadastro)
 let TAB = 'lista';
 const F = { st: new Set(['avaliacao', 'aberta', 'em_correcao', 'corrigida']), pav: '', disc: '', resp: '', tipo: '', pri: '', blq: false, inc: false, venc: false, fila: false, minhas: false, paraMim: false, meu: false, ord: 'pri', q: '' };
 const euEmail = () => String((NV && NV.usuario && NV.usuario.email) || '').toLowerCase();
@@ -603,6 +604,10 @@ const regraComodos = u => u ? LO.tipologiaDe(CFG.regras || {}, u) : null;
 const comodosDe = u => { const r = regraComodos(u); return r ? r.comodos.slice() : ativos('comodo'); };
 // mantém o valor já gravado visível, mesmo que a regra tenha mudado depois
 const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
+// aviso de personalização do apartamento (modificação pedida pelo comprador)
+const persDoApto = (pav, un) => un ? PERSZ.filter(x => x.pavimento === pav && String(x.unidade).trim() === String(un).trim()) : [];
+const avisoPers = (pav, un) => { const ps = persDoApto(pav, un); if (!ps.length) return '';
+  return `<div class="aviso"><b>Apartamento personalizado:</b> ${ps.map(x => `<a href="personalizacoes.html?obra=${encodeURIComponent(OBRA)}&p=${encodeURIComponent(x.id)}" target="_blank" rel="noopener">#${x.numero} ${esc(x.titulo)}${x.comodo ? ' (' + esc(x.comodo) + ')' : ''}</a>`).join(' · ')}. Confira antes de corrigir.</div>`; };
 
 // planta do IFC de cada pavimento (nomes diferentes são ligados pela ordem de altura; ver ListasObra.mapaPlantas)
 let MAPA_PL = {};
@@ -646,6 +651,8 @@ async function carregarServidor() {
     sb.from('pend_funcionarios').select('id,nome,cargos,equipe,email,ativo').eq('obra', OBRA).order('nome')
   ]);
   FUNC = lfu.error ? [] : (lfu.data || []);   // sem a tabela ainda: sem lista de funcionários
+  // personalizações do apartamento (quem pode ver; banco sem a tabela: nenhuma)
+  try { const r = await sb.from('personalizacoes').select('id,numero,pavimento,unidade,comodo,titulo,status').eq('obra', OBRA).in('status', ['solicitada', 'aprovada', 'executada', 'conferida']); PERSZ = r.error ? [] : (r.data || []); } catch (e) { PERSZ = []; }
   // banco sem a altura das plantas: lê sem ela
   let pls = lpl; if (pls.error) pls = await sb.from('pend_plantas').select('pavimento,caminho,bb,w,h,modelo').eq('obra', OBRA);
   // banco sem as colunas novas (regras/listas): lê só os pavimentos
@@ -658,11 +665,11 @@ async function carregarServidor() {
   L = LO.efetivas(LO.deTabela(lp.data), c.listas || null);
   CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO, regras: LO.normRegras(c.regras) };
   OBRA_NOME = lo.nome; PEND = lpend.data || []; ligarPlantas();
-  await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, FUNC, OBRA_NOME, em: new Date().toISOString() });
+  await idbPut('cache', OBRA, { L, CFG, PEND, PLANTAS, FUNC, PERSZ, OBRA_NOME, em: new Date().toISOString() });
 }
 async function carregarCache() {
   const c = await idbGet('cache', OBRA); if (!c) return false;
-  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; FUNC = c.FUNC || []; OBRA_NOME = c.OBRA_NOME; ligarPlantas(); return c.em;
+  L = LO.normListas(c.L); CFG = c.CFG; CFG.regras = LO.normRegras(CFG.regras); PEND = c.PEND; PLANTAS = c.PLANTAS || {}; FUNC = c.FUNC || []; PERSZ = c.PERSZ || []; OBRA_NOME = c.OBRA_NOME; ligarPlantas(); return c.em;
 }
 // imagem da planta: baixa uma vez e guarda no aparelho (funciona sem sinal)
 async function urlPlanta(pl) {
@@ -1028,6 +1035,7 @@ function formPend(id, encaminhar) {
         : (f.pavimento && !Object.keys(PLANTAS).length && navigator.onLine ? '<p class="muted" style="margin:0">Para marcar o local na planta: alguém com acesso de edição abre o <b>Mapa de Risco</b> desta obra uma vez (as plantas são geradas a partir do modelo IFC).</p>' : '')}
       <div class="fld"><span class="l">Local <span class="req">*</span></span>${f.pavimento ? grupo('Local', comAtual(locaisDe(f.pavimento), f.local_tipo), f.local_tipo, 'local_tipo', 'small') : '<span class="muted">Escolha o pavimento primeiro.</span>'}</div>
       ${ehApto ? `<div class="fld"><span class="l">Apartamento <span class="req">*</span></span>${uns.length ? grupo('Apartamento', uns, f.unidade, 'unidade', 'small') : '<input id="fUn" placeholder="Número do apartamento" value="' + esc(f.unidade || '') + '">'}</div>
+        ${avisoPers(f.pavimento, f.unidade)}
         <div class="fld"><span class="l">Cômodo <span class="req">*</span>${f.unidade && regraComodos(f.unidade) ? ' <span class="muted" style="text-transform:none;letter-spacing:0">(' + esc(regraComodos(f.unidade).nome) + ')</span>' : ''}</span>${String(f.unidade || '').trim() || !uns.length ? grupo('Cômodo', comAtual(comodosDe(f.unidade), f.comodo), f.comodo, 'comodo', 'small') : '<span class="muted">Escolha o apartamento para ver os cômodos dele.</span>'}</div>`
         : opcoesDo(f.local_tipo).length ? `<div class="fld"><span class="l">${esc(f.local_tipo)} <span class="req">*</span></span>${grupo(f.local_tipo, comAtual(opcoesDo(f.local_tipo), f.unidade), f.unidade, 'unidade', 'small')}</div>`
         : f.local_tipo === 'Outro' ? `<div class="fld"><label for="fUn2">Qual local? <span class="req">*</span></label><input id="fUn2" placeholder="Ex.: casa de máquinas, guarita" value="${esc(f.unidade || '')}"></div>`
@@ -1189,6 +1197,7 @@ function detalhe(id, mantemRolagem) {
       <div class="fi-resp"><span class="fi-l">Responsável pela correção</span><b>${esc([p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : 'Ofício a definir', rotQuemCorrige(p)].filter(Boolean).join(' · '))}</b></div>
       ${kv.length ? `<dl class="fi-kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
     </div>
+    ${avisoPers(p.pavimento, p.unidade)}
     ${aval ? `<div class="aviso info">${fecha(p) ? (p.seguranca ? 'Pendência de segurança para você avaliar.' : 'Sugestão para você avaliar.') + ' Escolha quem corrige e encaminhe, ou não aprove.' : 'Aguardando ' + quemAvalia(p) + ' avaliar.'}</div>` : ''}
     ${op ? `<div class="aviso">Não foi enviado: ${esc(op.erro)}<div class="acts" style="margin-top:6px"><button class="btn sm" id="dRetry" type="button">Tentar de novo</button><button class="btn sm danger" id="dDescartar" type="button">Descartar esta alteração</button></div></div>` : ''}
     <div class="fi-meio${temPlanta ? '' : ' so'}">

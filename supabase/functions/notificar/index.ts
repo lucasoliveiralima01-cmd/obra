@@ -165,6 +165,45 @@ async function fachadasLiberadas(hoje: string, site: string, nomeObra: (id: stri
   return n;
 }
 
+/* ---------------- personalizações dos apartamentos ---------------- */
+type Item = { servico?: string; oficio?: string; instrucao?: string };
+// aprovada: cada equipe afetada recebe o que muda e precisa dar "Estou ciente"
+async function personalizacao(p: Record<string, unknown>, site: string) {
+  const obra = String(p.obra || ''); if (!obra) return { enviados: 0 };
+  const ms = await membros();
+  const { data: o } = await sb.from('obras').select('nome').eq('id', obra).maybeSingle();
+  const url = site + 'personalizacoes.html?obra=' + encodeURIComponent(obra) + '&p=' + encodeURIComponent(String(p.id || ''));
+  let n = 0;
+  for (const i of ((p.itens || []) as Item[])) {
+    if (!i.oficio) continue;
+    n += await enviar(campoDe(ms, i.oficio, obra), { title: 'Personalização · Apto ' + p.unidade + ' · ' + (i.servico || ''),
+      body: (o ? o.nome + ' · ' : '') + p.titulo + (i.instrucao ? '\n' + i.instrucao : '') + '\nAbra e confirme que está ciente.', url, tag: 'pers-' + p.id + '-' + i.servico });
+  }
+  return { enviados: n };
+}
+// todo dia: frentes previstas para os próximos dias com ciência faltando → Engenharia e a equipe do serviço
+// deno-lint-ignore no-explicit-any
+async function frentesEmRisco(hoje: string, site: string, nomeObra: (id: string) => string, ms: Membro[]) {
+  const lim = new Date(hoje + 'T12:00:00'); lim.setDate(lim.getDate() + 5);
+  const limite = lim.toISOString().slice(0, 10);
+  const { data: fr, error } = await sb.from('frentes').select('obra,servico,pavimento,previsto').is('liberada_em', null).not('previsto', 'is', null).lte('previsto', limite);
+  if (error || !fr || !fr.length) return 0;
+  const { data: ps } = await sb.from('personalizacoes').select('id,obra,pavimento,unidade,titulo,itens,pers_ciencias(servico)').eq('status', 'aprovada');
+  let n = 0;
+  for (const f of fr) {
+    const faltam = (ps || []).filter(p => p.obra === f.obra && p.pavimento === f.pavimento
+      && ((p.itens || []) as Item[]).some(i => i.servico === f.servico) && !((p.pers_ciencias || []) as { servico: string }[]).some(c => c.servico === f.servico));
+    if (!faltam.length) continue;
+    const quando = f.previsto < hoje ? 'devia ter começado em ' + f.previsto.split('-').reverse().join('/') : 'começa em ' + f.previsto.split('-').reverse().join('/');
+    const aviso = { title: f.servico + ' · ' + f.pavimento + ' ' + quando, body: nomeObra(f.obra) + ': falta a ciência da equipe em ' + faltam.map(p => 'apto ' + p.unidade).join(', '),
+      url: site + 'personalizacoes.html?obra=' + encodeURIComponent(f.obra) + '&aba=frentes', tag: 'frente-' + f.obra + '-' + f.servico + '-' + f.pavimento };
+    const oficios = new Set<string>(); faltam.forEach(p => ((p.itens || []) as Item[]).forEach(i => { if (i.servico === f.servico && i.oficio) oficios.add(i.oficio); }));
+    const para = new Set(engenhariaDe(ms, f.obra)); for (const o of oficios) campoDe(ms, o, f.obra).forEach(e => para.add(e));
+    n += await enviar([...para], aviso);
+  }
+  return n;
+}
+
 // todo dia: vencidas para quem corrige e para quem fecha; resumo para a Engenharia (cada um só das suas obras)
 async function diario(site: string) {
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -193,6 +232,8 @@ async function diario(site: string) {
   } catch (e) { console.warn('rompimentos', e); }
   // fachadas: áreas cuja cura termina hoje (liberadas para a próxima camada) → Engenharia
   try { enviados += await fachadasLiberadas(hoje, site, nomeObra, obra => engenhariaDe(ms, obra)); } catch (e) { console.warn('fachadas', e); }
+  // personalizações: frentes previstas com ciência faltando
+  try { enviados += await frentesEmRisco(hoje, site, nomeObra, ms); } catch (e) { console.warn('frentes', e); }
   for (const obra of [...new Set(ps.map(p => p.obra))]) {
     const da = ps.filter(p => p.obra === obra);
     const venc = da.filter(p => (p.status === 'aberta' || p.status === 'em_correcao') && p.prazo && p.prazo < hoje);
@@ -245,6 +286,7 @@ Deno.serve(async (req) => {
     if ((req.headers.get('x-aviso-segredo') || '').trim() !== env('AVISO_SEGREDO')) return resp({ erro: 'não autorizado' }, 401);
     if (corpo.tipo === 'evento') return resp(await evento(corpo.evento || {}, site));
     if (corpo.tipo === 'diario') return resp(await diario(site));
+    if (corpo.tipo === 'personalizacao') return resp(await personalizacao(corpo.p || {}, site));
     // concreto abaixo do fck (avisado pelo Mapa de Concretagem) → Engenharia
     if (corpo.tipo === 'concreto') {
       const ms = await membros();
