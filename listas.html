@@ -142,7 +142,7 @@ function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = f
 const LO = window.ListasObra;
 const clone = o => JSON.parse(JSON.stringify(o));
 const CORES = ['#2f7fb8', '#d9701c', '#2f9a59', '#7b52b0', '#c23b2f', '#11a3a3', '#b54d86', '#8a9a1e', '#4d6a80', '#e39b1c'];
-const ROT = { problema: 'Tipos de problema', comodo: 'Cômodos', servico: 'Serviços que podem ser travados', local: 'Tipos de local', disciplina: 'Ofícios (quem corrige)' };
+const ROT = { problema: 'Tipos de problema', comodo: 'Cômodos', servico: 'Serviços (travados pelas pendências e afetados pelas personalizações)', local: 'Tipos de local', disciplina: 'Ofícios (quem corrige)' };
 const CAMPO = { problema: 'tipo', comodo: 'comodo', servico: 'servico', local: 'local_tipo', disciplina: 'disciplina' };
 const LISTAS4 = ['problema', 'comodo', 'servico', 'local'];
 const OBRIG = [['descricao', 'Descrição'], ['prazo', 'Prazo'], ['observacoes', 'Observações'], ['ponto', 'Local na planta (quando houver planta)'], ['bloqueios', 'Serviços travados']];
@@ -228,6 +228,7 @@ function telaLista(t) {
           <button type="button" data-up="${i}" aria-label="Subir">↑</button><button type="button" data-dn="${i}" aria-label="Descer">↓</button>${u ? '' : `<button type="button" data-rm="${i}" aria-label="Apagar">✕</button>`}</span>
         ${t === 'problema' ? `<span class="ex">Ofício sugerido <select data-dsug="${i}"><option value="">—</option>${discs.concat(x.extra.disciplina && !discs.includes(x.extra.disciplina) ? [x.extra.disciplina] : []).map(d => `<option ${d === x.extra.disciplina ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
           <label><input type="checkbox" data-seg="${i}" ${x.extra.seguranca || x.extra.disciplina === 'Segurança' ? 'checked' : ''}> é de segurança</label></span>` : ''}
+        ${t === 'servico' ? `<span class="ex">Equipe padrão <select data-osug="${i}"><option value="">—</option>${discs.concat(x.extra.oficio && !discs.includes(x.extra.oficio) ? [x.extra.oficio] : []).map(d => `<option ${d === x.extra.oficio ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select> <span class="muted">(já vem preenchida nas personalizações)</span></span>` : ''}
         ${t === 'local' ? `<span class="ex">Depois do local, perguntar <input type="text" data-opc="${i}" value="${esc((x.extra.opcoes || []).join('; '))}" placeholder="ex.: Esquerda; Direita (vazio = não pergunta)" style="min-width:240px"></span>` : ''}
         ${t === 'disciplina' ? `<span class="ex">Grupo (opcional, só para organizar) <input type="text" data-grp="${i}" value="${esc(x.extra.grupo || '')}" placeholder="ex.: Drywall e forro"></span>` : ''}
         ${x._orig && x._orig !== x.valor ? `<span class="ren">Era “${esc(x._orig)}”: ${u} pendência(s) serão atualizadas ao salvar.</span>` : ''}
@@ -243,6 +244,7 @@ function telaLista(t) {
   C.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => mover(L, +b.dataset.dn, 1, t, mudou));
   C.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { L.splice(+b.dataset.rm, 1); mudou(); telaLista(t); });
   C.querySelectorAll('[data-dsug]').forEach(s => s.onchange = () => { L[+s.dataset.dsug].extra.disciplina = s.value || undefined; mudou(); });
+  C.querySelectorAll('[data-osug]').forEach(s => s.onchange = () => { L[+s.dataset.osug].extra.oficio = s.value || undefined; mudou(); });
   C.querySelectorAll('[data-seg]').forEach(s => s.onchange = () => { L[+s.dataset.seg].extra.seguranca = s.checked; mudou(); });
   C.querySelectorAll('[data-opc]').forEach(s => s.onchange = () => { const o = [...new Set(s.value.split(/[;,]/).map(v => v.trim()).filter(Boolean))]; if (o.length) L[+s.dataset.opc].extra.opcoes = o; else delete L[+s.dataset.opc].extra.opcoes; mudou(); });
   C.querySelectorAll('[data-grp]').forEach(s => s.onchange = () => { const g = s.value.trim(); if (g) L[+s.dataset.grp].extra.grupo = g; else delete L[+s.dataset.grp].extra.grupo; mudou(); });
@@ -266,7 +268,7 @@ function renomearDentro(t, de, para) {
   RENOMES.push({ campo: CAMPO[t], de, para, global: t === 'disciplina' || ESC === 'padrao' });
   if (t === 'comodo') for (const tp of ED.regras.tipologias) tp.comodos = tp.comodos.map(c => c === de ? para : c);
   if (t === 'local') for (const p of ED.pavimentos) if (p.locais) p.locais = p.locais.map(c => c === de ? para : c);
-  if (t === 'disciplina') for (const x of ED.listas.problema) if (x.extra.disciplina === de) x.extra.disciplina = para;
+  if (t === 'disciplina') { for (const x of ED.listas.problema) if (x.extra.disciplina === de) x.extra.disciplina = para; for (const x of ED.listas.servico) if (x.extra.oficio === de) x.extra.oficio = para; }
 }
 
 /* ---------------- pavimentos, unidades e locais por pavimento ---------------- */

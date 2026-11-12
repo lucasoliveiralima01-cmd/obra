@@ -2882,6 +2882,124 @@ $p17$;
   raise notice 'Passo 17 aplicado: Personalizações dos apartamentos';
 end $passo$;
 
+
+-- =====================================================================
+-- Passo 18: Serviços de hidráulica e ar-condicionado, e equipe padrão de cada serviço
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 18 then return; end if;
+  execute $p18$
+-- A lista "Serviço" vale para as Pendências (serviços que a pendência trava) e para as
+-- Personalizações (serviços afetados). Acrescenta o que faltava e diz a equipe padrão de
+-- cada serviço (extra.oficio): na personalização, escolher o serviço já preenche a equipe.
+do $x$
+declare
+  -- ordem desejada: [serviço, equipe padrão]
+  -- [serviço, equipe padrão, é novo]: só os novos são acrescentados; os antigos (que alguém pode ter tirado de propósito) só ganham a equipe padrão
+  novos jsonb := '[["Alvenaria","Alvenaria/Reboco",1],["Reboco/emboço","Alvenaria/Reboco",1],
+    ["Instalação de água fria","Hidráulica",1],["Instalação de água quente","Hidráulica",1],["Instalação de esgoto","Hidráulica",1],["Instalação de gás","Hidráulica",1],
+    ["Instalação elétrica","Elétrica",0],["Infraestrutura de ar-condicionado (drenos e pontos)","Ar-condicionado",1],["Linhas frigorígenas","Ar-condicionado",1],
+    ["Estrutura drywall","Drywall",1],["Plaqueamento drywall","Drywall",0],["Fita/massa drywall","Drywall",0],["Forro","Forro/Gesso",0],["Contrapiso","Alvenaria/Reboco",0],
+    ["Impermeabilização","Impermeabilização",0],["Revestimento","Revestimento",0],["Esquadrias","Esquadrias",0],["Peitoris","Revestimento",0],["Pintura","Pintura",0],
+    ["Louças e metais","Hidráulica",0],["Limpeza final","Limpeza",0]]';
+  original text := 'Plaqueamento drywall|Fita/massa drywall|Instalação elétrica|Forro|Contrapiso|Impermeabilização|Revestimento|Pintura|Esquadrias|Peitoris|Louças e metais|Limpeza final';
+  intocada boolean; mx int; i int; nome text; ofi text; c record; arr jsonb; achou boolean;
+begin
+  -- ofício novo: Ar-condicionado
+  insert into public.pend_listas (tipo, valor, ordem, extra)
+  select 'disciplina', 'Ar-condicionado', coalesce(max(ordem), 0) + 1, '{}' from public.pend_listas where tipo = 'disciplina'
+  on conflict (tipo, valor) do nothing;
+  -- lista padrão da empresa: se ainda está como veio, reorganiza na ordem de execução; senão, só acrescenta no fim
+  select coalesce(string_agg(valor, '|' order by ordem), '') = original into intocada from public.pend_listas where tipo = 'servico';
+  select coalesce(max(ordem), 0) into mx from public.pend_listas where tipo = 'servico';
+  for i in 0 .. jsonb_array_length(novos) - 1 loop
+    nome := novos -> i ->> 0; ofi := novos -> i ->> 1;
+    if exists (select 1 from public.pend_listas where tipo = 'servico' and lower(valor) = lower(nome)) then
+      update public.pend_listas set extra = case when coalesce(extra ->> 'oficio', '') = '' then extra || jsonb_build_object('oficio', ofi) else extra end,
+        ordem = case when intocada then i + 1 else ordem end
+      where tipo = 'servico' and lower(valor) = lower(nome);
+    elsif (novos -> i ->> 2) = '1' then
+      mx := mx + 1;
+      insert into public.pend_listas (tipo, valor, ordem, extra) values ('servico', nome, case when intocada then i + 1 else mx end, jsonb_build_object('oficio', ofi));
+    end if;
+  end loop;
+  -- obras com lista própria de serviços: acrescenta o que falta (no fim)
+  for c in select obra, listas from public.pend_config where jsonb_typeof(listas -> 'servico') = 'array' loop
+    arr := c.listas -> 'servico';
+    for i in 0 .. jsonb_array_length(novos) - 1 loop
+      nome := novos -> i ->> 0; ofi := novos -> i ->> 1;
+      select exists (select 1 from jsonb_array_elements(arr) e where lower(e ->> 'valor') = lower(nome)) into achou;
+      if not achou and (novos -> i ->> 2) = '1' then
+        arr := arr || jsonb_build_array(jsonb_build_object('valor', nome, 'ordem', jsonb_array_length(arr) + 1, 'extra', jsonb_build_object('oficio', ofi), 'ativo', true));
+      elsif achou then
+        arr := (select jsonb_agg(case when lower(e ->> 'valor') = lower(nome) and coalesce(e #>> '{extra,oficio}', '') = ''
+                  then jsonb_set(e, '{extra}', coalesce(e -> 'extra', '{}') || jsonb_build_object('oficio', ofi)) else e end)
+                from jsonb_array_elements(arr) e);
+      end if;
+    end loop;
+    update public.pend_config set listas = jsonb_set(listas, '{servico}', arr) where obra = c.obra;
+  end loop;
+end $x$;
+
+-- renomear um serviço ou ofício em "Listas e regras" também atualiza as personalizações e as frentes
+create or replace function public.pend_renomear(p_obra text, p_campo text, p_de text, p_para text)
+returns int
+language plpgsql security definer set search_path = public as $$
+declare n int := 0;
+begin
+  if not public.eh_admin() then raise exception 'Só administradores.' using errcode = '42501'; end if;
+  if coalesce(trim(p_para), '') = '' or p_de = p_para then return 0; end if;
+  perform set_config('app.renomeando', '1', true);
+  if p_campo in ('tipo', 'comodo', 'local_tipo', 'disciplina', 'pavimento') then
+    execute format(
+      'update public.pendencias p set %I = $1 where p.%I = $2 and (
+         $4 = ''disciplina''
+         or ($3::text is not null and p.obra = $3)
+         or ($3::text is null and not exists (select 1 from public.pend_config c where c.obra = p.obra and c.listas is not null)))',
+      p_campo, p_campo)
+      using p_para, p_de, p_obra, p_campo;
+    get diagnostics n = row_count;
+  elsif p_campo = 'servico' then
+    update public.pendencias set bloqueios = (
+      select coalesce(jsonb_agg(case when b ->> 'servico' = p_de then jsonb_set(b, '{servico}', to_jsonb(p_para)) else b end), '[]'::jsonb)
+      from jsonb_array_elements(bloqueios) b)
+    where bloqueios @> jsonb_build_array(jsonb_build_object('servico', p_de))
+      and (p_obra is null or obra = p_obra);
+    get diagnostics n = row_count;
+  else
+    raise exception 'Campo inválido.';
+  end if;
+  -- personalizações (serviço afetado ou equipe) e frentes de trabalho
+  if p_campo in ('servico', 'disciplina') then
+    update public.personalizacoes set itens = (
+      select coalesce(jsonb_agg(case when i ->> (case p_campo when 'servico' then 'servico' else 'oficio' end) = p_de
+        then jsonb_set(i, array[case p_campo when 'servico' then 'servico' else 'oficio' end], to_jsonb(p_para)) else i end), '[]'::jsonb)
+      from jsonb_array_elements(itens) i)
+    where (p_obra is null or obra = p_obra or p_campo = 'disciplina')
+      and exists (select 1 from jsonb_array_elements(itens) i where i ->> (case p_campo when 'servico' then 'servico' else 'oficio' end) = p_de);
+  end if;
+  if p_campo = 'servico' then
+    update public.pers_ciencias c set servico = p_para where c.servico = p_de
+      and exists (select 1 from public.personalizacoes p where p.id = c.personalizacao and (p_obra is null or p.obra = p_obra))
+      and not exists (select 1 from public.pers_ciencias d where d.personalizacao = c.personalizacao and d.servico = p_para);
+    update public.frentes f set servico = p_para where f.servico = p_de and (p_obra is null or f.obra = p_obra)
+      and not exists (select 1 from public.frentes g where g.obra = f.obra and g.pavimento = f.pavimento and g.servico = p_para);
+  end if;
+  if p_campo = 'disciplina' then
+    update public.membros set disciplinas = array_replace(disciplinas, p_de, p_para) where p_de = any(disciplinas);
+    update public.pend_funcionarios set cargos = array_replace(cargos, p_de, p_para) where p_de = any(cargos);
+  end if;
+  perform set_config('app.renomeando', '', true);
+  insert into public.admin_log (por, alvo, acao, detalhe)
+  values (lower(auth.jwt() ->> 'email'), coalesce(p_obra, 'padrão'), 'listas',
+          case p_campo when 'disciplina' then 'ofício' else p_campo end || ': “' || p_de || '” → “' || p_para || '” (' || n || ' pendência(s))');
+  return n;
+end $$;
+$p18$;
+  update public.banco_versao set versao = 18, atualizado_em = now();
+  raise notice 'Passo 18 aplicado: Serviços de hidráulica e ar-condicionado';
+end $passo$;
+
 -- =====================================================================
 -- Conferência final
 -- =====================================================================

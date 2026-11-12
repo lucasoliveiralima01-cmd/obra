@@ -236,6 +236,8 @@ const ordPav = n => { const i = CFG.pavimentos.findIndex(x => x.nome === n); ret
 const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unidades) || [];
 const comodosDe = u => { const r = u ? LO.tipologiaDe(CFG.regras || {}, u) : null; return r ? r.comodos.slice() : ativos('comodo'); };
 const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
+// equipe padrão de um serviço (Listas e regras → Serviços → Equipe padrão)
+const equipeDe = sv => ((L.servico || []).find(x => x.valor === sv) || { extra: {} }).extra.oficio || '';
 
 /* ---------------- dados ---------------- */
 async function carregar() {
@@ -444,8 +446,9 @@ function formPers(id) {
     B.querySelectorAll('[data-irm]').forEach(b => b.onclick = () => { ler(); f.itens.splice(+b.dataset.irm, 1); desenhar(); });
     B.querySelectorAll('[data-arm]').forEach(b => b.onclick = () => { ler(); tirar.push(f.arquivos.splice(+b.dataset.arm, 1)[0]); desenhar(); });
     B.querySelectorAll('[data-nrm]').forEach(b => b.onclick = () => { ler(); const a = novos.splice(+b.dataset.nrm, 1)[0]; if (a.url) URL.revokeObjectURL(a.url); desenhar(); });
-    // escolher o serviço sugere a equipe (pelo nome parecido) se ainda não houver
-    B.querySelectorAll('[data-is]').forEach(s => s.onchange = () => { ler(); const i = f.itens[+s.dataset.is]; if (i.servico && !i.oficio) { const t = i.servico.toLowerCase(); const o = ativos('disciplina').find(d => t.includes(d.toLowerCase().slice(0, 5)) || d.toLowerCase().includes(t.slice(0, 5))); if (o) i.oficio = o; } desenhar(); });
+    // escolher o serviço já preenche a equipe padrão dele (Listas e regras → Serviços); dá para trocar
+    B.querySelectorAll('[data-is]').forEach(s => s.onchange = () => { const k = +s.dataset.is, i = f.itens[k], antes = equipeDe(i.servico); ler();
+      const nova = equipeDe(i.servico); if (nova && (!i.oficio || i.oficio === antes)) i.oficio = nova; desenhar(); });
     $('pArq').onchange = async e => { ler(); for (const a of [...e.target.files]) { if (/^image\//.test(a.type)) { const b = await reduzir(a); novos.push({ blob: b, nome: a.name, tipo: 'image/jpeg', url: URL.createObjectURL(b) }); } else novos.push({ blob: a, nome: a.name, tipo: a.type || 'application/pdf' }); } desenhar(); };
     if ($('pApr')) $('pApr').onchange = e => { aprovar = e.target.checked; };
   };
