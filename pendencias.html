@@ -295,6 +295,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 .legst i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 .com{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end}
 .com textarea{min-height:44px}
+.viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.viewer .vx:hover{background:rgba(20,30,40,.92)}
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
 .viewer{touch-action:none}
 .viewer img{transition:transform .05s;max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);width:auto;height:auto;object-fit:contain;cursor:zoom-out}
@@ -344,7 +346,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 <button class="fab" id="fab" type="button" hidden>+ Nova pendência</button>
 
 <div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
-<div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Foto ampliada"></div>
+<div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Foto ampliada"></div>
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
@@ -513,6 +515,7 @@ const VZ = { s: 1, x: 0, y: 0 }; const vzAplica = () => { $('viewerImg').style.t
 document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; Object.assign(VZ, { s: 1, x: 0, y: 0 }); vzAplica(); $('viewer').hidden = false; });
 let vzMexeu = false;
 $('viewer').onclick = () => { if (vzMexeu) { vzMexeu = false; return; } $('viewer').hidden = true; };
+$('viewerX').onclick = ev => { ev.stopPropagation(); vzMexeu = false; $('viewer').hidden = true; };
 if (window.AppObra && AppObra.pinca) AppObra.pinca($('viewer'), k => { VZ.s = Math.max(1, Math.min(6, VZ.s * k)); if (VZ.s === 1) { VZ.x = VZ.y = 0; } vzAplica(); vzMexeu = true; });
 { let p0 = null; $('viewer').addEventListener('touchstart', ev => { p0 = ev.touches.length === 1 && VZ.s > 1 ? [ev.touches[0].clientX - VZ.x, ev.touches[0].clientY - VZ.y] : null; }, { passive: true });
   $('viewer').addEventListener('touchmove', ev => { if (!p0 || ev.touches.length !== 1) return; ev.preventDefault(); VZ.x = ev.touches[0].clientX - p0[0]; VZ.y = ev.touches[0].clientY - p0[1]; vzAplica(); vzMexeu = true; }, { passive: false }); }

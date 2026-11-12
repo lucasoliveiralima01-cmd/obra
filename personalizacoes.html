@@ -146,6 +146,8 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
 .svc .ins{margin:0;font-weight:600;white-space:pre-wrap}
 .svc .ci{font-size:.84rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
 .svc .ci.ok{color:var(--ok)} .svc .ci.falta{color:var(--bad)}
+.viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.viewer .vx:hover{background:rgba(20,30,40,.92)}
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
 .viewer img{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);object-fit:contain}
 .toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
@@ -175,7 +177,7 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
 <button class="fab" id="fab" type="button" hidden>+ Nova personalização</button>
 
 <div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
-<div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Arquivo ampliado"></div>
+<div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Arquivo ampliado"></div>
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
@@ -360,6 +362,7 @@ $('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl
 $('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
 $('viewer').onclick = () => { $('viewer').hidden = true; };
+$('viewerX').onclick = ev => { ev.stopPropagation(); $('viewer').hidden = true; };
 document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
 const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=Falta|Só|Você)/, '');
 
