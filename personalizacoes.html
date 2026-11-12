@@ -237,7 +237,7 @@ const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unid
 const comodosDe = u => { const r = u ? LO.tipologiaDe(CFG.regras || {}, u) : null; return r ? r.comodos.slice() : ativos('comodo'); };
 const comAtual = (arr, cur) => cur && !arr.includes(cur) ? arr.concat(cur) : arr;
 // equipe padrão de um serviço (Listas e regras → Serviços → Equipe padrão)
-const equipeDe = sv => ((L.servico || []).find(x => x.valor === sv) || { extra: {} }).extra.oficio || '';
+const equipeDe = sv => { const o = ((L.servico || []).find(x => x.valor === sv) || { extra: {} }).extra.oficio || ''; return o && ativos('disciplina').includes(o) ? o : ''; };   // só se o ofício existe
 
 /* ---------------- dados ---------------- */
 async function carregar() {

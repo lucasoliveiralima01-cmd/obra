@@ -3000,6 +3000,67 @@ $p18$;
   raise notice 'Passo 18 aplicado: Serviços de hidráulica e ar-condicionado';
 end $passo$;
 
+
+-- =====================================================================
+-- Passo 19: Equipe padrão dos serviços sempre entre os ofícios cadastrados
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 19 then return; end if;
+  execute $p19$
+-- A equipe padrão de cada serviço (extra.oficio) precisa ser um ofício que existe na lista
+-- de ofícios da empresa. Cada empresa dá nomes diferentes (Hidráulica ou Encanador; Elétrica
+-- ou Eletricista...), então procura o primeiro nome equivalente que estiver cadastrado; se
+-- nenhum estiver, deixa sem equipe padrão (a pessoa escolhe na hora).
+create or replace function public.servico_equipe(p_servico text, p_atual text) returns text
+language plpgsql stable security definer set search_path = public as $$
+declare
+  ofs text[] := array(select valor from public.pend_listas where tipo = 'disciplina');
+  cands text[]; c text; s text := lower(coalesce(p_servico, ''));
+begin
+  if p_atual is not null and exists (select 1 from unnest(ofs) o where lower(o) = lower(p_atual)) then return p_atual; end if;
+  cands := case
+    when s like '%frigor%' or s like '%ar-condicionado%' or s like '%ar condicionado%' then array['Ar-condicionado', 'Refrigeração', 'Climatização', 'Técnico de refrigeração', 'Instalador de ar-condicionado']
+    when s like '%água%' or s like '%agua%' or s like '%esgoto%' or s like '%gás%' or s like '%gas%' or s like '%hidráu%' or s like '%louça%' or s like '%metais%' then array['Hidráulica', 'Encanador', 'Bombeiro hidráulico', 'Instalador hidráulico']
+    when s like '%elétric%' or s like '%eletric%' then array['Elétrica', 'Eletricista', 'Instalador elétrico']
+    when s like '%drywall%' then array['Drywall', 'Montador de drywall', 'Gesseiro', 'Forro/Gesso']
+    when s like '%forro%' then array['Forro/Gesso', 'Gesseiro', 'Forro', 'Drywall']
+    when s like '%impermeab%' then array['Impermeabilização', 'Impermeabilizador']
+    when s like '%alvenaria%' or s like '%reboco%' or s like '%emboço%' or s like '%contrapiso%' then array['Alvenaria/Reboco', 'Pedreiro', 'Alvenaria']
+    when s like '%revestimento%' or s like '%peitor%' then array['Revestimento', 'Azulejista', 'Ladrilheiro', 'Pedreiro']
+    when s like '%esquadria%' then array['Esquadrias', 'Instalador de esquadrias', 'Serralheiro', 'Vidraceiro']
+    when s like '%pintura%' then array['Pintura', 'Pintor']
+    when s like '%limpeza%' then array['Limpeza', 'Servente']
+    else array[]::text[] end;
+  foreach c in array cands loop
+    select o into c from unnest(ofs) o where lower(o) = lower(c) limit 1;
+    if c is not null then return c; end if;
+  end loop;
+  return null;
+end $$;
+revoke all on function public.servico_equipe(text, text) from public, anon, authenticated;
+
+-- confere a lista padrão e as listas próprias das obras
+do $x$
+declare r record; arr jsonb; eq text;
+begin
+  for r in select valor, extra from public.pend_listas where tipo = 'servico' loop
+    eq := public.servico_equipe(r.valor, r.extra ->> 'oficio');
+    update public.pend_listas set extra = case when eq is null then extra - 'oficio' else extra || jsonb_build_object('oficio', eq) end
+    where tipo = 'servico' and valor = r.valor;
+  end loop;
+  for r in select obra, listas from public.pend_config where jsonb_typeof(listas -> 'servico') = 'array' loop
+    arr := (select coalesce(jsonb_agg(case when public.servico_equipe(e ->> 'valor', e #>> '{extra,oficio}') is null
+                then jsonb_set(e, '{extra}', coalesce(e -> 'extra', '{}') - 'oficio')
+                else jsonb_set(e, '{extra}', coalesce(e -> 'extra', '{}') || jsonb_build_object('oficio', public.servico_equipe(e ->> 'valor', e #>> '{extra,oficio}'))) end), '[]')
+            from jsonb_array_elements(r.listas -> 'servico') e);
+    update public.pend_config set listas = jsonb_set(listas, '{servico}', arr) where obra = r.obra;
+  end loop;
+end $x$;
+$p19$;
+  update public.banco_versao set versao = 19, atualizado_em = now();
+  raise notice 'Passo 19 aplicado: Equipe padrão dos serviços entre os ofícios cadastrados';
+end $passo$;
+
 -- =====================================================================
 -- Conferência final
 -- =====================================================================
