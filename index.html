@@ -242,7 +242,11 @@ const FERRAMENTAS = [
   { id: 'personalizacao', nome: 'Personalizações', curto: 'Personalizações', pagina: 'personalizacoes.html', soOnline: true,
     resumo: 'Modificações dos compradores, ciência das equipes e liberação das frentes.',
     desc: 'Modificações pedidas pelos compradores por apartamento, com os serviços afetados, o “Estou ciente” de cada equipe e a liberação das frentes de trabalho.',
-    icone: '<img src=\"icones/personalizacoes.svg\" alt=\"\">' }
+    icone: '<img src=\"icones/personalizacoes.svg\" alt=\"\">' },
+  { id: 'ceramica', nome: 'Cerâmicas', curto: 'Cerâmicas', pagina: 'ceramicas.html', soOnline: true,
+    resumo: 'Pallets recebidos, entregas por apartamento e consumo estimado.',
+    desc: 'Estoque por pallet (tonalidade, tamanho e lote da etiqueta), entregas lendo o código do pallet pelo celular, estimativa por ambiente com margem de perda e consumo por apartamento.',
+    icone: '<img src=\"icones/ceramicas.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));
@@ -392,7 +396,14 @@ async function carregarResumo() {
     for (const p of PERSZ) { const r = g(p.obra); r.pers = r.pers || { ativas: 0, faltas: 0, sol: 0 }; r.pers.ativas++; if (p.status === 'solicitada') r.pers.sol++;
       if (p.status === 'aprovada' && persFaltas(p).some(i => NV.perfil !== 'campo' || meus.includes(i.oficio))) r.pers.faltas++; }
   } catch (e) {}
-  if (NV.perfil !== 'campo') try {
+  // cerâmicas: pallets e caixas em estoque
+  if (NV.podeVer('ceramica')) try {
+    const [lp, lm] = await Promise.all([sb.from('cer_pallets').select('id,obra,caixas,cer_produtos(pecas_cx)'), sb.from('cer_movs').select('pallet,tipo,pecas')]);
+    if (!lp.error) { const sai = {}; for (const m of lm.data || []) sai[m.pallet] = (sai[m.pallet] || 0) + (m.tipo === 'entrega' || m.tipo === 'quebra' ? m.pecas : -m.pecas);
+      for (const p of lp.data || []) { const pc = (p.cer_produtos && p.cer_produtos.pecas_cx) || 6, s = p.caixas * pc - (sai[p.id] || 0); const r = g(p.obra); r.cer = r.cer || { pallets: 0, cx: 0 };
+        if (s > 0) { r.cer.pallets++; r.cer.cx += s / pc; } } }
+  } catch (e) {}
+  if (!['campo', 'almoxarifado'].includes(NV.perfil)) try {
     const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas', 'aplicacoes']);
     if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
       if (fe === 'concretagem' && x.colecao === 'concretagens') { r.conc = r.conc || { n: 0, ultima: '' }; r.conc.n++; if (x.data && x.data > r.conc.ultima) r.conc.ultima = x.data; }
@@ -410,6 +421,7 @@ function resumoDe(id, fid) {
   if (fid === 'concretagem') { const c = r.conc; return c ? c.n + ' concretage' + (c.n > 1 ? 'ns' : 'm') + (c.ultima ? ' · Última em ' + fmtD(c.ultima) : '') : 'Nenhuma concretagem'; }
   if (fid === 'fachada') { const c = r.fach; return c ? c.n + ' área' + (c.n > 1 ? 's' : '') + ' aplicada' + (c.n > 1 ? 's' : '') + (c.ultima ? ' · Última aplicação em ' + fmtD(c.ultima) : '') : 'Nenhuma aplicação'; }
   if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma personalização'; }
+  if (fid === 'ceramica') { const k = r.cer; return k && k.pallets ? Math.floor(k.cx) + ' caixa' + (Math.floor(k.cx) === 1 ? '' : 's') + ' em estoque · ' + k.pallets + ' pallet' + (k.pallets > 1 ? 's' : '') : 'Nenhum pallet em estoque'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · Revisão R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }

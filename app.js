@@ -16,7 +16,8 @@
     { id: 'concretagem', nome: 'Concretagens', pag: 'concretagem.html' },
     { id: 'fachada', nome: 'Fachadas', pag: 'fachadas.html' },
     { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html' },
-    { id: 'personalizacao', nome: 'Personalizações', pag: 'personalizacoes.html' }
+    { id: 'personalizacao', nome: 'Personalizações', pag: 'personalizacoes.html' },
+    { id: 'ceramica', nome: 'Cerâmicas', pag: 'ceramicas.html' }
   ];
 
   /* ---------------- tema ---------------- */
@@ -181,7 +182,7 @@
     // só as ferramentas do perfil (Segurança: Risco e Pendências; Campo: só Pendências)
     const visiveis = FERR.filter(f => (nv.podeVer ? nv.podeVer(f.id) : !(nv.cargo === 'encarregado' && f.id !== 'pendencias')));
     // caminho "Obras › Obra › Ferramenta" logo abaixo do topo, com as ações principais da página (botões com data-barra)
-    if (!['pendencias', 'personalizacao'].includes(atual) && !document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
+    if (!['pendencias', 'personalizacao', 'ceramica'].includes(atual) && !document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
     // abas das ferramentas da mesma obra
     const ttl = document.querySelector('.brand .ttl');
     if (ttl && visiveis.length > 1 && !document.querySelector('.mo-abas')) {

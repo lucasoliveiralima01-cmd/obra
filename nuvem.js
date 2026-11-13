@@ -40,12 +40,13 @@
   const hashInicial = location.hash || '';
 
   /* ---------------- perfis: o que cada um vê e edita ---------------- */
-  const PERFIS = { admin: 'Administrador', engenharia: 'Engenharia', seguranca: 'Segurança', campo: 'Campo', consulta: 'Consulta' };
-  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Personalizações']];
+  const PERFIS = { admin: 'Administrador', engenharia: 'Engenharia', seguranca: 'Segurança', campo: 'Campo', consulta: 'Consulta', almoxarifado: 'Almoxarifado' };
+  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Personalizações'], ['ceramica', 'Cerâmicas']];
   // personalizacao: Campo vê as que afetam os seus ofícios (para dar "Estou ciente")
-  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao'],
-    seguranca: ['risco', 'pendencias'], campo: ['pendencias', 'personalizacao'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao'] };
-  const EDITA = { admin: ['risco', 'concretagem', 'fachada', 'personalizacao'], engenharia: ['risco', 'concretagem', 'fachada', 'personalizacao'], seguranca: ['risco'], campo: [], consulta: [] };
+  // ceramica: Almoxarifado recebe pallets e registra entregas (só essa ferramenta)
+  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica'],
+    seguranca: ['risco', 'pendencias'], campo: ['pendencias', 'personalizacao'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica'], almoxarifado: ['ceramica'] };
+  const EDITA = { admin: ['risco', 'concretagem', 'fachada', 'personalizacao', 'ceramica'], engenharia: ['risco', 'concretagem', 'fachada', 'personalizacao', 'ceramica'], seguranca: ['risco'], campo: [], consulta: [], almoxarifado: ['ceramica'] };
   const podeVer = f => (VE[perfil] || []).includes(f);
   const podeEditar = f => (EDITA[perfil] || []).includes(f);
   const temObra = id => obrasLib === null || obrasLib.includes(id);

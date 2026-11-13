@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244A66"/><stop offset="0.52" stop-color="#163852"/><stop offset="1" stop-color="#102B43"/></linearGradient>
+<linearGradient id="peca" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3E3CF"/><stop offset="1" stop-color="#D9BC9A"/></linearGradient>
+<linearGradient id="peca2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E8D2B6"/><stop offset="1" stop-color="#C9A67F"/></linearGradient>
+<linearGradient id="orange" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC04F"/><stop offset="1" stop-color="#F18A20"/></linearGradient>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#041D2E" flood-opacity="0.23"/></filter>
+</defs>
+<rect x="65" y="65" width="894" height="894" rx="190" fill="url(#tile)"/>
+<rect x="82" y="82" width="860" height="860" rx="176" fill="none" stroke="#52748B" stroke-width="9" opacity=".65"/>
+<!-- pallet: caixas empilhadas -->
+<g filter="url(#shadow)">
+  <rect x="200" y="300" width="300" height="190" rx="18" fill="url(#peca)"/>
+  <rect x="524" y="300" width="300" height="190" rx="18" fill="url(#peca2)"/>
+  <rect x="200" y="510" width="300" height="190" rx="18" fill="url(#peca2)"/>
+  <rect x="524" y="510" width="300" height="190" rx="18" fill="url(#peca)"/>
+  <rect x="180" y="716" width="664" height="40" rx="10" fill="#8EA6B5"/>
+  <rect x="220" y="756" width="80" height="44" rx="6" fill="#8EA6B5"/><rect x="472" y="756" width="80" height="44" rx="6" fill="#8EA6B5"/><rect x="724" y="756" width="80" height="44" rx="6" fill="#8EA6B5"/>
+</g>
+<!-- etiqueta com código -->
+<g filter="url(#shadow)">
+  <rect x="560" y="170" width="250" height="210" rx="22" fill="#F4F8F9" stroke="url(#orange)" stroke-width="16"/>
+  <g fill="#163852"><rect x="600" y="210" width="40" height="40"/><rect x="660" y="210" width="20" height="20"/><rect x="700" y="210" width="70" height="20"/><rect x="600" y="270" width="20" height="70"/><rect x="640" y="270" width="60" height="30"/><rect x="720" y="250" width="50" height="50"/><rect x="640" y="320" width="130" height="20"/></g>
+</g>
+</svg>

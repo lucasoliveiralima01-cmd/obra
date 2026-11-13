@@ -13,13 +13,14 @@ Site com ferramentas de engenharia e segurança que trabalham sobre o modelo IFC
 
 Cada pessoa tem **um perfil** (escolhido em **Administração**) e vê **só as obras liberadas para ela** (o administrador vê todas):
 
-| Perfil | Risco | Concretagem e Fachadas | Pendências | Personalizações | Administração |
-|---|---|---|---|---|---|
-| **Administrador** | edita | edita | tudo o que a Engenharia faz, e fecha também as de segurança | edita | sim |
-| **Engenharia** | edita | edita | abre, edita, avalia as sugestões e fecha as que não são de segurança | registra, aprova e libera as frentes | não |
-| **Segurança** (técnicos de segurança) | edita | não vê | registra pendências oficiais direto (sem passar pela Engenharia), avalia e fecha as de segurança | não vê | não |
-| **Campo** | não vê | não vê | vê as dos seus **ofícios**, marca como corrigida (com foto) e **sugere** novas | vê as do seu ofício e dá **Estou ciente** | não |
-| **Consulta** | só vê | só vê | só vê | só vê | não |
+| Perfil | Risco | Concretagem e Fachadas | Pendências | Personalizações | Cerâmicas | Administração |
+|---|---|---|---|---|---|---|
+| **Administrador** | edita | edita | tudo o que a Engenharia faz, e fecha também as de segurança | edita | edita | sim |
+| **Engenharia** | edita | edita | abre, edita, avalia as sugestões e fecha as que não são de segurança | registra, aprova e libera as frentes | edita tudo (estimativa, pallets, entregas) | não |
+| **Segurança** (técnicos de segurança) | edita | não vê | registra pendências oficiais direto (sem passar pela Engenharia), avalia e fecha as de segurança | não vê | não vê | não |
+| **Campo** | não vê | não vê | vê as dos seus **ofícios**, marca como corrigida (com foto) e **sugere** novas | vê as do seu ofício e dá **Estou ciente** | não vê | não |
+| **Consulta** | só vê | só vê | só vê | só vê | só vê | não |
+| **Almoxarifado** | não vê | não vê | não vê | não vê | recebe pallets e registra entregas (vê a estimativa) | não |
 
 - **Ofícios** (Pedreiro, Eletricista, Impermeabilizador…) são obrigatórios para quem é de Campo e podem ser vários. Quem é da Segurança pode ter ofício também (ex.: Técnico de segurança), para receber as pendências desse ofício e ser escolhido como responsável. Técnico de segurança deve ficar no perfil **Segurança**, não em Campo; a Administração avisa quando isso acontece. A lista de ofícios fica em **Listas e regras → Ofícios**.
 - **Pendência de segurança**: a Segurança registra e escolhe quem corrige. Quando a Engenharia vê uma não conformidade de segurança, marca **É de segurança do trabalho** e ela vai **em avaliação** para a Segurança, que escolhe quem corrige e encaminha. Quem dá a baixa final é a Segurança.
@@ -179,3 +180,4 @@ O endereço da obra (`residencial-x`) é criado a partir do nome e não muda qua
 - **Pendências no iPhone**: a pendência fica guardada no aparelho até subir. Se o Safari não deixar guardar (modo privado, ou ao voltar da câmera), ela sobe direto, desde que haja sinal.
 - **Relatórios de pendências em PDF** (botão **Relatório PDF** e, na ficha, **⋯ → Exportar PDF**): *Consolidado* (duas pendências por página, blocos de tamanho fixo), *Individual* (uma página por pendência, com a planta e o encerramento), *Fotográfico* e *Lista detalhada*. Fotos além de quatro por categoria e textos longos vão para os anexos. O desenho fica em `relatorio-pdf.js`; o logo, a empresa e o endereço ficam guardados em cada aparelho.
 - **Personalizações** (`personalizacoes.html`): modificações pedidas pelos compradores por apartamento (ex.: fechar uma porta do banheiro). Cada uma lista os **serviços afetados**, a equipe (ofício) e a instrução. Aprovada, a equipe de cada serviço recebe o aviso e precisa tocar em **Estou ciente** (ou a Engenharia registra quem foi avisado). Na aba **Frentes de trabalho** (serviço × pavimento) dá para marcar a **data prevista**: o sistema avisa 7 dias antes (no Meu dia e no celular, 5 dias antes) se ainda falta ciência, e a frente só é **liberada** com todas as ciências ou com uma justificativa registrada. As Pendências mostram quando o apartamento é personalizado.
+- **Cerâmicas** (`ceramicas.html`): estoque por **pallet** com os dados da etiqueta (qualidade, tonalidade, tamanho/calibre, lote, PLT…) e a foto da etiqueta. O código quadrado da etiqueta (DataMatrix) traz só a **série** do pallet, então o pallet é registrado uma vez ao chegar; depois, o almoxarifado toca em **Ler etiqueta**, aponta o celular para o código e só escolhe **para quem** (os funcionários de ofício Azulejista aparecem primeiro), **para onde** (pavimento → apartamento → ambiente, pelo final: o 01 tem banheiro social e suíte) e **quantas caixas**. O saldo é guardado em peças (caixa + peças avulsas) e nunca fica negativo. A aba **Estimativa** calcula as peças de cada ambiente (área ÷ área da peça; rodapé pela peça cortada em tiras) com **margem de perda** ajustável, e a aba **Apartamentos** compara o entregue com o estimado e avisa quando um ambiente recebeu **duas partidas** (tonalidade, tamanho ou lote diferentes). O leitor usa o do navegador (Android) ou a biblioteca zxing-wasm (iPhone); sem câmera ao vivo, dá para tirar uma foto da etiqueta ou digitar o número.

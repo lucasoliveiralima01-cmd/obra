@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="description" content="Cerâmicas: pallets recebidos com os dados da etiqueta, entregas por apartamento lendo o código do pallet e consumo comparado à estimativa.">
+<meta name="theme-color" content="#22425c">
+<title>Cerâmicas</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icones/ceramicas.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
+<style>
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
+/* faixa da marca */
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px))}
+.logo{display:block;color:inherit}
+.logo img{height:40px;width:40px;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
+.ttl .obra{font-size:.82rem;color:#d4e4ee}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+
+main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
+.crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:8px}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 18px;font:700 .92rem var(--f-body);color:var(--ink)}
+.tab:hover{border-color:var(--accent)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab b{font-family:var(--f-body);margin-left:4px;opacity:.85}
+.muted{color:var(--muted);font-size:.88rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:.82rem}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px}
+.lnk:hover{text-decoration:underline}
+
+/* avisos no topo */
+.alertas{display:grid;gap:8px}
+.alerta{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r);padding:10px 12px;color:var(--ink)}
+.alerta.info{background:var(--warn-soft);border-color:var(--warn)}
+.alerta .ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--bad);color:#fff;font:700 .9rem var(--f-body)}
+.alerta.info .ic{background:var(--warn)}
+.alerta b{font-weight:700}
+.alerta small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+
+/* filtros */
+.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.busca{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
+.fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);min-height:40px;max-width:100%}
+.fsel.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip{background:none;border:1px solid var(--line);border-radius:16px;padding:6px 11px;font:500 .84rem var(--f-body);color:var(--ink);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+
+/* lista */
+.grupo{display:grid;gap:8px}
+.grupo>h2{margin:4px 0 0;font:700 1rem var(--f-disp);color:var(--muted);letter-spacing:.02em}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.card{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;width:100%;color:inherit;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card.falta{border-left-color:var(--bad)} .card.ok{border-left-color:var(--ok)} .card.sol{border-left-color:var(--warn)}
+.c-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.c-loc{font-size:.8rem;color:var(--muted)}
+.c-tit{font:700 1rem/1.25 var(--f-body);overflow-wrap:anywhere}
+.st{flex:none;font:600 .74rem var(--f-body);padding:2px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st-solicitada{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.st-aprovada{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.st-executada,.st-conferida{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.st-cancelada{text-decoration:line-through}
+.svs{display:flex;flex-wrap:wrap;gap:5px}
+.sv{font:600 .76rem var(--f-body);padding:2px 8px;border-radius:12px;border:1px solid var(--line);color:var(--muted)}
+.sv.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.sv.falta{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
+.vazio h3{margin:0;font:700 1.15rem var(--f-disp)}
+
+/* frentes */
+.fr-wrap{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.fr{border-collapse:separate;border-spacing:0;width:100%;font-size:.86rem}
+table.fr th,table.fr td{padding:6px;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);text-align:center;vertical-align:middle}
+table.fr th{font:700 .8rem var(--f-disp);color:var(--muted);background:var(--panel);position:sticky;top:0}
+table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600;min-width:120px;z-index:1}
+.fc{display:grid;gap:2px;justify-items:center;width:100%;min-width:104px;background:none;border:1px solid transparent;border-radius:7px;padding:6px 4px;color:inherit}
+.fc:hover{border-color:var(--accent);background:var(--accent-soft)}
+.fc .s{font:600 .76rem var(--f-body);padding:1px 7px;border-radius:10px}
+.fc .d{font-size:.74rem;color:var(--muted)}
+.s-lib{background:var(--ok-soft);color:var(--ok)} .s-sol{background:var(--warn-soft);color:var(--warn)} .s-falta{background:var(--bad-soft);color:var(--bad)} .s-pronta{background:var(--accent-soft);color:var(--accent)} .s-nada{color:var(--muted)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+
+/* botão flutuante */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+
+/* janelas */
+.overlay{position:fixed;inset:0;background:rgba(6,20,30,.5);display:grid;place-items:center;padding:12px;z-index:20}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(760px,100%);max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.sheet>header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.sheet>header h3{margin:0;font:700 1.2rem var(--f-disp);flex:1}
+.sheet>header .x{background:none;border:1px solid var(--line);border-radius:8px;min-width:36px;height:36px;font-size:1.2rem;line-height:1;color:var(--ink)}
+.sheet .body{overflow:auto;padding:14px 16px;display:grid;gap:14px;align-content:start}
+.sheet>footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.sheet>footer:not(:has(.btn)){display:none}
+.fld{display:grid;gap:5px}
+.fld>label,.fld>.l{font:600 .72rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.req{color:var(--bad)}
+.fld input:not([type=file]):not([type=checkbox]),.fld select,.fld textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+.fld textarea{min-height:64px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font:600 .86rem var(--f-body);color:var(--ink);min-height:36px}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
+.msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.itens{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:8px}
+.item textarea{grid-column:1/-1;min-height:46px}
+.item select,.item textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 9px;width:100%;min-width:0}
+.arqs{display:flex;flex-wrap:wrap;gap:8px}
+.arq{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:.72rem;color:var(--muted);text-align:center;padding:4px}
+.arq img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.arq .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;line-height:22px;padding:0}
+.addarq{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:8px;padding:9px 13px;font:600 .9rem var(--f-body);color:var(--ink);cursor:pointer}
+.addarq input{display:none}
+/* ficha */
+.fi-tit{margin:0;font:700 1.4rem/1.2 var(--f-disp);overflow-wrap:anywhere}
+.fi-loc{margin:0;font:600 .98rem var(--f-body);color:var(--accent)}
+.fi-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.86rem;color:var(--muted)}
+.fi-desc{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fi h4{margin:0;font:700 1.02rem var(--f-disp)}
+.svc{display:grid;gap:6px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:10px 12px}
+.svc.ok{border-left-color:var(--ok)} .svc.falta{border-left-color:var(--bad)}
+.svc .h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between}
+.svc .h b{font:700 .98rem var(--f-body)}
+.svc .ins{margin:0;font-weight:600;white-space:pre-wrap}
+.svc .ci{font-size:.84rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.svc .ci.ok{color:var(--ok)} .svc .ci.falta{color:var(--bad)}
+.viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.viewer .vx:hover{background:rgba(20,30,40,.92)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
+.viewer img{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);object-fit:contain}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+@media (max-width:640px){
+  .brand::after{display:none}
+  .ttl{border-left:0;padding-left:0}
+  .hctl{width:auto;margin-left:auto;order:2}
+  #bQuem{display:none}
+  .lista{grid-template-columns:1fr}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;width:100%}
+  .tabs{display:grid}
+  .overlay{padding:0;place-items:end stretch}
+  .sheet{border-radius:14px 14px 0 0;max-height:94dvh;width:100%}
+  .item{grid-template-columns:1fr auto}
+  .item select:nth-of-type(2){grid-column:1/2}
+}
+
+/* ---------- cerâmicas ---------- */
+.resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:2px}
+.kpi b{font:700 1.45rem/1.1 var(--f-disp)}
+.kpi span{font-size:.8rem;color:var(--muted)}
+.kpi.ruim b{color:var(--bad)} .kpi.bom b{color:var(--ok)}
+.prod{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;gap:10px}
+.prod>header{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;justify-content:space-between}
+.prod>header h2{margin:0;font:700 1.05rem var(--f-disp)}
+.barra{height:8px;border-radius:5px;background:var(--line-2);overflow:hidden;display:flex}
+.barra i{display:block;height:100%}
+.barra .b-ent{background:var(--accent)} .barra .b-est{background:var(--ok)}
+.leg2{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted)}
+.leg2 i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.partida{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.partida>h3{margin:0;padding:8px 10px;background:var(--bg);font:700 .9rem var(--f-body);display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between}
+.partida>h3 small{font-weight:600;color:var(--muted)}
+.pl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line-2);padding:9px 10px;color:inherit}
+.pl:hover{background:var(--accent-soft)}
+.pl .n{font:700 .92rem var(--f-mono, monospace)}
+.pl .d{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.pl .q{font:700 .92rem var(--f-body);text-align:right;white-space:nowrap}
+.pl .q small{display:block;font-weight:500;color:var(--muted);font-size:.76rem}
+.pl.vazio-pl{opacity:.55}
+.tag{display:inline-block;font:700 .74rem var(--f-body);padding:1px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);white-space:nowrap}
+.tag.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.tag.bad{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+.tag.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+/* movimentos */
+.dia{display:grid;gap:6px}
+.dia>h3{margin:6px 0 0;font:700 .9rem var(--f-disp);color:var(--muted)}
+.mv{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:9px;padding:9px 11px}
+.mv.devolucao{border-left-color:var(--ok)} .mv.quebra{border-left-color:var(--bad)} .mv.ajuste{border-left-color:var(--warn)}
+.mv .h{font:700 .82rem var(--f-mono, monospace);color:var(--muted)}
+.mv .t{font-weight:600;overflow-wrap:anywhere}
+.mv .t small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.mv .q{font:700 .95rem var(--f-body);white-space:nowrap;text-align:right}
+.mv .x{background:none;border:0;color:var(--muted);font-size:.8rem;padding:2px 0;text-align:right}
+.mv .x:hover{color:var(--bad);text-decoration:underline}
+/* apartamentos */
+.pav{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:8px}
+.pav>h3{margin:0;font:700 .98rem var(--f-disp);display:flex;justify-content:space-between;gap:10px}
+.pav>h3 small{font:600 .8rem var(--f-body);color:var(--muted)}
+.aps{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+.ap{display:grid;gap:1px;text-align:left;background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:6px 8px;color:inherit;min-width:0}
+.ap:hover{border-color:var(--accent)}
+.ap b{font:700 .88rem var(--f-body)} .ap small{font-size:.74rem;color:var(--muted);overflow-wrap:anywhere}
+.ap.parcial{border-left-color:var(--warn)} .ap.ok{border-left-color:var(--ok)} .ap.acima{border-left-color:var(--bad)} .ap.mist{box-shadow:inset 0 0 0 2px var(--bad)}
+/* estimativa */
+.tw{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.es{border-collapse:collapse;width:100%;font-size:.86rem;min-width:760px}
+table.es th,table.es td{padding:6px 8px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+table.es th{font:700 .76rem var(--f-disp);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
+table.es th.g{text-align:center;border-left:1px solid var(--line)} table.es td.g{border-left:1px solid var(--line)}
+table.es td:first-child,table.es th:first-child,table.es td:nth-child(2),table.es th:nth-child(2){text-align:left}
+table.es tbody tr{cursor:pointer} table.es tbody tr:hover td{background:var(--accent-soft)}
+table.es tfoot td{font-weight:700;background:var(--bg)}
+table.es .mut{color:var(--muted);font-size:.78rem}
+.partes{display:grid;gap:8px}
+.parte{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,.9fr) auto;gap:6px;align-items:end;border:1px solid var(--line);border-radius:9px;padding:8px}
+.parte label{font:600 .68rem var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:grid;gap:3px}
+.parte input,.parte select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px;width:100%;min-width:0}
+.parte .calc{font:700 .9rem var(--f-body);padding-bottom:8px}
+.parte .rm{background:none;border:1px solid var(--line);border-radius:7px;height:36px;width:36px;color:var(--muted)}
+.tot{background:var(--accent-soft);border:1px solid var(--accent);border-radius:9px;padding:10px 12px;display:grid;gap:3px;font-size:.92rem}
+.tot b{font-size:1.05rem}
+/* formulário de entrega */
+.palinfo{display:grid;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.palinfo b{font:700 1rem var(--f-body)}
+.palinfo .tags{display:flex;flex-wrap:wrap;gap:5px}
+.qtd{display:flex;align-items:center;gap:8px}
+.qtd button{width:46px;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font:700 1.4rem var(--f-body);color:var(--ink)}
+.qtd input{width:90px!important;text-align:center;font:700 1.3rem var(--f-body)!important}
+.qtd span{color:var(--muted);font-size:.9rem}
+.aviso2{background:var(--warn-soft);border:1px solid var(--warn);border-radius:9px;padding:9px 11px;font-size:.9rem}
+.aviso2.bad{background:var(--bad-soft);border-color:var(--bad)}
+.dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;margin:0}
+.dados div{display:grid;gap:1px} .dados dt{font:600 .7rem var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)} .dados dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.etq{max-width:100%;max-height:260px;border-radius:9px;border:1px solid var(--line);cursor:zoom-in;justify-self:start}
+details.mais>summary{cursor:pointer;font:600 .9rem var(--f-body);color:var(--accent);padding:4px 0}
+details.mais[open]>summary{margin-bottom:10px}
+/* leitor do código */
+.scan{position:fixed;inset:0;z-index:45;background:#000;display:grid;grid-template-rows:1fr auto}
+.scan video{width:100%;height:100%;object-fit:cover;min-height:0}
+.scan .mira{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(64vw,300px);aspect-ratio:1;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 100vmax rgba(0,0,0,.38)}
+.scan .dica{position:absolute;left:0;right:0;top:calc(14px + env(safe-area-inset-top,0px));text-align:center;color:#fff;font:600 1rem var(--f-body);text-shadow:0 1px 4px #000;padding:0 60px}
+.scan .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px}
+.scan .acoes{background:#0d1a24;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.scan .acoes .btn{min-height:44px}
+.scan .st2{color:#cfe0ea;font-size:.88rem;width:100%;text-align:center}
+.fab svg{vertical-align:-4px;margin-right:6px}
+.tab .sm{display:none}
+@media (max-width:640px){
+  .tab .lg{display:none} .tab .sm{display:inline}
+  .tabs .seg .tab{padding:9px 6px;font-size:.86rem}
+  .resumo{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .resumo.q4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi{padding:8px 9px} .kpi b{font-size:1.2rem} .kpi span{font-size:.74rem}
+  .parte{grid-template-columns:1fr 1fr 1fr}
+  .parte .rm{grid-column:3}
+  .mv{grid-template-columns:minmax(0,1fr) auto}
+  .mv .h{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/ceramicas.svg" alt="" width="40" height="40"></a>
+  <div class="ttl"><h1>Cerâmicas</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="hctl"></div>
+</div></header>
+
+<main id="main"><p class="muted">Carregando…</p></main>
+<button class="fab" id="fab" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9h3v3H8zM13 13h3v3h-3zM13 9h3M8 15h2"/></svg>Ler etiqueta</button>
+
+<div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
+<div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Foto ampliada"></div>
+<div class="scan" id="scan" hidden><div style="position:relative;min-height:0"><video id="scanV" playsinline muted autoplay></video><div class="mira" aria-hidden="true"></div><div class="dica">Aponte para o código quadrado da etiqueta do pallet</div><button type="button" class="vx" id="scanX" aria-label="Fechar o leitor">×</button></div>
+  <div class="acoes"><span class="st2" id="scanSt">Abrindo a câmera…</span><label class="btn ghost" style="background:#fff">Tirar foto da etiqueta<input type="file" accept="image/*" capture="environment" id="scanF" hidden></label><button class="btn ghost" style="background:#fff" type="button" id="scanD">Digitar o número</button></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script>window.NUVEM_FERRAMENTA = 'ceramica';</script>
+<script src="nuvem.js"></script>
+<script src="listas-comum.js"></script>
+<script>
+/* =====================================================================
+   Cerâmicas
+   - Estoque por pallet: os dados da etiqueta (tonalidade, tamanho/calibre,
+     lote...). O código quadrado (DataMatrix) da etiqueta traz só a série
+     do pallet; por isso o pallet é cadastrado uma vez, ao chegar.
+   - Entrega: o almoxarifado lê o código com o celular e diz para quem,
+     para qual apartamento/ambiente e quantas caixas. O saldo baixa sozinho.
+   - Estimativa por ambiente (piso, parede, rodapé) com margem de perda,
+     e o consumo de cada apartamento comparado a ela.
+   O saldo é guardado em peças (a tela mostra caixas + peças).
+   Regras de acesso no banco (banco.sql, passo 20).
+   ===================================================================== */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const fmtD = s => { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('pt-BR'); };
+const fmtH = s => new Date(s).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const diaDe = s => { const d = new Date(s); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const n1 = v => (Math.round(v * 10) / 10).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+const n2 = v => (+v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+const num = v => { const x = parseFloat(String(v ?? '').replace(',', '.')); return isFinite(x) ? x : null; };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const LO = window.ListasObra;
+const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', 'Pavimento 05', 'Pavimento 06', 'Cobertura'].map(n => ({ nome: n, unidades: [] }));
+// ofícios de quem assenta cerâmica (aparecem primeiro na entrega)
+const ASSENTA = ['azulejista', 'ceramista', 'revestimento', 'ladrilheiro', 'assentador'];
+const TIPOS = { entrega: 'Entrega', devolucao: 'Devolução', quebra: 'Quebra', ajuste: 'Ajuste' };
+
+let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
+let CFG = { pavimentos: [] }, PROD = [], EST = [], PAL = [], MOV = [], FUNC = [];
+let TAB = 'estoque';
+const ULT = { func: '', pav: '' };   // última pessoa e pavimento escolhidos (entregas em sequência)
+const F = { pav: '', func: '', tipo: '' };
+
+/* ---------------- quem pode o quê (o banco confere de novo) ---------------- */
+const estoque = () => NV && ['admin', 'engenharia', 'almoxarifado'].includes(NV.perfil);
+const edita = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
+const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
+const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=O pallet|Informe|Produto)/, '');
+
+/* ---------------- contas ---------------- */
+const PROD0 = { nome: '?', larg_cm: 60, comp_cm: 60, pecas_cx: 6, cx_pallet: 40 };
+const prodDe = id => PROD.find(p => p.id === id) || PROD0;
+const pcx = pal => +prodDe(pal.produto).pecas_cx || 6;
+const m2Peca = pr => (+pr.larg_cm || 60) * (+pr.comp_cm || 60) / 10000;
+// rendimento do rodapé: a peça cortada em tiras da altura do rodapé
+const rendRodape = (pr, h) => { const a = +pr.larg_cm || 60, b = +pr.comp_cm || 60; return Math.max(1, Math.floor(Math.min(a, b) / (+h || 10))) * Math.max(a, b) / 100; };
+function pecasCalc(pt, pr) {
+  const m = +pt.medida || 0; if (!m) return 0;
+  return pt.tipo === 'linear' ? Math.ceil(m / rendRodape(pr, pt.altura_cm) - 1e-9) : Math.ceil(m / m2Peca(pr) - 1e-9);
+}
+const pecasParte = (pt, pr) => pt.pecas != null && pt.pecas !== '' ? +pt.pecas : pecasCalc(pt, pr);
+const baseEst = e => (e.partes || []).reduce((s, pt) => s + pecasParte(pt, prodDe(e.produto)), 0);
+const totalEst = e => Math.ceil(baseEst(e) * (1 + (+e.perda || 0) / 100) - 1e-9);   // peças por ambiente, com a perda
+const fmtQ = (pc, n) => { const s = pc < 0 ? '−' : '', a = Math.abs(pc), cx = Math.floor(a / n), r = a % n; return s + (cx ? cx + ' cx' : '') + (cx && r ? ' + ' : '') + (r ? r + ' pç' : '') + (!cx && !r ? '0 cx' : ''); };
+const fmtCx = (pc, n) => n1(pc / n) + ' cx';
+// a entrega é em caixa fechada: o estimado arredondado para caixas inteiras ainda não é "acima"
+const limCx = (est, n) => Math.ceil(est / n - 1e-9) * n;
+// o que saiu de cada pallet (entregas e quebras menos devoluções e ajustes)
+let SAI = {};
+function contar() { SAI = {}; for (const m of MOV) SAI[m.pallet] = (SAI[m.pallet] || 0) + (m.tipo === 'entrega' || m.tipo === 'quebra' ? m.pecas : -m.pecas); }
+const inicial = p => p.caixas * pcx(p);
+const saldo = p => inicial(p) - (SAI[p.id] || 0);
+const palDe = id => PAL.find(p => p.id === id) || null;
+const partidaTxt = p => [p.tonalidade ? 'TON ' + p.tonalidade : '', p.tamanho ? 'TAM ' + p.tamanho : '', p.lote ? 'Lote ' + p.lote : ''].filter(Boolean).join(' · ') || 'Sem tonalidade/lote';
+const partidaK = p => [p.produto, p.qualidade || '', p.tonalidade || '', p.tamanho || '', p.lote || ''].join('|');
+const plt = p => p.plt ? 'PLT ' + p.plt : p.serie ? 'Série ' + p.serie : 'Pallet';
+// destino de uma entrega
+const destK = (pav, un, amb) => [pav || '', un || '', amb || ''].join('|');
+const destTxt = m => [m.unidade ? 'Apto ' + m.unidade : m.pavimento, m.unidade ? m.pavimento : '', m.ambiente].filter(Boolean).join(' · ') || 'Sem destino';
+const ordPav = n => { const i = CFG.pavimentos.findIndex(x => x.nome === n); return i < 0 ? 999 : i; };
+const unidadesDe = pav => ((CFG.pavimentos.find(x => x.nome === pav) || {}).unidades) || [];
+const finalDe = u => LO.finalDe(u);
+// ambientes da estimativa para um apartamento (pelo final) ou para as áreas do pavimento
+function ambientesDe(un, produto) {
+  let a = un ? EST.filter(e => e.local === 'apto' && e.final === finalDe(un)) : EST.filter(e => e.local === 'pavimento');
+  if (produto && a.some(e => e.produto === produto)) a = a.filter(e => e.produto === produto);
+  return a.sort((x, y) => (x.ordem || 0) - (y.ordem || 0));
+}
+const estDe = (un, amb, produto) => ambientesDe(un, produto).find(e => e.ambiente === amb) || null;
+// o que já foi para um destino: peças líquidas e as partidas
+function noDestino(pav, un, amb, exceto) {
+  const r = { pecas: 0, partidas: new Map(), movs: [] };
+  for (const m of MOV) { if (m.id === exceto || destK(m.pavimento, m.unidade, m.ambiente) !== destK(pav, un, amb) || !['entrega', 'devolucao'].includes(m.tipo)) continue;
+    r.movs.push(m); r.pecas += m.tipo === 'entrega' ? m.pecas : -m.pecas; const p = palDe(m.pallet); if (p && m.tipo === 'entrega') r.partidas.set(partidaK(p), p); }
+  return r;
+}
+
+/* ---------------- dados ---------------- */
+async function carregar() {
+  const [lc, lo, lp, le, lpl, lm, lf] = await Promise.all([
+    sb.from('pend_config').select('pavimentos,regras').eq('obra', OBRA).maybeSingle(),
+    NV.obras.obter(OBRA),
+    sb.from('cer_produtos').select('*').eq('obra', OBRA),
+    sb.from('cer_estimativas').select('*').eq('obra', OBRA).order('ordem'),
+    sb.from('cer_pallets').select('*').eq('obra', OBRA).order('recebido_em', { ascending: false }),
+    sb.from('cer_movs').select('*').eq('obra', OBRA).order('em', { ascending: false }),
+    sb.from('pend_funcionarios').select('id,obra,nome,cargos,ativo')
+  ]);
+  if (lp.error) { const e = new Error(lp.error.message); e.banco = /cer_produtos|relation|schema cache/i.test(lp.error.message || ''); throw e; }
+  if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
+  let cfg = lc; if (cfg.error) cfg = await sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle();
+  const c = cfg.data || {};
+  CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO, regras: c.regras || {} };
+  OBRA_NOME = lo.nome; PROD = lp.data || []; EST = le.data || []; PAL = lpl.data || []; MOV = lm.data || [];
+  FUNC = (lf.data || []).filter(f => f.ativo !== false && (!f.obra || f.obra === OBRA));
+  contar();
+}
+async function recarregar() { try { await carregar(); render(); const o = $('ovl'); if (!o.hidden && o.dataset.pal && !o.dataset.form) fichaPallet(o.dataset.pal); } catch (e) { console.warn(e); } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && NV) recarregar(); });
+
+/* ======================= telas ======================= */
+function render() {
+  const m = $('main'), nEst = PAL.filter(p => saldo(p) > 0).length;
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Cerâmicas</span></nav>
+    <div class="tabs"><div class="seg">${[['estoque', 'Estoque', nEst], ['entregas', 'Entregas'], ['aptos', '<span class="lg">Apartamentos</span><span class="sm">Aptos</span>'], ['estimativa', 'Estimativa']]
+      .map(([k, t, n]) => `<button type="button" class="tab" data-tab="${k}" aria-pressed="${TAB === k}">${t}${n ? '<b>' + n + '</b>' : ''}</button>`).join('')}</div></div>
+    <div id="tabBody"></div>`;
+  m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  ({ estoque: renderEstoque, entregas: renderEntregas, aptos: renderAptos, estimativa: renderEstimativa })[TAB]();
+  $('fab').hidden = !estoque();
+}
+
+/* ---------------- Estoque ---------------- */
+function renderEstoque() {
+  const B = $('tabBody');
+  const totCx = PAL.reduce((s, p) => s + Math.max(0, saldo(p)) / pcx(p), 0);
+  const entregue = MOV.filter(m => m.tipo === 'entrega').reduce((s, m) => { const p = palDe(m.pallet); return s + (p ? m.pecas / pcx(p) : 0); }, 0);
+  const prods = PROD.filter(pr => PAL.some(p => p.produto === pr.id) || EST.some(e => e.produto === pr.id));
+  B.innerHTML = `<div class="resumo">
+      <div class="kpi"><b>${Math.floor(totCx).toLocaleString('pt-BR')}</b><span>caixas em estoque</span></div>
+      <div class="kpi"><b>${PAL.filter(p => saldo(p) > 0).length}</b><span>pallets com saldo</span></div>
+      <div class="kpi"><b>${Math.round(entregue).toLocaleString('pt-BR')}</b><span>caixas entregues</span></div>
+    </div>
+    ${estoque() ? `<div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn" type="button" id="bReceber">+ Receber pallet</button>${edita() ? '<button class="btn ghost" type="button" id="bProd">Produtos</button>' : ''}</div>` : ''}
+    ${prods.length ? prods.map(prodHtml).join('') : `<div class="vazio"><h3>Nenhum pallet recebido</h3><p class="muted" style="margin:0">${estoque() ? 'Quando chegar material, toque em <b>Ler etiqueta</b> ou em <b>+ Receber pallet</b> e preencha os dados da etiqueta (tonalidade, tamanho e lote). Depois, cada entrega é só ler o código do pallet.' : 'Os pallets recebidos aparecem aqui.'}</p></div>`}`;
+  if ($('bReceber')) $('bReceber').onclick = () => formPallet(null, {});
+  if ($('bProd')) $('bProd').onclick = listaProdutos;
+  B.querySelectorAll('[data-pal]').forEach(b => b.onclick = () => fichaPallet(b.dataset.pal));
+  B.querySelectorAll('[data-vazios]').forEach(b => b.onclick = () => { b.closest('.partida').querySelectorAll('.vazio-pl').forEach(x => x.hidden = !x.hidden); b.remove(); });
+}
+function prodHtml(pr) {
+  const pals = PAL.filter(p => p.produto === pr.id), n = +pr.pecas_cx || 6;
+  const nec = EST.filter(e => e.produto === pr.id).reduce((s, e) => s + totalEst(e) * (+e.qtd || 0), 0);
+  const rec = pals.reduce((s, p) => s + inicial(p), 0), sal = pals.reduce((s, p) => s + Math.max(0, saldo(p)), 0), ent = rec - sal;
+  const falta = nec - rec;
+  // partidas: produto + qualidade + tonalidade + tamanho + lote
+  const parts = new Map(); pals.forEach(p => { const k = partidaK(p); if (!parts.has(k)) parts.set(k, []); parts.get(k).push(p); });
+  const max = Math.max(nec, rec, 1);
+  return `<section class="prod"><header><h2>${esc(pr.nome)}${pr.codigo ? ' <span class="muted">' + esc(pr.codigo) + '</span>' : ''}</h2><span class="muted">${n2(pr.larg_cm)}×${n2(pr.comp_cm)} cm · ${n} pç/cx · ${pr.cx_pallet} cx/pallet</span></header>
+    ${nec ? `<div style="display:grid;gap:5px"><div class="barra" title="Recebido ${fmtCx(rec, n)} de ${fmtCx(nec, n)} estimadas"><i class="b-ent" style="width:${ent / max * 100}%"></i><i class="b-est" style="width:${sal / max * 100}%"></i></div>
+      <div class="leg2"><span><i style="background:var(--accent)"></i>Entregue ${fmtCx(ent, n)}</span><span><i style="background:var(--ok)"></i>Em estoque ${fmtCx(sal, n)}</span><span>Estimado para a obra: <b>${fmtCx(nec, n)}</b> (${n1(nec / n / (+pr.cx_pallet || 40))} pallets)</span>${falta > 0 ? `<span class="ruim"><b style="color:var(--bad)">Falta receber ${fmtCx(falta, n)}</b></span>` : rec ? '<span style="color:var(--ok)"><b>Recebido tudo o estimado</b></span>' : ''}</div></div>` : ''}
+    ${[...parts.values()].map(ps => { const s = ps.reduce((a, p) => a + Math.max(0, saldo(p)), 0), vz = ps.filter(p => saldo(p) <= 0).length;
+      return `<div class="partida"><h3><span>${esc(partidaTxt(ps[0]))}${ps[0].qualidade && ps[0].qualidade !== 'A' ? ' <span class="tag warn">Qual ' + esc(ps[0].qualidade) + '</span>' : ''}</span><small>${fmtQ(s, n)} em ${ps.filter(p => saldo(p) > 0).length} pallet(s)</small></h3>
+        ${ps.map(p => `<button type="button" class="pl${saldo(p) <= 0 ? ' vazio-pl' : ''}" data-pal="${esc(p.id)}" ${saldo(p) <= 0 ? 'hidden' : ''}><span class="n">${esc(plt(p))}</span><span class="d">${p.posicao ? esc(p.posicao) + ' · ' : ''}recebido ${fmtD(p.recebido_em)}${p.serie ? ' · série ' + esc(p.serie) : ''}</span><span class="q">${fmtQ(Math.max(0, saldo(p)), n)}<small>de ${p.caixas} cx</small></span></button>`).join('')}
+        ${vz ? `<button type="button" class="lnk" data-vazios style="padding:6px 10px">Mostrar ${vz} pallet(s) já esvaziado(s)</button>` : ''}</div>`; }).join('')}
+  </section>`;
+}
+
+/* ---------------- Entregas (movimentos) ---------------- */
+function renderEntregas() {
+  const B = $('tabBody');
+  const pavs = [...new Set(MOV.map(m => m.pavimento).filter(Boolean))].sort((a, b) => ordPav(a) - ordPav(b));
+  const pess = [...new Set(MOV.map(m => m.funcionario_nome).filter(Boolean))].sort();
+  const vis = MOV.filter(m => (!F.pav || m.pavimento === F.pav) && (!F.func || m.funcionario_nome === F.func) && (!F.tipo || m.tipo === F.tipo));
+  const dias = new Map(); vis.forEach(m => { const d = diaDe(m.em); if (!dias.has(d)) dias.set(d, []); dias.get(d).push(m); });
+  const podeApagar = m => edita() || (estoque() && String(m.por || '').toLowerCase() === String(NV.usuario.email || '').toLowerCase() && Date.now() - new Date(m.em) < 864e5);
+  B.innerHTML = `<div class="filtros">
+      <select class="fsel${F.tipo ? ' on' : ''}" id="fTipo" aria-label="Tipo"><option value="">Todos os movimentos</option>${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}" ${F.tipo === k ? 'selected' : ''}>${t}s</option>`).join('')}</select>
+      <select class="fsel${F.pav ? ' on' : ''}" id="fPav" aria-label="Pavimento"><option value="">Todos os pavimentos</option>${pavs.map(n => `<option ${n === F.pav ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      <select class="fsel${F.func ? ' on' : ''}" id="fFunc" aria-label="Pessoa"><option value="">Todas as pessoas</option>${pess.map(n => `<option ${n === F.func ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+    </div>
+    ${vis.length ? [...dias.entries()].map(([d, ms]) => `<section class="dia"><h3>${d === diaDe(new Date()) ? 'Hoje' : fmtD(d + 'T12:00:00')}</h3>${ms.map(m => { const p = palDe(m.pallet) || {}, n = p.id ? pcx(p) : 6;
+        return `<div class="mv ${m.tipo}"><span class="h">${fmtH(m.em)}</span><span class="t">${m.tipo === 'entrega' ? esc(m.funcionario_nome || 'Sem pessoa') + ' · ' + esc(destTxt(m)) : TIPOS[m.tipo] + (m.unidade || m.pavimento ? ' · ' + esc(destTxt(m)) : '')}
+          <small>${esc(plt(p))} · ${esc(partidaTxt(p))} · por ${esc(nomeDe(m.por))}${m.obs ? ' · ' + esc(m.obs) : ''}</small></span>
+          <span style="display:grid;justify-items:end"><span class="q">${m.tipo === 'devolucao' ? '+' : ''}${fmtQ(m.tipo === 'ajuste' ? m.pecas : m.pecas, n)}</span>${podeApagar(m) ? `<button type="button" class="x" data-del="${esc(m.id)}">Desfazer</button>` : ''}</span></div>`; }).join('')}</section>`).join('')
+      : `<div class="vazio"><h3>${MOV.length ? 'Nenhum movimento com estes filtros' : 'Nenhuma entrega registrada'}</h3><p class="muted" style="margin:0">${estoque() ? 'Para entregar, toque em <b>Ler etiqueta</b> e aponte o celular para o código do pallet.' : 'As entregas do almoxarifado aparecem aqui.'}</p></div>`}`;
+  $('fTipo').onchange = e => { F.tipo = e.target.value; renderEntregas(); };
+  $('fPav').onchange = e => { F.pav = e.target.value; renderEntregas(); };
+  $('fFunc').onchange = e => { F.func = e.target.value; renderEntregas(); };
+  B.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const m = MOV.find(x => x.id === b.dataset.del); if (!m || !confirm('Desfazer este movimento (' + TIPOS[m.tipo].toLowerCase() + ' de ' + fmtQ(m.pecas, pcx(palDe(m.pallet) || {})) + ')? O saldo do pallet volta como estava.')) return;
+    const { error } = await sb.from('cer_movs').delete().eq('id', m.id); if (error) { toast('Não foi possível: ' + erroMsg(error)); return; } toast('Movimento desfeito.'); await recarregar(); });
+}
+
+/* ---------------- Apartamentos: entregue × estimado ---------------- */
+function situacao(pav, un, e) {
+  const d = noDestino(pav, un, e.ambiente), est = totalEst(e), lim = limCx(est, pcx({ produto: e.produto }));
+  const k = d.pecas <= 0 ? '' : d.pecas > lim ? 'acima' : d.pecas >= est ? 'ok' : 'parcial';
+  return { d, est, k, mist: d.partidas.size > 1 };
+}
+function renderAptos() {
+  const B = $('tabBody'); const n = +((PROD[0] || PROD0).pecas_cx) || 6;
+  const pavs = CFG.pavimentos.filter(p => (p.unidades || []).some(u => ambientesDe(u).length) || ambientesDe(null).length);
+  let nOk = 0, nPar = 0, nAc = 0, nMist = 0, nTot = 0;
+  const html = pavs.map(p => {
+    const cel = [];
+    for (const u of p.unidades || []) for (const e of ambientesDe(u)) { const s = situacao(p.nome, u, e); nTot++; if (s.k === 'ok') nOk++; else if (s.k === 'parcial') nPar++; else if (s.k === 'acima') nAc++; if (s.mist) nMist++;
+      const np = pcx({ produto: e.produto });
+      cel.push(`<button type="button" class="ap ${s.k}${s.mist ? ' mist' : ''}" data-ap='${esc(JSON.stringify([p.nome, u, e.ambiente]))}'><b>${esc(u)}${ambientesDe(u).length > 1 ? ' · ' + esc(e.ambiente.replace(/^Banheiro\s*/i, '') || e.ambiente) : ''}</b><small>${s.d.pecas ? fmtQ(s.d.pecas, np) + ' de ' + Math.ceil(s.est / np) + ' cx' : Math.ceil(s.est / np) + ' cx · nada entregue'}${s.mist ? ' · <b style="color:var(--bad)">2 partidas</b>' : ''}</small></button>`); }
+    for (const e of ambientesDe(null)) { const s = situacao(p.nome, '', e); nTot++; const np = pcx({ produto: e.produto });
+      cel.push(`<button type="button" class="ap ${s.k}${s.mist ? ' mist' : ''}" data-ap='${esc(JSON.stringify([p.nome, '', e.ambiente]))}'><b>${esc(e.ambiente)}</b><small>${s.d.pecas ? fmtQ(s.d.pecas, np) + ' de ' + Math.ceil(s.est / np) + ' cx' : Math.ceil(s.est / np) + ' cx · nada entregue'}</small></button>`); }
+    return cel.length ? `<section class="pav"><h3>${esc(p.nome)}</h3><div class="aps">${cel.join('')}</div></section>` : '';
+  }).join('');
+  // entregas para destinos fora do cadastro (ex.: apartamento digitado)
+  B.innerHTML = EST.length ? `<div class="resumo q4"><div class="kpi bom"><b>${nOk}</b><span>ambientes completos</span></div><div class="kpi"><b>${nPar}</b><span>com entrega parcial</span></div>
+      <div class="kpi${nAc ? ' ruim' : ''}"><b>${nAc}</b><span>acima do estimado</span></div><div class="kpi${nMist ? ' ruim' : ''}"><b>${nMist}</b><span>com duas partidas (tonalidade/lote)</span></div></div>
+    <div class="leg2"><span><i style="background:var(--line)"></i>Nada entregue</span><span><i style="background:var(--warn)"></i>Parcial</span><span><i style="background:var(--ok)"></i>Completo</span><span><i style="background:var(--bad)"></i>Acima do estimado</span></div>
+    ${html || '<div class="vazio"><h3>Nenhum apartamento cadastrado</h3><p class="muted" style="margin:0">Os apartamentos de cada pavimento vêm do cadastro das Pendências (Listas e regras → Pavimentos). O ambiente é ligado pelo final do apartamento (ex.: 401 → final 01).</p></div>'}`
+    : `<div class="vazio"><h3>Sem estimativa</h3><p class="muted" style="margin:0">Cadastre na aba <b>Estimativa</b> quanto vai em cada ambiente para comparar com o que foi entregue.</p></div>`;
+  B.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => { const [p, u, a] = JSON.parse(b.dataset.ap); fichaDestino(p, u, a); });
+}
+function fichaDestino(pav, un, amb) {
+  const e = estDe(un, amb), d = noDestino(pav, un, amb), np = e ? pcx({ produto: e.produto }) : 6, est = e ? totalEst(e) : 0;
+  openSheet((un ? 'Apto ' + un : pav) + ' · ' + amb, `<div style="display:grid;gap:12px">
+    ${e ? `<div class="tot"><span>Estimado: <b>${est} peças (${fmtCx(est, np)})</b>${+e.perda ? ' · com ' + n2(e.perda) + '% de perda' : ''}</span><span>Entregue: <b>${d.pecas} peças (${fmtQ(d.pecas, np)})</b>${d.pecas > limCx(est, np) ? ' · <b style="color:var(--bad)">' + (d.pecas - est) + ' peças acima</b>' : d.pecas > est ? ' · ' + (d.pecas - est) + ' peças de sobra da última caixa' : d.pecas < est ? ' · faltam ' + (est - d.pecas) + ' peças' : ''}</span></div>` : ''}
+    ${d.partidas.size > 1 ? `<div class="aviso2 bad"><b>Este ambiente recebeu ${d.partidas.size} partidas diferentes.</b> Tonalidade, tamanho ou lote diferentes no mesmo ambiente podem dar diferença de cor ou de junta. Confira antes de assentar.<br>${[...d.partidas.values()].map(p => esc(partidaTxt(p))).join('<br>')}</div>` : ''}
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Movimentos (${d.movs.length})</h4>
+    ${d.movs.length ? d.movs.map(m => { const p = palDe(m.pallet) || {}; return `<div class="mv ${m.tipo}"><span class="h">${fmtD(m.em)}</span><span class="t">${TIPOS[m.tipo]}${m.funcionario_nome ? ' · ' + esc(m.funcionario_nome) : ''}<small>${esc(plt(p))} · ${esc(partidaTxt(p))}</small></span><span class="q">${fmtQ(m.pecas, np)}</span></div>`; }).join('') : '<p class="muted" style="margin:0">Nada entregue ainda.</p>'}</div>`, '');
+}
+
+/* ---------------- Estimativa ---------------- */
+function renderEstimativa() {
+  const B = $('tabBody');
+  const grupos = new Map(); EST.slice().sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(e => { const k = e.grupo || 'Outros'; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(e); });
+  const partesNomes = arr => { const s = []; arr.forEach(e => (e.partes || []).forEach(pt => { if (!s.includes(pt.parte)) s.push(pt.parte); })); return s; };
+  B.innerHTML = `${edita() ? `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button class="btn" type="button" id="bNovaEst">+ Ambiente</button>${EST.length ? '<button class="btn ghost" type="button" id="bPerda">Margem de perda de todos</button>' : ''}<span class="muted">Toque numa linha para ajustar medidas, peças e perda.</span></div>` : ''}
+    ${EST.length ? [...grupos.entries()].map(([g, es]) => { const nomes = partesNomes(es);
+      const tot = { pc: 0, m2: 0, cx: 0 }; const porProd = {};
+      es.forEach(e => { const pr = prodDe(e.produto), t = totalEst(e) * (+e.qtd || 0); tot.pc += t; tot.m2 += t * m2Peca(pr); porProd[pr.id || '?'] = (porProd[pr.id || '?'] || 0) + t; });
+      const prods = Object.keys(porProd).map(id => prodDe(id));
+      return `<section class="grupo"><h2>${esc(g)}</h2><div class="tw"><table class="es"><thead>
+        <tr><th rowspan="2">Final</th><th rowspan="2">Ambiente</th><th rowspan="2">Qtd.</th>${nomes.map(nm => `<th class="g" colspan="2">${esc(nm)}</th>`).join('')}<th class="g" rowspan="2">Perda</th><th rowspan="2">Peças/un.</th><th rowspan="2">Total peças</th><th rowspan="2">Total m²</th></tr>
+        <tr>${nomes.map(() => '<th class="g">Medida</th><th>Peças</th>').join('')}</tr></thead><tbody>
+        ${es.map(e => { const pr = prodDe(e.produto), t = totalEst(e);
+          return `<tr data-est="${esc(e.id)}"><td>${e.local === 'apto' ? esc(e.final || '—') : e.local === 'pavimento' ? 'Pav.' : 'Obra'}</td><td>${esc(e.ambiente)}</td><td>${e.qtd}</td>
+            ${nomes.map(nm => { const pt = (e.partes || []).find(x => x.parte === nm); if (!pt) return '<td class="g mut">—</td><td></td>';
+              const man = pt.pecas != null && pt.pecas !== ''; return `<td class="g">${n2(pt.medida)} ${pt.tipo === 'linear' ? 'm' : 'm²'}</td><td>${pecasParte(pt, pr)}${man ? ' <span class="tag warn" title="Ajustado à mão (calculado: ' + pecasCalc(pt, pr) + ')">aj.</span>' : ''}</td>`; }).join('')}
+            <td class="g">${+e.perda ? n2(e.perda) + '%' : '<span class="mut">0%</span>'}</td><td><b>${t}</b> <span class="mut">${fmtCx(t, +pr.pecas_cx || 6)}</span></td><td>${(t * e.qtd).toLocaleString('pt-BR')}</td><td>${n2(t * e.qtd * m2Peca(pr))}</td></tr>`; }).join('')}
+        </tbody><tfoot><tr><td colspan="${3 + nomes.length * 2 + 2}">Total ${esc(g.toLowerCase())}: ${es.reduce((s, e) => s + (+e.qtd || 0), 0)} ambientes</td><td>${tot.pc.toLocaleString('pt-BR')}</td><td>${n2(tot.m2)}</td></tr></tfoot></table></div>
+        ${prods.map(pr => { const pc = porProd[pr.id || '?'], n = +pr.pecas_cx || 6, cx = Math.ceil(pc / n);
+          return `<p class="muted" style="margin:0">${esc(pr.nome)}: <b>${pc.toLocaleString('pt-BR')} peças</b> = <b>${cx.toLocaleString('pt-BR')} caixas</b> = <b>${n1(cx / (+pr.cx_pallet || 40))} pallets</b> (${n2(pc * m2Peca(pr))} m²)${es.some(e => !+e.perda) ? ' · <b style="color:var(--warn)">há ambientes sem margem de perda</b>' : ''}</p>`; }).join('')}</section>`; }).join('')
+      : `<div class="vazio"><h3>Nenhum ambiente estimado</h3><p class="muted" style="margin:0">Cadastre cada ambiente (ex.: banheiro do final 01) com as medidas de piso, parede e rodapé. O sistema calcula as peças pelo tamanho da peça e soma a margem de perda.</p></div>`}
+    <p class="muted" style="margin:0">Peças por área: área ÷ área da peça, arredondado para cima. Rodapé: a peça é cortada em tiras da altura do rodapé (60×60 com rodapé de 10 cm = 6 tiras = 3,6 m por peça). A perda é somada por ambiente.</p>`;
+  if ($('bNovaEst')) $('bNovaEst').onclick = () => formEst(null);
+  if ($('bPerda')) $('bPerda').onclick = formPerdaTodos;
+  if (edita()) B.querySelectorAll('[data-est]').forEach(r => r.onclick = () => formEst(r.dataset.est));
+  else B.querySelectorAll('[data-est]').forEach(r => r.style.cursor = 'default');
+}
+function formPerdaTodos() {
+  openSheet('Margem de perda', `<div class="fld"><label for="pT">Perda (quebra e desperdício) para todos os ambientes, em %</label><input id="pT" type="number" min="0" max="50" step="0.5" inputmode="decimal" value="${esc(EST[0] ? EST[0].perda : 10)}"></div>
+    <p class="muted" style="margin:0">Depois dá para ajustar um ambiente específico tocando na linha dele.</p>`, '<span class="msg" id="pMsg"></span><button class="btn" type="button" id="pOk">Aplicar a todos</button>', true);
+  $('pOk').onclick = async () => { const v = num($('pT').value); if (v == null || v < 0 || v >= 100) { $('pMsg').className = 'msg err'; $('pMsg').textContent = 'Informe um número entre 0 e 99.'; return; }
+    $('pOk').disabled = true; const { error } = await sb.from('cer_estimativas').update({ perda: v }).eq('obra', OBRA);
+    if (error) { $('pOk').disabled = false; $('pMsg').className = 'msg err'; $('pMsg').textContent = erroMsg(error); return; }
+    delete $('ovl').dataset.form; closeSheet(); toast('Perda de ' + n2(v) + '% aplicada a todos os ambientes.'); await recarregar(); };
+}
+function formEst(id) {
+  const ed = id ? EST.find(e => e.id === id) : null;
+  const f = ed ? JSON.parse(JSON.stringify(ed)) : { grupo: (EST[EST.length - 1] || {}).grupo || 'Banheiros', local: 'apto', final: '', ambiente: '', qtd: 1, perda: (EST[0] || {}).perda || 0, produto: (PROD[0] || {}).id || null, obs: '',
+    partes: [{ parte: 'Piso', tipo: 'area', medida: '' }, { parte: 'Parede', tipo: 'area', medida: '' }, { parte: 'Rodapé', tipo: 'linear', medida: '', altura_cm: 10 }] };
+  const grupos = [...new Set(['Banheiros', 'Sacadas', 'Corredores', 'Piscina'].concat(EST.map(e => e.grupo)))];
+  const finaisCad = [...new Set(CFG.pavimentos.flatMap(p => (p.unidades || []).map(finalDe)).filter(Boolean))].sort();
+  const repet = fin => CFG.pavimentos.reduce((s, p) => s + (p.unidades || []).filter(u => finalDe(u) === fin).length, 0);
+  const ler = () => { const B = $('ovlB'); f.grupo = $('eG').value.trim(); f.local = $('eL').value; f.final = $('eF') ? $('eF').value.trim() : ''; f.ambiente = $('eA').value.trim(); f.qtd = Math.max(0, parseInt($('eQ').value, 10) || 0);
+    f.perda = num($('eP').value) || 0; f.produto = $('ePr').value || null; f.obs = $('eO').value.trim();
+    B.querySelectorAll('[data-pt]').forEach(r => { const pt = f.partes[+r.dataset.pt]; pt.parte = r.querySelector('[data-k=parte]').value.trim(); pt.tipo = r.querySelector('[data-k=tipo]').value; pt.medida = num(r.querySelector('[data-k=medida]').value);
+      const h = r.querySelector('[data-k=altura_cm]'); if (h) pt.altura_cm = num(h.value) || 10; else delete pt.altura_cm;
+      const pc = r.querySelector('[data-k=pecas]').value.trim(); pt.pecas = pc === '' ? null : Math.max(0, parseInt(pc, 10) || 0); }); };
+  const desenhar = () => {
+    const pr = prodDe(f.produto), t = totalEst(f), n = +pr.pecas_cx || 6;
+    openSheet(ed ? 'Ambiente: ' + (f.final ? 'final ' + f.final + ' · ' : '') + f.ambiente : 'Novo ambiente', `
+      <div class="g2"><div class="fld"><label for="eG">Grupo</label><input id="eG" list="eGl" value="${esc(f.grupo)}"><datalist id="eGl">${grupos.map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>
+        <div class="fld"><label for="eL">Onde</label><select id="eL"><option value="apto" ${f.local === 'apto' ? 'selected' : ''}>Em cada apartamento do final</option><option value="pavimento" ${f.local === 'pavimento' ? 'selected' : ''}>Em cada pavimento (corredor…)</option><option value="obra" ${f.local === 'obra' ? 'selected' : ''}>Uma vez na obra (piscina…)</option></select></div>
+        ${f.local === 'apto' ? `<div class="fld"><label for="eF">Final do apartamento <span class="req">*</span></label><input id="eF" list="eFl" inputmode="numeric" placeholder="01" value="${esc(f.final || '')}"><datalist id="eFl">${finaisCad.map(x => `<option value="${x}">`).join('')}</datalist></div>` : ''}
+        <div class="fld"><label for="eA">Ambiente <span class="req">*</span></label><input id="eA" placeholder="Banheiro, Banheiro suíte, Sacada…" value="${esc(f.ambiente)}"></div>
+        <div class="fld"><label for="eQ">Quantas vezes se repete</label><input id="eQ" type="number" min="0" inputmode="numeric" value="${esc(f.qtd)}">${f.local === 'apto' && f.final && repet(f.final) && repet(f.final) !== +f.qtd ? `<span class="muted">No cadastro de pavimentos há ${repet(f.final)} apartamentos com final ${esc(f.final)}. <button type="button" class="lnk" id="eQs">Usar ${repet(f.final)}</button></span>` : ''}</div>
+        <div class="fld"><label for="ePr">Produto</label><select id="ePr">${PROD.map(p => `<option value="${esc(p.id)}" ${p.id === f.produto ? 'selected' : ''}>${esc(p.nome)} (${n2(p.larg_cm)}×${n2(p.comp_cm)})</option>`).join('')}${!PROD.length ? '<option value="">Cadastre um produto em Estoque → Produtos</option>' : ''}</select></div></div>
+      <div class="fld"><span class="l">Partes (medidas de um ambiente)</span><div class="partes">${f.partes.map((pt, i) => `<div class="parte" data-pt="${i}">
+          <label>Parte<input data-k="parte" value="${esc(pt.parte)}" placeholder="Piso"></label>
+          <label>Tipo<select data-k="tipo"><option value="area" ${pt.tipo !== 'linear' ? 'selected' : ''}>Área (m²)</option><option value="linear" ${pt.tipo === 'linear' ? 'selected' : ''}>Linear (m)</option></select></label>
+          <label>${pt.tipo === 'linear' ? 'Perímetro (m)' : 'Área (m²)'}<input data-k="medida" inputmode="decimal" value="${pt.medida ?? ''}"></label>
+          ${pt.tipo === 'linear' ? `<label>Altura (cm)<input data-k="altura_cm" inputmode="decimal" value="${pt.altura_cm ?? 10}"></label>` : '<span></span>'}
+          <label>Peças<input data-k="pecas" inputmode="numeric" placeholder="${pecasCalc(pt, pr)} (calc.)" value="${pt.pecas ?? ''}" title="Deixe vazio para usar o cálculo"></label>
+          <button type="button" class="rm" data-rm="${i}" aria-label="Tirar esta parte">×</button></div>`).join('')}</div>
+        <button type="button" class="lnk" id="eAdd" style="justify-self:start">+ Parte</button>
+        <span class="muted">Peças: deixe vazio para usar o cálculo; preencha para ajustar à mão (ex.: paginação real).</span></div>
+      <div class="fld"><label for="eP">Margem de perda (%)</label><input id="eP" type="number" min="0" max="50" step="0.5" inputmode="decimal" value="${esc(f.perda)}" style="max-width:140px"></div>
+      <div class="tot"><span>Por ambiente: ${baseEst(f)} peças${+f.perda ? ' + ' + n2(f.perda) + '% = <b>' + t + ' peças</b>' : ' (<b>sem margem de perda</b>)'} · ${fmtCx(t, n)} · ${n2(t * m2Peca(pr))} m²</span>
+        <span>Na obra (× ${f.qtd}): <b>${(t * f.qtd).toLocaleString('pt-BR')} peças</b> · ${Math.ceil(t * f.qtd / n)} caixas</span></div>
+      <div class="fld"><label for="eO">Observação</label><textarea id="eO" placeholder="Ex.: medidas conferidas na obra em 12/11">${esc(f.obs || '')}</textarea></div>`,
+      `<span class="msg" id="eMsg"></span>${ed ? '<button class="btn danger" type="button" id="eDel">Excluir</button>' : ''}<button class="btn" type="button" id="eOk">Salvar</button>`, true);
+    const B = $('ovlB');
+    B.querySelectorAll('input,select,textarea').forEach(x => x.addEventListener('change', () => { ler(); const y = B.scrollTop; desenhar(); $('ovlB').scrollTop = y; }));
+    B.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { ler(); f.partes.splice(+b.dataset.rm, 1); desenhar(); });
+    $('eAdd').onclick = () => { ler(); f.partes.push({ parte: '', tipo: 'area', medida: null }); desenhar(); };
+    if ($('eQs')) $('eQs').onclick = () => { ler(); f.qtd = repet(f.final); desenhar(); };
+    const msg = t => { $('eMsg').className = 'msg err'; $('eMsg').textContent = t; };
+    if ($('eDel')) $('eDel').onclick = async () => { if (!confirm('Excluir este ambiente da estimativa?')) return; const { error } = await sb.from('cer_estimativas').delete().eq('id', ed.id); if (error) { msg(erroMsg(error)); return; } delete $('ovl').dataset.form; closeSheet(); await recarregar(); };
+    $('eOk').onclick = async () => {
+      ler();
+      if (!f.ambiente) { msg('Diga o ambiente.'); return; } if (f.local === 'apto' && !f.final) { msg('Diga o final do apartamento (ex.: 01).'); return; }
+      if (f.local === 'apto') f.final = f.final.padStart(2, '0');
+      const partes = f.partes.filter(pt => pt.parte && (pt.medida || pt.pecas != null)).map(pt => { const o = { parte: pt.parte, tipo: pt.tipo, medida: pt.medida || 0 }; if (pt.tipo === 'linear') o.altura_cm = pt.altura_cm || 10; if (pt.pecas != null) o.pecas = pt.pecas; return o; });
+      const row = { grupo: f.grupo || 'Outros', local: f.local, final: f.local === 'apto' ? f.final : null, ambiente: f.ambiente, qtd: f.qtd, perda: f.perda, produto: f.produto, obs: f.obs || null, partes };
+      $('eOk').disabled = true;
+      const r = ed ? await sb.from('cer_estimativas').update(row).eq('id', ed.id) : await sb.from('cer_estimativas').insert(Object.assign({ id: uuid(), obra: OBRA, ordem: EST.reduce((m, e) => Math.max(m, e.ordem || 0), 0) + 1 }, row));
+      if (r.error) { $('eOk').disabled = false; msg('Não foi possível salvar: ' + erroMsg(r.error)); return; }
+      delete $('ovl').dataset.form; closeSheet(); toast('Estimativa salva.'); await recarregar();
+    };
+  };
+  desenhar();
+}
+
+/* ---------------- Produtos ---------------- */
+function listaProdutos() {
+  openSheet('Produtos', `<div style="display:grid;gap:8px">${PROD.map(p => `<button type="button" class="pl" data-pr="${esc(p.id)}" style="border:1px solid var(--line);border-radius:9px"><span class="n">${esc(p.codigo || '—')}</span><span class="d"><b style="color:var(--ink)">${esc(p.nome)}</b><br>${n2(p.larg_cm)}×${n2(p.comp_cm)} cm · ${p.pecas_cx} pç/cx · ${p.cx_pallet} cx/pallet</span><span class="q">${PAL.filter(x => x.produto === p.id).length} pallet(s)</span></button>`).join('') || '<p class="muted" style="margin:0">Nenhum produto. Ele é criado ao receber o primeiro pallet.</p>'}</div>`,
+    '<button class="btn" type="button" id="prNovo">+ Produto</button>');
+  $('ovlB').querySelectorAll('[data-pr]').forEach(b => b.onclick = () => formProduto(b.dataset.pr));
+  $('prNovo').onclick = () => formProduto(null);
+}
+// lê "60X60" da descrição da etiqueta
+const formatoDe = nome => { const m = /(\d{2,3}(?:[.,]\d)?)\s*[xX×]\s*(\d{2,3}(?:[.,]\d)?)/.exec(nome || ''); return m ? [num(m[1]), num(m[2])] : null; };
+function camposProduto(p) {
+  return `<div class="g2"><div class="fld"><label for="prC">Código</label><input id="prC" inputmode="numeric" placeholder="8067005" value="${esc(p.codigo || '')}"></div>
+    <div class="fld" style="grid-column:span 2"><label for="prN">Descrição (como na etiqueta) <span class="req">*</span></label><input id="prN" placeholder="SERRA AMENDOA ESM ACET 60X60R" value="${esc(p.nome || '')}"></div>
+    <div class="fld"><label for="prL">Peça: largura (cm)</label><input id="prL" inputmode="decimal" value="${esc(p.larg_cm ?? 60)}"></div><div class="fld"><label for="prW">Peça: comprimento (cm)</label><input id="prW" inputmode="decimal" value="${esc(p.comp_cm ?? 60)}"></div>
+    <div class="fld"><label for="prPc">Peças por caixa</label><input id="prPc" type="number" min="1" inputmode="numeric" value="${esc(p.pecas_cx ?? 6)}"></div><div class="fld"><label for="prCx">Caixas por pallet</label><input id="prCx" type="number" min="1" inputmode="numeric" value="${esc(p.cx_pallet ?? 40)}"></div></div>`;
+}
+function lerProduto() {
+  return { codigo: $('prC').value.trim() || null, nome: $('prN').value.trim(), larg_cm: num($('prL').value) || 60, comp_cm: num($('prW').value) || 60,
+    pecas_cx: Math.max(1, parseInt($('prPc').value, 10) || 6), cx_pallet: Math.max(1, parseInt($('prCx').value, 10) || 40) };
+}
+function ligarFormato() { $('prN').addEventListener('change', () => { const fm = formatoDe($('prN').value); if (fm) { $('prL').value = fm[0]; $('prW').value = fm[1]; } }); }
+function formProduto(id) {
+  const ed = id ? PROD.find(p => p.id === id) : null;
+  openSheet(ed ? 'Produto' : 'Novo produto', camposProduto(ed || {}), `<span class="msg" id="prMsg"></span>${ed && edita() && !PAL.some(p => p.produto === ed.id) ? '<button class="btn danger" type="button" id="prDel">Excluir</button>' : ''}<button class="btn" type="button" id="prOk">Salvar</button>`, true);
+  ligarFormato();
+  if ($('prDel')) $('prDel').onclick = async () => { if (!confirm('Excluir este produto?')) return; const { error } = await sb.from('cer_produtos').delete().eq('id', ed.id); if (error) { $('prMsg').className = 'msg err'; $('prMsg').textContent = erroMsg(error); return; } delete $('ovl').dataset.form; await recarregar(); listaProdutos(); };
+  $('prOk').onclick = async () => { const row = lerProduto(); if (!row.nome) { $('prMsg').className = 'msg err'; $('prMsg').textContent = 'Escreva a descrição.'; return; }
+    const r = ed ? await sb.from('cer_produtos').update(row).eq('id', ed.id) : await sb.from('cer_produtos').insert(Object.assign({ id: uuid(), obra: OBRA }, row));
+    if (r.error) { $('prMsg').className = 'msg err'; $('prMsg').textContent = erroMsg(r.error); return; } delete $('ovl').dataset.form; await recarregar(); listaProdutos(); };
+}
+
+/* ---------------- Pallet: ficha e recebimento ---------------- */
+const CAMPOS_ETQ = [['qualidade', 'Qualidade (QUAL)', 'A'], ['tonalidade', 'Tonalidade (TON)', '5007'], ['tamanho', 'Tamanho/calibre (TAM)', '2'], ['lote', 'Lote', '0903857'], ['plt', 'Nº do pallet (PLT)', '00041']];
+const CAMPOS_MAIS = [['mar', 'MAR', '037'], ['tp', 'TP', '073'], ['pack', 'PACK', '006517'], ['ordem_fab', 'OF (ordem de fabricação)', '00441112'], ['turno', 'Turno', 'C'], ['fabricado', 'Data de fabricação', '22/08/26 01:02'], ['peso', 'Peso (kg)', '1524']];
+function fichaPallet(id) {
+  const p = palDe(id); if (!p) { closeSheet(); return; }
+  const pr = prodDe(p.produto), n = pcx(p), s = saldo(p), movs = MOV.filter(m => m.pallet === p.id);
+  openSheet(plt(p), `<div style="display:grid;gap:12px">
+    <div class="palinfo"><b>${esc(pr.nome)}</b><span class="tags"><span class="tag">${esc(partidaTxt(p))}</span>${p.qualidade ? `<span class="tag${p.qualidade !== 'A' ? ' warn' : ''}">Qual ${esc(p.qualidade)}</span>` : ''}</span>
+      <span>Saldo: <b>${fmtQ(Math.max(0, s), n)}</b> de ${p.caixas} cx${s <= 0 ? ' · <b style="color:var(--muted)">pallet vazio</b>' : ''}</span></div>
+    ${p.foto ? `<img class="etq" data-foto="${esc(p.foto)}" alt="Foto da etiqueta">` : ''}
+    <dl class="dados">${[['Série (código)', p.serie], ...CAMPOS_ETQ.map(c => [c[1], p[c[0]]]), ...CAMPOS_MAIS.map(c => [c[1], p[c[0]]]), ['Posição no depósito', p.posicao], ['Nota fiscal', p.nf], ['Recebido', fmtD(p.recebido_em) + ' por ' + nomeDe(p.recebido_por)], ['Observação', p.obs]]
+      .filter(x => x[1] != null && x[1] !== '').map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Movimentos (${movs.length})</h4>
+    ${movs.length ? movs.map(m => `<div class="mv ${m.tipo}"><span class="h">${fmtD(m.em)}</span><span class="t">${TIPOS[m.tipo]}${m.funcionario_nome ? ' · ' + esc(m.funcionario_nome) : ''}${m.unidade || m.pavimento ? ' · ' + esc(destTxt(m)) : ''}<small>por ${esc(nomeDe(m.por))}${m.obs ? ' · ' + esc(m.obs) : ''}</small></span><span class="q">${fmtQ(m.pecas, n)}</span></div>`).join('') : '<p class="muted" style="margin:0">Nenhuma entrega deste pallet ainda.</p>'}</div>`,
+    estoque() ? `<button class="btn ghost" type="button" id="pEd">Editar dados</button>${s > 0 ? '<button class="btn ghost" type="button" id="pQb">Quebra</button>' : ''}<button class="btn ghost" type="button" id="pDv">Devolução</button>${s > 0 ? '<button class="btn" type="button" id="pEnt">Entregar</button>' : ''}` : '');
+  $('ovl').dataset.pal = p.id;
+  $('ovlB').querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; }).catch(() => img.remove()));
+  if ($('pEd')) $('pEd').onclick = () => formPallet(p.id, {});
+  if ($('pEnt')) $('pEnt').onclick = () => formMov(p.id, 'entrega');
+  if ($('pDv')) $('pDv').onclick = () => formMov(p.id, 'devolucao');
+  if ($('pQb')) $('pQb').onclick = () => formMov(p.id, 'quebra');
+}
+function formPallet(id, pre) {
+  const ed = id ? palDe(id) : null;
+  const f = Object.assign(ed ? JSON.parse(JSON.stringify(ed)) : { produto: (PAL[0] || {}).produto || (PROD[0] || {}).id || '', caixas: '' }, pre || {});
+  let foto = null;   // { blob, url } nova foto da etiqueta
+  let novoProd = !PROD.length;
+  const ultimo = PAL.find(p => p.id !== (ed && ed.id));
+  const desenhar = () => {
+    const pr = prodDe(f.produto);
+    openSheet(ed ? 'Editar ' + plt(ed) : 'Receber pallet', `
+      <p class="muted" style="margin:0">Copie os dados da etiqueta do pallet. A <b>tonalidade</b>, o <b>tamanho</b> e o <b>lote</b> são o que importa para não misturar peças no mesmo ambiente.</p>
+      <div class="fld"><span class="l">Produto <span class="req">*</span></span>${novoProd ? camposProduto(Object.assign({}, f._np || {})) + (PROD.length ? '<button type="button" class="lnk" id="fpProdVolta" style="justify-self:start">Escolher um produto já cadastrado</button>' : '')
+        : `<select id="fpProd">${PROD.map(p => `<option value="${esc(p.id)}" ${p.id === f.produto ? 'selected' : ''}>${esc(p.nome)}${p.codigo ? ' · ' + esc(p.codigo) : ''}</option>`).join('')}</select><button type="button" class="lnk" id="fpProdNovo" style="justify-self:start">+ Outro produto (primeira vez que chega)</button>`}</div>
+      <div class="fld"><label for="fpSerie">Código da etiqueta (série)</label><div style="display:flex;gap:8px"><input id="fpSerie" inputmode="numeric" placeholder="1006107494" value="${esc(f.serie || '')}"><button class="btn ghost" type="button" id="fpLer">Ler código</button></div>
+        <span class="muted">É o número embaixo do código quadrado. Com ele, a entrega é só ler o código.</span></div>
+      ${!ed && ultimo ? `<button type="button" class="lnk" id="fpCopia" style="justify-self:start">Copiar tonalidade, tamanho e lote do último pallet (${esc(plt(ultimo))}: ${esc(partidaTxt(ultimo))})</button>` : ''}
+      <div class="g2">${CAMPOS_ETQ.map(([k, t, ph]) => `<div class="fld"><label for="fp_${k}">${t}${['tonalidade', 'tamanho', 'lote'].includes(k) ? ' <span class="req">*</span>' : ''}</label><input id="fp_${k}" placeholder="${ph}" value="${esc(f[k] || '')}"></div>`).join('')}
+        <div class="fld"><label for="fpCx">Caixas no pallet <span class="req">*</span></label><input id="fpCx" type="number" min="1" inputmode="numeric" placeholder="${esc(novoProd ? 40 : pr.cx_pallet)}" value="${esc(f.caixas || '')}"></div>
+        <div class="fld"><label for="fpPos">Posição no depósito</label><input id="fpPos" placeholder="Ex.: fila B, 3º" value="${esc(f.posicao || '')}"></div></div>
+      <div class="fld"><span class="l">Foto da etiqueta</span><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">${foto ? `<img class="etq" src="${foto.url}" alt="Foto nova" style="max-height:120px">` : f.foto ? `<img class="etq" data-foto="${esc(f.foto)}" alt="Foto da etiqueta" style="max-height:120px">` : ''}
+        <label class="addarq">${foto || f.foto ? 'Trocar foto' : '📷 Tirar foto da etiqueta'}<input type="file" accept="image/*" capture="environment" id="fpFoto"></label></div></div>
+      <details class="mais"><summary>Mais dados da etiqueta e nota fiscal</summary><div class="g2">${CAMPOS_MAIS.map(([k, t, ph]) => `<div class="fld"><label for="fp_${k}">${t}</label><input id="fp_${k}" placeholder="${ph}" value="${esc(f[k] ?? '')}"></div>`).join('')}
+        <div class="fld"><label for="fpNf">Nota fiscal</label><input id="fpNf" value="${esc(f.nf || '')}"></div></div>
+        <div class="fld" style="margin-top:10px"><label for="fpObs">Observação</label><textarea id="fpObs" placeholder="Ex.: 2 caixas amassadas na chegada">${esc(f.obs || '')}</textarea></div></details>`,
+      `<span class="msg" id="fpMsg"></span>${ed && edita() && !MOV.some(m => m.pallet === ed.id) ? '<button class="btn danger" type="button" id="fpDel">Excluir</button>' : ''}<button class="btn" type="button" id="fpOk">${ed ? 'Salvar' : 'Registrar pallet'}</button>`, true);
+    const B = $('ovlB');
+    B.querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; }).catch(() => img.remove()));
+    if (novoProd) ligarFormato();
+    if ($('fpProdNovo')) $('fpProdNovo').onclick = () => { ler(); novoProd = true; desenhar(); };
+    if ($('fpProdVolta')) $('fpProdVolta').onclick = () => { ler(); novoProd = false; desenhar(); };
+    if ($('fpProd')) $('fpProd').onchange = () => { ler(); desenhar(); };
+    if ($('fpCopia')) $('fpCopia').onclick = () => { ler(); for (const k of ['produto', 'qualidade', 'tonalidade', 'tamanho', 'lote', 'mar', 'tp', 'ordem_fab', 'turno', 'fabricado']) if (ultimo[k] != null) f[k] = ultimo[k]; novoProd = false; desenhar(); toast('Copiado. Confira com a etiqueta deste pallet.'); };
+    $('fpLer').onclick = async () => { ler(); const c = await lerCodigo('Leia o código da etiqueta'); if (c) { f.serie = c; desenhar(); } };
+    $('fpFoto').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; ler();
+      try { const b = await comprimir(a); if (foto) URL.revokeObjectURL(foto.url); foto = { blob: b, url: URL.createObjectURL(b) };
+        // a foto também serve para ler o código, se ainda não tem
+        if (!f.serie) { const c = await decodificarArquivo(a).catch(() => null); if (c) { f.serie = c; toast('Código lido da foto: ' + c); } }
+      } catch (e) { toast('Não foi possível usar a foto: ' + (e.message || e)); } desenhar(); };
+    if ($('fpDel')) $('fpDel').onclick = async () => { if (!confirm('Excluir este pallet?')) return; const { error } = await sb.from('cer_pallets').delete().eq('id', ed.id); if (error) { msg(erroMsg(error)); return; } delete $('ovl').dataset.form; closeSheet(); await recarregar(); };
+    $('fpOk').onclick = salvar;
+  };
+  const ler = () => {
+    if (novoProd && $('prN')) f._np = lerProduto(); if ($('fpProd')) f.produto = $('fpProd').value;
+    f.serie = $('fpSerie').value.trim(); [...CAMPOS_ETQ, ...CAMPOS_MAIS].forEach(([k]) => { const x = $('fp_' + k); if (x) f[k] = x.value.trim(); });
+    f.caixas = $('fpCx').value; f.posicao = $('fpPos').value.trim(); if ($('fpNf')) f.nf = $('fpNf').value.trim(); if ($('fpObs')) f.obs = $('fpObs').value.trim();
+  };
+  const msg = t => { $('fpMsg').className = 'msg err'; $('fpMsg').textContent = t; };
+  async function salvar() {
+    ler();
+    const cx = parseInt(f.caixas, 10) || (novoProd ? (f._np && f._np.cx_pallet) : prodDe(f.produto).cx_pallet);
+    const falta = []; if (novoProd && !(f._np && f._np.nome)) falta.push('descrição do produto'); if (!novoProd && !f.produto) falta.push('produto');
+    if (!f.tonalidade) falta.push('tonalidade'); if (!f.tamanho) falta.push('tamanho'); if (!f.lote) falta.push('lote'); if (!cx) falta.push('caixas');
+    if (falta.length) { msg('Falta: ' + falta.join(', ') + '.'); return; }
+    if (f.serie && PAL.some(p => p.serie === f.serie && p.id !== (ed && ed.id))) { msg('Já existe um pallet com o código ' + f.serie + '.'); return; }
+    if (ed && cx * pcx(ed) < (SAI[ed.id] || 0)) { msg('Já saíram ' + fmtQ(SAI[ed.id], pcx(ed)) + ' deste pallet; as caixas não podem ser menos que isso.'); return; }
+    $('fpOk').disabled = true;
+    try {
+      if (novoProd) { const np = Object.assign({ id: uuid(), obra: OBRA }, f._np); const r = await sb.from('cer_produtos').insert(np); if (r.error) throw r.error; f.produto = np.id; }
+      const pid = ed ? ed.id : uuid();
+      let caminho = f.foto || null;
+      if (foto) { caminho = 'ceramicas/' + OBRA + '/' + pid + '-' + Date.now().toString(36) + '.jpg'; const { error } = await sb.storage.from('arquivos').upload(caminho, foto.blob, { contentType: 'image/jpeg', upsert: false }); if (error) throw error;
+        if (f.foto) sb.storage.from('arquivos').remove([f.foto]).catch(() => {}); }
+      const row = { produto: f.produto, serie: f.serie || null, caixas: cx, posicao: f.posicao || null, nf: f.nf || null, obs: f.obs || null, foto: caminho, peso: num(f.peso) };
+      [...CAMPOS_ETQ, ...CAMPOS_MAIS].forEach(([k]) => { if (k !== 'peso') row[k] = f[k] || null; });
+      const r = ed ? await sb.from('cer_pallets').update(row).eq('id', ed.id) : await sb.from('cer_pallets').insert(Object.assign({ id: pid, obra: OBRA }, row));
+      if (r.error) throw r.error;
+      if (foto) URL.revokeObjectURL(foto.url);
+      delete $('ovl').dataset.form; await carregar(); render(); fichaPallet(pid);
+      toast(ed ? 'Pallet salvo.' : 'Pallet registrado: ' + cx + ' caixas · ' + partidaTxt(f) + '.', 5000);
+    } catch (e) { console.error(e); $('fpOk').disabled = false; msg('Não foi possível salvar: ' + erroMsg(e)); }
+  }
+  desenhar();
+}
+
+/* ---------------- Entrega, devolução e quebra ---------------- */
+function formMov(palId, tipo) {
+  const p = palDe(palId); if (!p) return;
+  const pr = prodDe(p.produto), n = pcx(p);
+  const f = { func: tipo === 'entrega' ? ULT.func : '', pav: tipo !== 'quebra' ? ULT.pav : '', un: '', amb: '', cx: null, pc: 0, obs: '', todos: false, texto: '' };
+  const assenta = FUNC.filter(x => (x.cargos || []).some(c => ASSENTA.includes(String(c).toLowerCase())));
+  const desenhar = () => {
+    const s = saldo(p), uns = f.pav ? unidadesDe(f.pav) : [], ambs = f.pav ? ambientesDe(f.un || null, p.produto) : [];
+    if (f.pav && ambs.length === 1 && (f.un || !uns.length)) f.amb = ambs[0].ambiente;
+    const e = f.amb ? estDe(f.un || null, f.amb, p.produto) : null, d = f.pav && (f.amb || !ambs.length) ? noDestino(f.pav, f.un, f.amb) : null;
+    const est = e ? totalEst(e) : 0, falta = e ? Math.max(0, est - (d ? d.pecas : 0)) : 0;
+    if (f.cx == null && tipo === 'entrega' && e) f.cx = Math.min(Math.floor(s / n), Math.ceil(falta / n)) || null;
+    const qt = (f.cx || 0) * n + (f.pc || 0);
+    const outras = d ? [...d.partidas.values()].filter(x => partidaK(x) !== partidaK(p)) : [];
+    const pessoas = f.todos || !assenta.length ? FUNC : assenta;
+    const titulo = { entrega: 'Entregar', devolucao: 'Devolução ao estoque', quebra: 'Registrar quebra' }[tipo];
+    openSheet(titulo, `
+      <div class="palinfo"><b>${esc(plt(p))} · ${esc(pr.nome)}</b><span class="tags"><span class="tag">${esc(partidaTxt(p))}</span>${p.qualidade ? `<span class="tag${p.qualidade !== 'A' ? ' warn' : ''}">Qual ${esc(p.qualidade)}</span>` : ''}</span><span>Saldo do pallet: <b>${fmtQ(s, n)}</b></span></div>
+      ${tipo === 'entrega' ? `<div class="fld"><span class="l">Para quem <span class="req">*</span></span><div class="opts">${pessoas.map(x => `<button type="button" class="opt" data-func="${esc(x.id)}" aria-pressed="${f.func === x.id}">${esc(x.nome)}</button>`).join('')}
+        ${assenta.length && !f.todos ? '<button type="button" class="opt" data-todos style="border-style:dashed">Outra pessoa…</button>' : ''}</div>${!FUNC.length ? '<span class="muted">Nenhum funcionário cadastrado nesta obra (Listas e regras → Funcionários).</span>' : ''}</div>` : ''}
+      ${tipo !== 'quebra' ? `<div class="fld"><span class="l">${tipo === 'entrega' ? 'Para onde' : 'Voltou de onde'} ${tipo === 'entrega' ? '<span class="req">*</span>' : '(opcional)'}</span><div class="opts">${CFG.pavimentos.map(x => `<button type="button" class="opt" data-pav="${esc(x.nome)}" aria-pressed="${f.pav === x.nome}">${esc(x.nome)}</button>`).join('')}</div></div>
+        ${f.pav ? (uns.length ? `<div class="fld"><span class="l">Apartamento</span><div class="opts">${uns.map(u => `<button type="button" class="opt" data-un="${esc(u)}" aria-pressed="${f.un === u}">${esc(u)}</button>`).join('')}${ambientesDe(null, p.produto).length ? `<button type="button" class="opt" data-un="" aria-pressed="${!f.un && !!f.amb}">Áreas do pavimento</button>` : ''}</div></div>`
+          : `<div class="fld"><label for="mUn">Apartamento</label><input id="mUn" inputmode="numeric" placeholder="Ex.: 201" value="${esc(f.un)}"></div>`) : ''}
+        ${f.pav && ambs.length > 1 && (f.un || !uns.length || f.amb) ? `<div class="fld"><span class="l">Qual ambiente <span class="req">*</span></span><div class="opts">${ambs.map(a => `<button type="button" class="opt" data-amb="${esc(a.ambiente)}" aria-pressed="${f.amb === a.ambiente}">${esc(a.ambiente)}</button>`).join('')}</div></div>` : ''}` : ''}
+      ${e && tipo === 'entrega' ? `<div class="tot"><span>${esc(f.amb)}: estimado <b>${fmtQ(est, n)}</b> (${est} peças) · já entregue <b>${fmtQ(d.pecas, n)}</b></span><span>${falta ? 'Falta <b>' + fmtQ(falta, n) + '</b>' : '<b>Já recebeu tudo o estimado.</b>'}</span></div>` : ''}
+      ${outras.length && tipo === 'entrega' ? `<div class="aviso2 bad"><b>Atenção: partida diferente.</b> Este ambiente já recebeu ${outras.map(x => esc(partidaTxt(x))).join(' e ')}. Este pallet é ${esc(partidaTxt(p))}. Misturar pode dar diferença de cor ou de junta.</div>` : ''}
+      <div class="fld"><span class="l">Quantidade <span class="req">*</span></span><div class="qtd"><button type="button" id="mMenos" aria-label="Menos uma caixa">−</button><input id="mCx" type="number" min="0" inputmode="numeric" value="${f.cx ?? ''}" aria-label="Caixas"><button type="button" id="mMais" aria-label="Mais uma caixa">+</button><span>caixas</span></div>
+        <details class="mais"${f.pc ? ' open' : ''}><summary>Peças avulsas (caixa aberta)</summary><div class="qtd"><input id="mPc" type="number" min="0" max="${n - 1}" inputmode="numeric" value="${f.pc || ''}" aria-label="Peças avulsas"><span>peças (cada caixa tem ${n})</span></div></details>
+        ${qt ? `<span class="muted">${qt} peças · ${n2(qt * m2Peca(pr))} m²</span>` : ''}
+        ${tipo === 'entrega' && e && d && qt + d.pecas > limCx(est, n) ? `<div class="aviso2">Com esta entrega o ambiente passa do estimado em ${qt + d.pecas - est} peças (mais que a última caixa aberta).</div>` : ''}
+        ${(tipo !== 'devolucao') && qt > s ? `<div class="aviso2 bad">O pallet tem só ${fmtQ(s, n)}.</div>` : ''}</div>
+      <div class="fld"><label for="mObs">Observação${tipo === 'quebra' ? ' (onde/como quebrou)' : ' (opcional)'}</label><input id="mObs" value="${esc(f.obs)}" placeholder="${tipo === 'quebra' ? 'Ex.: caixa caiu no transporte' : ''}"></div>`,
+      `<span class="msg" id="mMsg"></span><button class="btn${tipo === 'quebra' ? ' danger' : ''}" type="button" id="mOk">${{ entrega: 'Registrar entrega', devolucao: 'Registrar devolução', quebra: 'Registrar quebra' }[tipo]}</button>`, true);
+    const B = $('ovlB');
+    const ler = () => { f.cx = $('mCx').value === '' ? null : Math.max(0, parseInt($('mCx').value, 10) || 0); f.pc = Math.max(0, Math.min(n - 1, parseInt(($('mPc') || {}).value, 10) || 0)); f.obs = $('mObs').value.trim(); if ($('mUn')) f.un = $('mUn').value.trim(); };
+    const redesenhar = () => { const y = $('ovlB').scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    B.querySelectorAll('[data-func]').forEach(b => b.onclick = () => { ler(); f.func = b.dataset.func; redesenhar(); });
+    B.querySelectorAll('[data-todos]').forEach(b => b.onclick = () => { ler(); f.todos = true; redesenhar(); });
+    B.querySelectorAll('[data-pav]').forEach(b => b.onclick = () => { ler(); if (f.pav !== b.dataset.pav) { f.pav = b.dataset.pav; f.un = ''; f.amb = ''; if (tipo === 'entrega') f.cx = null; } redesenhar(); });
+    B.querySelectorAll('[data-un]').forEach(b => b.onclick = () => { ler(); f.un = b.dataset.un; f.amb = ''; if (tipo === 'entrega') f.cx = null; redesenhar(); });
+    B.querySelectorAll('[data-amb]').forEach(b => b.onclick = () => { ler(); f.amb = b.dataset.amb; if (tipo === 'entrega') f.cx = null; redesenhar(); });
+    if ($('mUn')) $('mUn').onchange = () => { ler(); f.amb = ''; redesenhar(); };
+    $('mMenos').onclick = () => { ler(); f.cx = Math.max(0, (f.cx || 0) - 1); redesenhar(); };
+    $('mMais').onclick = () => { ler(); f.cx = (f.cx || 0) + 1; redesenhar(); };
+    $('mCx').onchange = () => { ler(); redesenhar(); }; if ($('mPc')) $('mPc').onchange = () => { ler(); redesenhar(); };
+    $('mOk').onclick = async () => {
+      ler(); const q = (f.cx || 0) * n + (f.pc || 0), ms = $('mMsg'); const erro = t => { ms.className = 'msg err'; ms.textContent = t; };
+      if (tipo === 'entrega' && !f.func) return erro('Escolha para quem.');
+      if (tipo === 'entrega' && !f.pav) return erro('Escolha o pavimento.');
+      if (tipo === 'entrega' && uns.length && !f.un && !f.amb) return erro('Escolha o apartamento.');
+      if (f.pav && ambs.length > 1 && !f.amb && (f.un || tipo === 'entrega')) return erro('Escolha o ambiente.');
+      if (!q) return erro('Informe a quantidade.');
+      if (tipo !== 'devolucao' && q > saldo(p)) return erro('O pallet tem só ' + fmtQ(saldo(p), n) + '.');
+      $('mOk').disabled = true;
+      const fu = FUNC.find(x => x.id === f.func);
+      const row = { id: uuid(), obra: OBRA, pallet: p.id, tipo, pecas: q, pavimento: f.pav || null, unidade: f.un || null, ambiente: f.amb || null,
+        funcionario: fu ? fu.id : null, funcionario_nome: fu ? fu.nome : null, obs: f.obs || null };
+      const { error } = await sb.from('cer_movs').insert(row);
+      if (error) { $('mOk').disabled = false; return erro('Não foi possível: ' + erroMsg(error)); }
+      if (tipo === 'entrega') { ULT.func = f.func; ULT.pav = f.pav; }
+      delete $('ovl').dataset.form; closeSheet(); await recarregar();
+      toast(tipo === 'entrega' ? 'Entregue: ' + fmtQ(q, n) + ' para ' + (fu ? fu.nome : '') + ' · ' + destTxt(row) + '.' : tipo === 'devolucao' ? 'Devolução registrada: ' + fmtQ(q, n) + ' voltaram ao pallet.' : 'Quebra registrada: ' + fmtQ(q, n) + '.', 5000);
+    };
+  };
+  desenhar();
+}
+
+/* ======================= leitor do código da etiqueta ======================= */
+// O código quadrado é um DataMatrix. Android (Chrome) lê com o leitor do próprio navegador;
+// no iPhone (e onde não houver) usa a biblioteca zxing-wasm.
+const ZX = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/iife/reader/index.js';
+const ZX_WASM = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/reader/zxing_reader.wasm';
+let detectorP = null;
+function carregarScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('sem internet para carregar o leitor')); document.head.appendChild(s); }); }
+function detector() {
+  if (detectorP) return detectorP;
+  detectorP = (async () => {
+    if ('BarcodeDetector' in window) try {
+      const fs = await window.BarcodeDetector.getSupportedFormats();
+      if (fs.includes('data_matrix')) { const d = new window.BarcodeDetector({ formats: ['data_matrix', 'qr_code'] }); return async cv => { const r = await d.detect(cv); return r[0] ? r[0].rawValue : null; }; }
+    } catch (e) {}
+    if (!window.ZXingWASM) await carregarScript(ZX);
+    window.ZXingWASM.setZXingModuleOverrides({ locateFile: (f, pre) => f.endsWith('.wasm') ? ZX_WASM : pre + f });
+    return async cv => { const id = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+      const r = await window.ZXingWASM.readBarcodes(id, { formats: ['DataMatrix', 'QRCode'], tryHarder: true, maxNumberOfSymbols: 1 }); return r[0] && r[0].isValid !== false ? r[0].text : null; };
+  })();
+  detectorP.catch(() => { detectorP = null; });
+  return detectorP;
+}
+const limpar = t => String(t || '').trim();
+async function decodificarArquivo(arq) {
+  const url = URL.createObjectURL(arq); const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; }); } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  const det = await detector();
+  for (const lado of [1600, 2400, 1000]) {
+    const sc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas');
+    cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    const t = await det(cv).catch(() => null); cv.width = cv.height = 0; if (t) return limpar(t);
+  }
+  return null;
+}
+// abre a câmera e devolve o texto do código (ou null se cancelar)
+function lerCodigo(dica) {
+  return new Promise(resolve => {
+    const box = $('scan'), v = $('scanV'), st = $('scanSt'); let fim = false, stream = null, t = null;
+    box.querySelector('.dica').textContent = dica || 'Aponte para o código quadrado da etiqueta do pallet';
+    const acabar = val => { if (fim) return; fim = true; clearTimeout(t); if (stream) stream.getTracks().forEach(x => x.stop()); v.srcObject = null; box.hidden = true; $('scanF').value = ''; resolve(val ? limpar(val) : null); };
+    box.hidden = false; st.textContent = 'Abrindo a câmera…';
+    $('scanX').onclick = () => acabar(null);
+    $('scanD').onclick = () => { const x = prompt('Número embaixo do código (ex.: 1006107494):'); if (x && x.trim()) acabar(x); };
+    $('scanF').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; st.textContent = 'Lendo a foto…';
+      const c = await decodificarArquivo(a).catch(e => { st.textContent = 'Não foi possível: ' + (e.message || e); return null; });
+      if (c) acabar(c); else if (!fim) st.textContent = 'Não achei o código na foto. Tente mais perto, com a etiqueta inteira e sem reflexo, ou digite o número.'; };
+    const cv = document.createElement('canvas');
+    const ciclo = async det => {
+      if (fim) return;
+      if (v.readyState >= 2 && v.videoWidth) {
+        const sc = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight)); cv.width = Math.round(v.videoWidth * sc); cv.height = Math.round(v.videoHeight * sc);
+        cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+        try { const c = await det(cv); if (c) { if (navigator.vibrate) navigator.vibrate(80); acabar(c); return; } } catch (e) {}
+      }
+      t = setTimeout(() => ciclo(det), 220);
+    };
+    (async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('câmera indisponível neste navegador');
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+        if (fim) { stream.getTracks().forEach(x => x.stop()); return; }
+        v.srcObject = stream; await v.play().catch(() => {});
+        st.textContent = 'Procurando o código…';
+        const det = await detector(); ciclo(det);
+      } catch (e) { if (!fim) st.textContent = 'Sem câmera ao vivo (' + (e.message || e.name || e) + '). Use "Tirar foto da etiqueta" ou digite o número.'; }
+    })();
+  });
+}
+// botão principal: lê a etiqueta e abre a entrega (ou o recebimento, se o pallet ainda não existe)
+async function lerEtiqueta() {
+  const c = await lerCodigo(); if (!c) return;
+  const p = PAL.find(x => x.serie === c || (x.serie && c.includes(x.serie)));
+  if (!p) {
+    openSheet('Pallet não cadastrado', `<p style="margin:0">O código <b>${esc(c)}</b> ainda não está no estoque.</p><p class="muted" style="margin:0">Se o pallet acabou de chegar, registre o recebimento com os dados da etiqueta. Da próxima vez, ler este código já abre a entrega.</p>`,
+      '<button class="btn ghost" type="button" id="nlOutro">Ler outro</button><button class="btn" type="button" id="nlRec">Receber este pallet</button>');
+    $('nlOutro').onclick = () => { closeSheet(); lerEtiqueta(); };
+    $('nlRec').onclick = () => formPallet(null, { serie: c });
+    return;
+  }
+  if (saldo(p) <= 0) { toast(plt(p) + ' está vazio (já saiu tudo). Para devolver peças a ele, abra o pallet no Estoque.', 6000); fichaPallet(p.id); return; }
+  formMov(p.id, 'entrega');
+}
+
+/* ---------------- janelas ---------------- */
+function openSheet(t, body, foot, form) { const o = $('ovl'); delete o.dataset.pal; $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; o.hidden = false; if (form) o.dataset.form = '1'; else delete o.dataset.form; $('ovlB').scrollTop = 0; }
+function closeSheet() { const o = $('ovl'); o.hidden = true; $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete o.dataset.form; delete o.dataset.pal; render(); }
+$('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl').dataset.form) closeSheet(); });
+$('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
+$('viewer').onclick = () => { $('viewer').hidden = true; };
+$('viewerX').onclick = ev => { ev.stopPropagation(); $('viewer').hidden = true; };
+document.addEventListener('click', ev => { const img = ev.target.closest('img.etq'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
+
+async function comprimir(arq) {
+  const url = URL.createObjectURL(arq); const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('não foi possível ler a imagem')); img.src = url; }); }
+  finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  for (const lado of [1600, 1200, 900]) {
+    const sc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.naturalWidth * sc)); cv.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    const ctx = cv.getContext('2d'); if (!ctx) continue;
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .8); } catch (e) { r(null); } });
+    cv.width = cv.height = 0;
+    if (b && b.size) return b;
+  }
+  if (/jpe?g/i.test(arq.type) && arq.size < 8e6) return arq;
+  throw new Error('não foi possível reduzir a foto');
+}
+
+/* ======================= início ======================= */
+(async function iniciar() {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">O estoque de cerâmicas é compartilhado pela equipe e precisa do Supabase configurado no config.js.</p></div>'; return; }
+  sb = NV.cliente; OBRA = NV.obraId;
+  try { await carregar(); }
+  catch (e) {
+    if (e.naoTem) { $('main').innerHTML = '<div class="vazio"><h3>Obra não encontrada</h3><a class="btn" href="index.html" style="text-decoration:none">Ver as obras</a></div>'; return; }
+    if (e.banco) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
+    $('main').innerHTML = `<div class="vazio"><h3>Não foi possível carregar</h3><p class="muted" style="margin:0">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return;
+  }
+  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Cerâmicas';
+  $('fab').onclick = lerEtiqueta;
+  const q = new URLSearchParams(location.search);
+  if (['estoque', 'entregas', 'aptos', 'estimativa'].includes(q.get('aba'))) TAB = q.get('aba');
+  else if (NV.perfil !== 'almoxarifado' && !PAL.length && EST.length) TAB = 'estimativa';
+  render();
+  // carrega o leitor em segundo plano (a primeira leitura fica rápida)
+  if (estoque()) setTimeout(() => detector().catch(() => {}), 1500);
+  try { sb.channel('cer-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'cer_movs', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cer_pallets', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); }).subscribe(); } catch (e) {}
+})();
+})();
+</script>
+</body>
+</html>

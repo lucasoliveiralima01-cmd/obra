@@ -3062,6 +3062,328 @@ $p19$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 20: Cerâmicas (estoque por pallet, entregas e estimativa) e perfil Almoxarifado
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 20 then return; end if;
+  execute $p20$
+-- ---------------------------------------------------------------------
+-- 1. Perfil Almoxarifado: só a ferramenta Cerâmicas (recebe pallets e registra entregas)
+-- ---------------------------------------------------------------------
+alter table public.membros drop constraint if exists membros_perfil_check;
+alter table public.membros add constraint membros_perfil_check
+  check (perfil in ('admin', 'engenharia', 'seguranca', 'campo', 'consulta', 'almoxarifado'));
+
+create or replace function public.admin_definir_perfil(alvo text, novo_perfil text, novos_oficios text[] default null, novas_obras text[] default null)
+returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  e text := lower(trim(alvo));
+  m public.membros;
+  rot jsonb := '{"admin":"Administrador","engenharia":"Engenharia","seguranca":"Segurança","campo":"Campo","consulta":"Consulta","almoxarifado":"Almoxarifado"}';
+  antes text; depois text;
+begin
+  if not public.eh_admin() then raise exception 'Só administradores podem mudar o perfil das pessoas.' using errcode = '42501'; end if;
+  if e is null or e = '' or position('@' in e) = 0 then raise exception 'E-mail inválido.'; end if;
+  if novo_perfil not in ('admin', 'engenharia', 'seguranca', 'campo', 'consulta', 'almoxarifado', 'nenhum') then raise exception 'Perfil inválido.'; end if;
+  select * into m from public.membros where lower(email) = e;
+  if m.perfil = 'admin' and novo_perfil <> 'admin' and (select count(*) from public.membros where perfil = 'admin') <= 1 then
+    raise exception 'Esta é a única conta de administrador. Torne outra pessoa administradora antes.';
+  end if;
+  antes := case when m.email is null then 'sem acesso' else
+             coalesce(rot ->> m.perfil, m.perfil)
+             || case when m.perfil in ('campo', 'seguranca') and array_length(m.disciplinas, 1) > 0 then ' (' || array_to_string(m.disciplinas, ', ') || ')' else '' end
+             || case when m.perfil <> 'admin' then ' · obras: ' || coalesce(nullif(array_to_string(m.obras, ', '), ''), 'nenhuma') else '' end end;
+  if novo_perfil = 'nenhum' then
+    delete from public.membros where lower(email) = e;
+    depois := 'sem acesso';
+  else
+    if novo_perfil = 'campo' and array_length(coalesce(novos_oficios, m.disciplinas, '{}'), 1) is null then
+      raise exception 'Marque ao menos um ofício para quem é de campo.';
+    end if;
+    -- Almoxarifado não tem ofício
+    if novo_perfil = 'almoxarifado' then novos_oficios := '{}'; end if;
+    if m.email is null then
+      insert into public.membros (email, perfil, disciplinas, obras)
+      values (e, novo_perfil, coalesce(novos_oficios, '{}'), coalesce(novas_obras, '{}'));
+    else
+      update public.membros set perfil = novo_perfil,
+             disciplinas = coalesce(novos_oficios, disciplinas),
+             obras = coalesce(novas_obras, obras)
+      where lower(email) = e;
+    end if;
+    select * into m from public.membros where lower(email) = e;
+    depois := coalesce(rot ->> m.perfil, m.perfil)
+              || case when m.perfil in ('campo', 'seguranca') and array_length(m.disciplinas, 1) > 0 then ' (' || array_to_string(m.disciplinas, ', ') || ')' else '' end
+              || case when m.perfil <> 'admin' then ' · obras: ' || coalesce(nullif(array_to_string(m.obras, ', '), ''), 'nenhuma') else '' end;
+  end if;
+  if antes is distinct from depois then
+    insert into public.admin_log (por, alvo, acao, detalhe) values (lower(auth.jwt() ->> 'email'), e, 'perfil', antes || ' → ' || depois);
+  end if;
+end $$;
+revoke all on function public.admin_definir_perfil(text, text, text[], text[]) from public, anon;
+grant execute on function public.admin_definir_perfil(text, text, text[], text[]) to authenticated;
+
+-- quem vê as cerâmicas da obra / quem mexe no estoque / quem mexe na estimativa
+create or replace function public.cer_ve(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'consulta', 'almoxarifado'), false)
+$$;
+create or replace function public.cer_estoque(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'almoxarifado'), false)
+$$;
+create or replace function public.cer_edita(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia'), false)
+$$;
+grant execute on function public.cer_ve(text), public.cer_estoque(text), public.cer_edita(text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 2. Tabelas
+-- ---------------------------------------------------------------------
+-- produto (o que vem escrito na etiqueta: código e descrição) e como ele vem embalado
+create table if not exists public.cer_produtos (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  codigo      text,                          -- código do fabricante (ex.: 8067005)
+  nome        text not null,                 -- ex.: SERRA AMENDOA ESM ACET 60X60R
+  larg_cm     numeric not null default 60,   -- tamanho da peça
+  comp_cm     numeric not null default 60,
+  pecas_cx    int not null default 6 check (pecas_cx > 0),
+  cx_pallet   int not null default 40 check (cx_pallet > 0),
+  obs         text,
+  criado_em   timestamptz not null default now()
+);
+create index if not exists cer_produtos_obra on public.cer_produtos (obra);
+
+-- estimativa: um ambiente de uma tipologia (final do apartamento) ou do pavimento (corredor...)
+-- partes: [{parte, tipo: 'area'|'linear', medida, altura_cm (rodapé), pecas (ajuste manual)}]
+create table if not exists public.cer_estimativas (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  produto     uuid references public.cer_produtos(id) on delete set null,
+  grupo       text not null default 'Banheiros',     -- Banheiros, Sacadas, Corredores, Piscina...
+  local       text not null default 'apto' check (local in ('apto', 'pavimento', 'obra')),
+  final       text,                                   -- '01' (local apto)
+  ambiente    text not null,                          -- 'Banheiro', 'Banheiro social'...
+  qtd         int not null default 1 check (qtd >= 0), -- quantas vezes se repete na torre
+  partes      jsonb not null default '[]',
+  perda       numeric not null default 0 check (perda >= 0 and perda < 100),   -- % de quebra/desperdício
+  obs         text,
+  ordem       int not null default 0,
+  atualizado_por text,
+  atualizado_em  timestamptz not null default now()
+);
+create index if not exists cer_estimativas_obra on public.cer_estimativas (obra);
+
+-- pallet recebido: os dados da etiqueta (a série é o que o código DataMatrix traz)
+create table if not exists public.cer_pallets (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  produto     uuid not null references public.cer_produtos(id) on delete restrict,
+  serie       text,                -- 1006107494 (o código da etiqueta)
+  qualidade   text,                -- QUAL A
+  tonalidade  text,                -- TON 5007
+  tamanho     text,                -- TAM 2 (calibre)
+  lote        text,                -- LOTE 0903857
+  mar         text, tp text, pack text, plt text, ordem_fab text, turno text,
+  fabricado   text,                -- DATA 22/08/26 01:02
+  peso        numeric,
+  caixas      int not null check (caixas > 0),
+  posicao     text,                -- onde está no depósito
+  nf          text,
+  foto        text,                -- caminho da foto da etiqueta no armazenamento
+  obs         text,
+  recebido_em timestamptz not null default now(),
+  recebido_por text
+);
+create unique index if not exists cer_pallets_serie on public.cer_pallets (obra, serie) where serie is not null;
+create index if not exists cer_pallets_obra on public.cer_pallets (obra);
+
+-- movimentos de um pallet, em peças (a tela mostra em caixas + peças)
+create table if not exists public.cer_movs (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  pallet      uuid not null references public.cer_pallets(id) on delete cascade,
+  tipo        text not null check (tipo in ('entrega', 'devolucao', 'quebra', 'ajuste')),
+  pecas       int not null,        -- entrega/quebra/devolução: > 0; ajuste: + ou -
+  pavimento   text, unidade text, ambiente text,
+  funcionario uuid references public.pend_funcionarios(id) on delete set null,
+  funcionario_nome text,
+  obs         text,
+  em          timestamptz not null default now(),
+  por         text
+);
+create index if not exists cer_movs_obra on public.cer_movs (obra, em desc);
+create index if not exists cer_movs_pallet on public.cer_movs (pallet);
+
+alter table public.cer_produtos enable row level security;
+alter table public.cer_estimativas enable row level security;
+alter table public.cer_pallets enable row level security;
+alter table public.cer_movs enable row level security;
+
+drop policy if exists "ve cer_produtos" on public.cer_produtos;
+drop policy if exists "grava cer_produtos" on public.cer_produtos;
+create policy "ve cer_produtos" on public.cer_produtos for select to authenticated using (public.cer_ve(obra));
+create policy "grava cer_produtos" on public.cer_produtos for all to authenticated using (public.cer_estoque(obra)) with check (public.cer_estoque(obra));
+
+drop policy if exists "ve cer_estimativas" on public.cer_estimativas;
+drop policy if exists "grava cer_estimativas" on public.cer_estimativas;
+create policy "ve cer_estimativas" on public.cer_estimativas for select to authenticated using (public.cer_ve(obra));
+create policy "grava cer_estimativas" on public.cer_estimativas for all to authenticated using (public.cer_edita(obra)) with check (public.cer_edita(obra));
+
+drop policy if exists "ve cer_pallets" on public.cer_pallets;
+drop policy if exists "grava cer_pallets" on public.cer_pallets;
+create policy "ve cer_pallets" on public.cer_pallets for select to authenticated using (public.cer_ve(obra));
+create policy "grava cer_pallets" on public.cer_pallets for all to authenticated using (public.cer_estoque(obra)) with check (public.cer_estoque(obra));
+
+-- movimento: quem cuida do estoque registra; apagar: a Engenharia, ou quem registrou (no mesmo dia)
+drop policy if exists "ve cer_movs" on public.cer_movs;
+drop policy if exists "cria cer_movs" on public.cer_movs;
+drop policy if exists "edita cer_movs" on public.cer_movs;
+drop policy if exists "apaga cer_movs" on public.cer_movs;
+create policy "ve cer_movs" on public.cer_movs for select to authenticated using (public.cer_ve(obra));
+create policy "cria cer_movs" on public.cer_movs for insert to authenticated with check (public.cer_estoque(obra));
+create policy "edita cer_movs" on public.cer_movs for update to authenticated using (public.cer_edita(obra)) with check (public.cer_edita(obra));
+create policy "apaga cer_movs" on public.cer_movs for delete to authenticated
+  using (public.cer_edita(obra) or (public.cer_estoque(obra) and lower(por) = lower(auth.jwt() ->> 'email') and em > now() - interval '24 hours'));
+
+-- saldo do pallet em peças
+create or replace function public.cer_saldo(p_pallet uuid) returns int
+language sql stable security definer set search_path = public as $$
+  select (select pl.caixas * pr.pecas_cx from public.cer_pallets pl join public.cer_produtos pr on pr.id = pl.produto where pl.id = p_pallet)
+       - coalesce((select sum(case when tipo in ('entrega', 'quebra') then pecas when tipo = 'devolucao' then -pecas else -pecas end)
+                   from public.cer_movs where pallet = p_pallet), 0)::int
+$$;
+grant execute on function public.cer_saldo(uuid) to authenticated;
+
+-- ao gravar um movimento: autoria, obra do pallet e não deixar o saldo ficar negativo
+create or replace function public.cer_mov_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare s int; pc int;
+begin
+  perform 1 from public.cer_pallets where id = new.pallet for update;
+  select obra into new.obra from public.cer_pallets where id = new.pallet;
+  if new.tipo <> 'ajuste' and new.pecas <= 0 then raise exception 'Informe a quantidade.'; end if;
+  if tg_op = 'INSERT' then
+    new.por := lower(coalesce(auth.jwt() ->> 'email', new.por)); new.em := now();
+    s := public.cer_saldo(new.pallet);
+  else
+    new.por := old.por; new.em := old.em;
+    s := public.cer_saldo(new.pallet) + case when old.tipo in ('entrega', 'quebra') then old.pecas else -old.pecas end;
+  end if;
+  if (new.tipo in ('entrega', 'quebra') and new.pecas > s) or (new.tipo = 'ajuste' and s + new.pecas < 0) then
+    select pr.pecas_cx into pc from public.cer_pallets pl join public.cer_produtos pr on pr.id = pl.produto where pl.id = new.pallet;
+    raise exception 'O pallet tem só % caixa(s)% no saldo.', s / pc, case when s % pc > 0 then ' e ' || (s % pc) || ' peça(s)' else '' end;
+  end if;
+  if new.funcionario is not null and coalesce(new.funcionario_nome, '') = '' then
+    select nome into new.funcionario_nome from public.pend_funcionarios where id = new.funcionario;
+  end if;
+  return new;
+end $$;
+drop trigger if exists cer_mov_ao_gravar on public.cer_movs;
+create trigger cer_mov_ao_gravar before insert or update on public.cer_movs for each row execute function public.cer_mov_ao_gravar();
+
+create or replace function public.cer_pallet_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then new.recebido_por := lower(coalesce(auth.jwt() ->> 'email', new.recebido_por));
+  else new.recebido_por := old.recebido_por; new.obra := old.obra; end if;
+  new.serie := nullif(trim(coalesce(new.serie, '')), '');
+  if (select obra from public.cer_produtos where id = new.produto) is distinct from new.obra then
+    raise exception 'Produto de outra obra.'; end if;
+  return new;
+end $$;
+drop trigger if exists cer_pallet_ao_gravar on public.cer_pallets;
+create trigger cer_pallet_ao_gravar before insert or update on public.cer_pallets for each row execute function public.cer_pallet_ao_gravar();
+
+create or replace function public.cer_estim_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.atualizado_por := lower(coalesce(auth.jwt() ->> 'email', new.atualizado_por)); new.atualizado_em := now();
+  return new;
+end $$;
+drop trigger if exists cer_estim_ao_gravar on public.cer_estimativas;
+create trigger cer_estim_ao_gravar before insert or update on public.cer_estimativas for each row execute function public.cer_estim_ao_gravar();
+
+-- tempo real (a tela do almoxarifado e a da engenharia se atualizam sozinhas)
+do $x$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'cer_movs') then
+      alter publication supabase_realtime add table public.cer_movs; end if;
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'cer_pallets') then
+      alter publication supabase_realtime add table public.cer_pallets; end if;
+  end if;
+end $x$;
+
+-- ---------------------------------------------------------------------
+-- 3. Arquivos: ceramicas/<obra>/… (foto da etiqueta do pallet)
+-- ---------------------------------------------------------------------
+create or replace function public.arquivo_ok(p_nome text, p_editar boolean) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when split_part(p_nome, '/', 1) in ('risco', 'concretagem', 'fachada')
+      then public.painel_ok(split_part(p_nome, '/', 1) || ':' || split_part(p_nome, '/', 2), p_editar)
+    when split_part(p_nome, '/', 1) = 'obras'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'seguranca') or (not p_editar and public.perfil_atual() is not null), false)
+    when p_nome like 'pendencias/%/plantas/%'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and (not p_editar or public.ferramenta_ok('risco', true))
+    when split_part(p_nome, '/', 1) = 'pendencias'
+      then public.pend_visivel_id(split_part(p_nome, '/', 3))
+           and (not p_editar or coalesce(public.perfil_atual() <> 'consulta', false))
+    when split_part(p_nome, '/', 1) = 'personalizacoes'
+      then case when p_editar then public.pers_edita(split_part(p_nome, '/', 2))
+                else public.pers_edita(split_part(p_nome, '/', 2)) or public.pers_visivel_id(split_part(p_nome, '/', 3)) end
+    when split_part(p_nome, '/', 1) = 'ceramicas'
+      then case when p_editar then public.cer_estoque(split_part(p_nome, '/', 2)) else public.cer_ve(split_part(p_nome, '/', 2)) end
+    else false end
+$$;
+
+-- ---------------------------------------------------------------------
+-- 4. Obra Start: o porcelanato dos banheiros, a estimativa e os azulejistas
+-- ---------------------------------------------------------------------
+do $x$
+declare pid uuid; ofi text;
+begin
+  if not exists (select 1 from public.obras where id = 'start') then return; end if;
+  -- ofício de quem assenta cerâmica (usa o nome que a empresa já tem)
+  select valor into ofi from public.pend_listas where tipo = 'disciplina'
+    and lower(valor) in ('azulejista', 'ceramista', 'revestimento', 'ladrilheiro', 'assentador')
+    order by array_position(array['azulejista', 'ceramista', 'revestimento', 'ladrilheiro', 'assentador'], lower(valor)) limit 1;
+  if ofi is null then
+    ofi := 'Azulejista';
+    insert into public.pend_listas (tipo, valor, ordem, extra)
+    select 'disciplina', ofi, coalesce(max(ordem), 0) + 1, '{}' from public.pend_listas where tipo = 'disciplina';
+  end if;
+  insert into public.pend_funcionarios (obra, nome, cargos, ativo)
+  select 'start', n, array[ofi], true from unnest(array['Rodrigo', 'Mauro']) n
+  where not exists (select 1 from public.pend_funcionarios f where f.obra = 'start' and lower(f.nome) = lower(n));
+
+  if exists (select 1 from public.cer_produtos where obra = 'start') then return; end if;
+  insert into public.cer_produtos (obra, codigo, nome, larg_cm, comp_cm, pecas_cx, cx_pallet)
+  values ('start', '8067005', 'SERRA AMENDOA ESM ACET 60X60R', 60, 60, 6, 40) returning id into pid;
+  insert into public.cer_estimativas (obra, produto, grupo, local, final, ambiente, qtd, partes, ordem)
+  select 'start', pid, 'Banheiros', 'apto', f, amb, q,
+         jsonb_build_array(jsonb_build_object('parte', 'Piso', 'tipo', 'area', 'medida', piso),
+                           jsonb_build_object('parte', 'Parede', 'tipo', 'area', 'medida', 6.72),
+                           jsonb_build_object('parte', 'Rodapé', 'tipo', 'linear', 'medida', per, 'altura_cm', 10)), o
+  from (values
+    ('01', 'Banheiro social', 10, 2.39, 5.12, 1), ('01', 'Banheiro suíte', 10, 2.23, 5.35, 2),
+    ('02', 'Banheiro', 10, 2.41, 5.15, 3), ('03', 'Banheiro', 9, 2.23, 5.36, 4), ('04', 'Banheiro', 9, 2.23, 5.36, 5),
+    ('05', 'Banheiro', 9, 2.23, 5.36, 6), ('06', 'Banheiro', 9, 2.23, 5.36, 7), ('07', 'Banheiro', 9, 2.23, 5.36, 8),
+    ('08', 'Banheiro', 5, 2.23, 5.35, 9), ('09', 'Banheiro', 5, 2.23, 5.35, 10), ('10', 'Banheiro', 5, 2.23, 5.35, 11),
+    ('11', 'Banheiro', 5, 2.23, 5.35, 12), ('12', 'Banheiro', 5, 2.23, 5.35, 13)
+  ) v(f, amb, q, piso, per, o);
+end $x$;
+$p20$;
+  update public.banco_versao set versao = 20, atualizado_em = now();
+  raise notice 'Passo 20 aplicado: Cerâmicas e perfil Almoxarifado';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin

@@ -135,11 +135,12 @@ const PERFIS = [
   ['engenharia', 'Engenharia', 'Edita Risco, Concretagem e Fachadas. Abre, aprova e fecha pendências. Registra as personalizações e libera as frentes.'],
   ['seguranca', 'Segurança', 'Técnicos de segurança do trabalho. Edita o Mapa de Risco e registra pendências oficiais direto, sem passar pela Engenharia; avalia e fecha as de segurança. Não vê Concretagem nem Fachadas.'],
   ['campo', 'Campo', 'Equipes que corrigem. Pendências dos seus ofícios (marca como corrigida e sugere novas) e as personalizações que afetam o seu serviço, para dar “Estou ciente”.'],
-  ['consulta', 'Consulta', 'Só visualiza os mapas e as pendências, sem alterar nada.']
+  ['consulta', 'Consulta', 'Só visualiza os mapas, as pendências e as cerâmicas, sem alterar nada.'],
+  ['almoxarifado', 'Almoxarifado', 'Só a ferramenta Cerâmicas: recebe os pallets (dados da etiqueta) e registra as entregas lendo o código do pallet pelo celular.']
 ];
 const rotPerfil = v => (PERFIS.find(p => p[0] === v) || [, v || 'Sem acesso'])[1];
 const descPerfil = v => (PERFIS.find(p => p[0] === v) || [, , ''])[2];
-const BANCO_ESPERADO = 19;   // versão do banco.sql que esta tela espera
+const BANCO_ESPERADO = 20;   // versão do banco.sql que esta tela espera
 
 let NV = null, sb = null, LISTA = [], DISC = [], OBRAS = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '', VERSAO = null;
 const nomeDe = e => { const u = LISTA.find(x => x.email === String(e || '').toLowerCase()); return (u && u.nome) || (NV ? NV.pessoas.nome(e) : String(e || '').split('@')[0]); };
@@ -206,7 +207,7 @@ const FILTROS = {
   todos: ['Todos', () => true], aguardando: ['Aguardando liberação', aguardando], convite: ['Convite não aceito', conviteAberto],
   admin: ['Administrador', u => perfilDe(u) === 'admin'], engenharia: ['Engenharia', u => perfilDe(u) === 'engenharia'],
   seguranca: ['Segurança', u => perfilDe(u) === 'seguranca'], campo: ['Campo', u => perfilDe(u) === 'campo'],
-  consulta: ['Consulta', u => perfilDe(u) === 'consulta'], semobra: ['Sem obra', semObra]
+  consulta: ['Consulta', u => perfilDe(u) === 'consulta'], almoxarifado: ['Almoxarifado', u => perfilDe(u) === 'almoxarifado'], semobra: ['Sem obra', semObra]
 };
 function telaPessoas() {
   const q = BUSCA.trim().toLowerCase();
