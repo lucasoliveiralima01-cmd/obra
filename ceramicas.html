@@ -166,6 +166,7 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
 }
 
 /* ---------- cerâmicas ---------- */
+#tabBody{display:grid;gap:14px;align-content:start}
 .resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:2px}
 .kpi b{font:700 1.45rem/1.1 var(--f-disp)}
@@ -275,7 +276,7 @@ details.mais[open]>summary{margin-bottom:10px}
 <header class="brand"><div class="brand-in">
   <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/ceramicas.svg" alt="" width="40" height="40"></a>
   <div class="ttl"><h1>Cerâmicas</h1><span class="obra" id="obraNome">Carregando…</span></div>
-  <div class="hctl"></div>
+  <div class="hctl"><button class="hbtn" id="bEst" type="button" data-menu title="Quanto vai em cada ambiente e a margem de perda">Estimativa de cerâmicas</button></div>
 </div></header>
 
 <main id="main"><p class="muted">Carregando…</p></main>
@@ -326,7 +327,7 @@ const TIPOS = { entrega: 'Entrega', devolucao: 'Devolução', quebra: 'Quebra', 
 
 let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
 let CFG = { pavimentos: [] }, PROD = [], EST = [], PAL = [], MOV = [], FUNC = [];
-let TAB = 'estoque';
+let TAB = 'entregas';
 const ULT = { func: '', pav: '' };   // última pessoa e pavimento escolhidos (entregas em sequência)
 const F = { pav: '', func: '', tipo: '' };
 
@@ -411,8 +412,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && NV
 function render() {
   const m = $('main'), nEst = PAL.filter(p => saldo(p) > 0).length;
   m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Cerâmicas</span></nav>
-    <div class="tabs"><div class="seg">${[['estoque', 'Estoque', nEst], ['entregas', 'Entregas'], ['aptos', '<span class="lg">Apartamentos</span><span class="sm">Aptos</span>'], ['estimativa', 'Estimativa']]
-      .map(([k, t, n]) => `<button type="button" class="tab" data-tab="${k}" aria-pressed="${TAB === k}">${t}${n ? '<b>' + n + '</b>' : ''}</button>`).join('')}</div></div>
+    ${TAB === 'estimativa' ? `<div class="tabs" style="justify-content:space-between"><h2 style="margin:0;font:700 1.25rem var(--f-disp)">Estimativa</h2><button type="button" class="btn ghost sm" data-tab="entregas">‹ Voltar às entregas</button></div>`
+      : `<div class="tabs"><div class="seg">${[['entregas', 'Entregas'], ['estoque', 'Estoque', nEst], ['aptos', '<span class="lg">Apartamentos</span><span class="sm">Aptos</span>']]
+      .map(([k, t, n]) => `<button type="button" class="tab" data-tab="${k}" aria-pressed="${TAB === k}">${t}${n ? '<b>' + n + '</b>' : ''}</button>`).join('')}</div></div>`}
     <div id="tabBody"></div>`;
   m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
   ({ estoque: renderEstoque, entregas: renderEntregas, aptos: renderAptos, estimativa: renderEstimativa })[TAB]();
@@ -511,7 +513,7 @@ function renderAptos() {
       <div class="kpi${nAc ? ' ruim' : ''}"><b>${nAc}</b><span>acima do estimado</span></div><div class="kpi${nMist ? ' ruim' : ''}"><b>${nMist}</b><span>com duas partidas (tonalidade/lote)</span></div></div>
     <div class="leg2"><span><i style="background:var(--line)"></i>Nada entregue</span><span><i style="background:var(--warn)"></i>Parcial</span><span><i style="background:var(--ok)"></i>Completo</span><span><i style="background:var(--bad)"></i>Acima do estimado</span></div>
     ${html || '<div class="vazio"><h3>Nenhum apartamento cadastrado</h3><p class="muted" style="margin:0">Os apartamentos de cada pavimento vêm do cadastro das Pendências (Listas e regras → Pavimentos). O ambiente é ligado pelo final do apartamento (ex.: 401 → final 01).</p></div>'}`
-    : `<div class="vazio"><h3>Sem estimativa</h3><p class="muted" style="margin:0">Cadastre na aba <b>Estimativa</b> quanto vai em cada ambiente para comparar com o que foi entregue.</p></div>`;
+    : `<div class="vazio"><h3>Sem estimativa</h3><p class="muted" style="margin:0">Cadastre em <b>Configurações (engrenagem) → Estimativa de cerâmicas</b> quanto vai em cada ambiente para comparar com o que foi entregue.</p></div>`;
   B.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => { const [p, u, a] = JSON.parse(b.dataset.ap); fichaDestino(p, u, a); });
 }
 function fichaDestino(pav, un, amb) {
@@ -795,7 +797,7 @@ function formEntrega(palId) {
           ${edita() ? `<div class="fld" style="margin-top:8px"><label for="eExc">Liberar mesmo assim (Engenharia): justificativa</label><input id="eExc" value="${esc(f.exc)}" placeholder="Ex.: partida acabou; fornecedor sem estoque"></div>` : ''}</div>` : ''}
         ${locais.length ? `<div class="fld"><span class="l">Locais no ${esc(f.pav)}</span><div class="opts">${locais.map(chip).join('')}</div>
           ${outras.length && !liberadoPorExc ? '' : '<div class="opts"><button type="button" class="lnk" id="eTodosPav">Marcar todos os que faltam neste andar</button></div>'}</div>`
-          : `<p class="muted" style="margin:0">${uns.length ? 'Nenhum ambiente estimado para os apartamentos deste andar (aba Estimativa).' : 'Este pavimento não tem apartamentos cadastrados (Listas e regras → Pavimentos).'}</p>`}` : ''}
+          : `<p class="muted" style="margin:0">${uns.length ? 'Nenhum ambiente estimado para os apartamentos deste andar (engrenagem → Estimativa de cerâmicas).' : 'Este pavimento não tem apartamentos cadastrados (Listas e regras → Pavimentos).'}</p>`}` : ''}
       ${f.sel.length ? `<div class="tot"><span><b>${f.sel.length} local(is) marcado(s)</b> · precisam de <b>${fmtQ(N, n)}</b> (${N} peças) = <b>${B} cx</b></span>
         <span style="display:flex;flex-wrap:wrap;gap:4px 10px;font-size:.85rem">${f.sel.map(d => `<span>${esc(d.pav.replace(/Pavimento/i, 'Pav.'))} ${esc(rot(d))}: ${fmtQ(precisa(d) || 0, n)} <button type="button" class="lnk" data-tira='${esc(K(d))}' aria-label="Desmarcar" style="padding:0">×</button></span>`).join('')}</span></div>` : ''}
       <div class="fld"><span class="l">Quantidade <span class="req">*</span></span><div class="qtd"><button type="button" id="mMenos" aria-label="Menos uma caixa">−</button><input id="mCx" type="number" min="0" inputmode="numeric" value="${f.cx ?? ''}" aria-label="Caixas"><button type="button" id="mMais" aria-label="Mais uma caixa">+</button><span>caixas</span></div>
@@ -1032,9 +1034,9 @@ async function comprimir(arq) {
   }
   $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Cerâmicas';
   $('fab').onclick = lerEtiqueta;
+  $('bEst').onclick = () => { TAB = 'estimativa'; render(); window.scrollTo(0, 0); };
   const q = new URLSearchParams(location.search);
   if (['estoque', 'entregas', 'aptos', 'estimativa'].includes(q.get('aba'))) TAB = q.get('aba');
-  else if (NV.perfil !== 'almoxarifado' && !PAL.length && EST.length) TAB = 'estimativa';
   render();
   // carrega o leitor em segundo plano (a primeira leitura fica rápida)
   if (estoque()) setTimeout(() => detector().catch(() => {}), 1500);
