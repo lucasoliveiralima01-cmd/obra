@@ -363,7 +363,8 @@ const saldo = p => inicial(p) - (SAI[p.id] || 0);
 const palDe = id => PAL.find(p => p.id === id) || null;
 const partidaTxt = p => [p.tonalidade ? 'TON ' + p.tonalidade : '', p.tamanho ? 'TAM ' + p.tamanho : '', p.lote ? 'Lote ' + p.lote : ''].filter(Boolean).join(' · ') || 'Sem tonalidade/lote';
 const partidaK = p => [p.produto, p.qualidade || '', p.tonalidade || '', p.tamanho || '', p.lote || ''].join('|');
-const plt = p => p.plt ? 'PLT ' + p.plt : p.serie ? 'Série ' + p.serie : 'Pallet';
+// o pallet é identificado pelo código da etiqueta (série)
+const plt = p => p.serie ? 'Pallet ' + p.serie : 'Pallet sem código';
 // destino de uma entrega
 const destK = (pav, un, amb) => [pav || '', un || '', amb || ''].join('|');
 const destTxt = m => [m.unidade ? 'Apto ' + m.unidade : m.pavimento, m.unidade ? m.pavimento : '', m.ambiente].filter(Boolean).join(' · ') || 'Sem destino';
@@ -452,7 +453,7 @@ function prodHtml(pr) {
       <div class="leg2"><span><i style="background:var(--accent)"></i>Entregue ${fmtCx(ent, n)}</span><span><i style="background:var(--ok)"></i>Em estoque ${fmtCx(sal, n)}</span><span>Estimado para a obra: <b>${fmtCx(nec, n)}</b> (${n1(nec / n / (+pr.cx_pallet || 40))} pallets)</span>${falta > 0 ? `<span class="ruim"><b style="color:var(--bad)">Falta receber ${fmtCx(falta, n)}</b></span>` : rec ? '<span style="color:var(--ok)"><b>Recebido tudo o estimado</b></span>' : ''}</div></div>` : ''}
     ${[...parts.values()].map(ps => { const s = ps.reduce((a, p) => a + Math.max(0, saldo(p)), 0), vz = ps.filter(p => saldo(p) <= 0).length;
       return `<div class="partida"><h3><span>${esc(partidaTxt(ps[0]))}${ps[0].qualidade && ps[0].qualidade !== 'A' ? ' <span class="tag warn">Qual ' + esc(ps[0].qualidade) + '</span>' : ''}</span><small>${fmtQ(s, n)} em ${ps.filter(p => saldo(p) > 0).length} pallet(s)</small></h3>
-        ${ps.map(p => `<button type="button" class="pl${saldo(p) <= 0 ? ' vazio-pl' : ''}" data-pal="${esc(p.id)}" ${saldo(p) <= 0 ? 'hidden' : ''}><span class="n">${esc(plt(p))}</span><span class="d">${p.posicao ? esc(p.posicao) + ' · ' : ''}recebido ${fmtD(p.recebido_em)}${p.serie ? ' · série ' + esc(p.serie) : ''}</span><span class="q">${fmtQ(Math.max(0, saldo(p)), n)}<small>de ${p.caixas} cx</small></span></button>`).join('')}
+        ${ps.map(p => `<button type="button" class="pl${saldo(p) <= 0 ? ' vazio-pl' : ''}" data-pal="${esc(p.id)}" ${saldo(p) <= 0 ? 'hidden' : ''}><span class="n">${esc(p.serie || 'sem código')}</span><span class="d">${p.posicao ? esc(p.posicao) + ' · ' : ''}recebido ${fmtD(p.recebido_em)}</span><span class="q">${fmtQ(Math.max(0, saldo(p)), n)}<small>de ${p.caixas} cx</small></span></button>`).join('')}
         ${vz ? `<button type="button" class="lnk" data-vazios style="padding:6px 10px">Mostrar ${vz} pallet(s) já esvaziado(s)</button>` : ''}</div>`; }).join('')}
   </section>`;
 }
@@ -649,7 +650,7 @@ function formProduto(id) {
 }
 
 /* ---------------- Pallet: ficha e recebimento ---------------- */
-const CAMPOS_ETQ = [['qualidade', 'Qualidade (QUAL)', 'A'], ['tonalidade', 'Tonalidade (TON)', '5007'], ['tamanho', 'Tamanho/calibre (TAM)', '2'], ['lote', 'Lote', '0903857'], ['plt', 'Nº do pallet (PLT)', '00041']];
+const CAMPOS_ETQ = [['qualidade', 'Qualidade (QUAL)', 'A'], ['tonalidade', 'Tonalidade (TON)', '5007'], ['tamanho', 'Tamanho/calibre (TAM)', '2'], ['lote', 'Lote', '0903857']];
 const CAMPOS_MAIS = [['mar', 'MAR', '037'], ['tp', 'TP', '073'], ['pack', 'PACK', '006517'], ['ordem_fab', 'OF (ordem de fabricação)', '00441112'], ['turno', 'Turno', 'C'], ['fabricado', 'Data de fabricação', '22/08/26 01:02'], ['peso', 'Peso (kg)', '1524']];
 function fichaPallet(id) {
   const p = palDe(id); if (!p) { closeSheet(); return; }
