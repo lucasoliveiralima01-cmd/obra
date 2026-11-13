@@ -3384,6 +3384,84 @@ $p20$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 21: Cerâmicas: uma partida por andar e entrega para vários locais
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 21 then return; end if;
+  execute $p21$
+-- uma entrega pode ir para vários locais: cada local é uma linha, ligadas pelo mesmo "entrega"
+alter table public.cer_movs add column if not exists entrega uuid;
+create index if not exists cer_movs_entrega on public.cer_movs (entrega) where entrega is not null;
+-- justificativa da Engenharia quando libera outra partida num andar (exceção registrada)
+alter table public.cer_movs add column if not exists excecao text;
+
+-- partida = produto + qualidade + tonalidade + tamanho + lote
+create or replace function public.cer_partida(p_pallet uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select concat_ws('|', produto::text, coalesce(qualidade, ''), coalesce(tonalidade, ''), coalesce(tamanho, ''), coalesce(lote, ''))
+  from public.cer_pallets where id = p_pallet
+$$;
+
+-- partidas do mesmo produto que estão no andar (entregues menos devolvidas), fora a do pallet
+create or replace function public.cer_outras_partidas(p_obra text, p_pavimento text, p_pallet uuid, p_exceto uuid default null)
+returns table (tonalidade text, tamanho text, lote text, pecas int)
+language sql stable security definer set search_path = public as $$
+  select pl.tonalidade, pl.tamanho, pl.lote, sum(case when m.tipo = 'entrega' then m.pecas else -m.pecas end)::int
+  from public.cer_movs m join public.cer_pallets pl on pl.id = m.pallet
+  where m.obra = p_obra and m.pavimento = p_pavimento and m.tipo in ('entrega', 'devolucao')
+    and m.id is distinct from p_exceto
+    and pl.produto = (select produto from public.cer_pallets where id = p_pallet)
+    and public.cer_partida(pl.id) <> public.cer_partida(p_pallet)
+  group by public.cer_partida(pl.id), pl.tonalidade, pl.tamanho, pl.lote
+  having sum(case when m.tipo = 'entrega' then m.pecas else -m.pecas end) > 0
+$$;
+grant execute on function public.cer_partida(uuid), public.cer_outras_partidas(text, text, uuid, uuid) to authenticated;
+
+create or replace function public.cer_mov_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare s int; pc int; outra record;
+begin
+  perform 1 from public.cer_pallets where id = new.pallet for update;
+  select obra into new.obra from public.cer_pallets where id = new.pallet;
+  if new.tipo <> 'ajuste' and new.pecas <= 0 then raise exception 'Informe a quantidade.'; end if;
+  if tg_op = 'INSERT' then
+    new.por := lower(coalesce(auth.jwt() ->> 'email', new.por)); new.em := now();
+    s := public.cer_saldo(new.pallet);
+  else
+    new.por := old.por; new.em := old.em;
+    s := public.cer_saldo(new.pallet) + case when old.tipo in ('entrega', 'quebra') then old.pecas else -old.pecas end;
+  end if;
+  if (new.tipo in ('entrega', 'quebra') and new.pecas > s) or (new.tipo = 'ajuste' and s + new.pecas < 0) then
+    select pr.pecas_cx into pc from public.cer_pallets pl join public.cer_produtos pr on pr.id = pl.produto where pl.id = new.pallet;
+    raise exception 'O pallet tem só % caixa(s)% no saldo.', s / pc, case when s % pc > 0 then ' e ' || (s % pc) || ' peça(s)' else '' end;
+  end if;
+  -- uma partida por andar: outra tonalidade/tamanho/lote do mesmo produto não entra
+  -- (só a Engenharia libera, com justificativa)
+  new.excecao := nullif(trim(coalesce(new.excecao, '')), '');
+  if new.tipo = 'entrega' and new.pavimento is not null then
+    select * into outra from public.cer_outras_partidas(new.obra, new.pavimento, new.pallet, case when tg_op = 'UPDATE' then old.id end) limit 1;
+    if found then
+      if new.excecao is null or not coalesce(public.perfil_atual() in ('admin', 'engenharia'), false) then
+        raise exception 'O % já recebeu outra partida deste produto (TON % · TAM % · Lote %). Não é permitido misturar partidas no mesmo andar.',
+          new.pavimento, coalesce(outra.tonalidade, '—'), coalesce(outra.tamanho, '—'), coalesce(outra.lote, '—');
+      end if;
+    else
+      new.excecao := null;
+    end if;
+  else
+    new.excecao := null;
+  end if;
+  if new.funcionario is not null and coalesce(new.funcionario_nome, '') = '' then
+    select nome into new.funcionario_nome from public.pend_funcionarios where id = new.funcionario;
+  end if;
+  return new;
+end $$;
+$p21$;
+  update public.banco_versao set versao = 21, atualizado_em = now();
+  raise notice 'Passo 21 aplicado: uma partida por andar e entrega para vários locais';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin

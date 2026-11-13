@@ -334,7 +334,7 @@ const F = { pav: '', func: '', tipo: '' };
 const estoque = () => NV && ['admin', 'engenharia', 'almoxarifado'].includes(NV.perfil);
 const edita = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
 const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
-const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=O pallet|Informe|Produto)/, '');
+const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=O pallet|O .+ já recebeu|Informe|Produto)/, '');
 
 /* ---------------- contas ---------------- */
 const PROD0 = { nome: '?', larg_cm: 60, comp_cm: 60, pecas_cx: 6, cx_pallet: 40 };
@@ -461,7 +461,12 @@ function renderEntregas() {
   const pavs = [...new Set(MOV.map(m => m.pavimento).filter(Boolean))].sort((a, b) => ordPav(a) - ordPav(b));
   const pess = [...new Set(MOV.map(m => m.funcionario_nome).filter(Boolean))].sort();
   const vis = MOV.filter(m => (!F.pav || m.pavimento === F.pav) && (!F.func || m.funcionario_nome === F.func) && (!F.tipo || m.tipo === F.tipo));
-  const dias = new Map(); vis.forEach(m => { const d = diaDe(m.em); if (!dias.has(d)) dias.set(d, []); dias.get(d).push(m); });
+  // uma entrega para vários locais vira um cartão só (m.locais = as linhas dela)
+  const grupos = []; const porEnt = new Map();
+  vis.forEach(m => { if (m.entrega) { if (porEnt.has(m.entrega)) { const g = porEnt.get(m.entrega); g.locais.push(m); g.pecasT += m.pecas; return; } const g = Object.assign({}, m, { locais: [m], pecasT: m.pecas }); porEnt.set(m.entrega, g); grupos.push(g); }
+    else grupos.push(Object.assign({}, m, { locais: [m], pecasT: m.pecas })); });
+  const dias = new Map(); grupos.forEach(m => { const d = diaDe(m.em); if (!dias.has(d)) dias.set(d, []); dias.get(d).push(m); });
+  const locTxt = m => m.locais.length > 1 ? m.locais.length + ' locais: ' + m.locais.map(x => (x.unidade || x.pavimento) + (x.unidade && ambientesDe(x.unidade).length > 1 ? ' ' + String(x.ambiente || '').replace(/^Banheiro\s*/i, '') : '')).join(', ') + ' · ' + [...new Set(m.locais.map(x => x.pavimento))].join(', ') : destTxt(m);
   const podeApagar = m => edita() || (estoque() && String(m.por || '').toLowerCase() === String(NV.usuario.email || '').toLowerCase() && Date.now() - new Date(m.em) < 864e5);
   B.innerHTML = `<div class="filtros">
       <select class="fsel${F.tipo ? ' on' : ''}" id="fTipo" aria-label="Tipo"><option value="">Todos os movimentos</option>${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}" ${F.tipo === k ? 'selected' : ''}>${t}s</option>`).join('')}</select>
@@ -469,16 +474,17 @@ function renderEntregas() {
       <select class="fsel${F.func ? ' on' : ''}" id="fFunc" aria-label="Pessoa"><option value="">Todas as pessoas</option>${pess.map(n => `<option ${n === F.func ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
     </div>
     ${vis.length ? [...dias.entries()].map(([d, ms]) => `<section class="dia"><h3>${d === diaDe(new Date()) ? 'Hoje' : fmtD(d + 'T12:00:00')}</h3>${ms.map(m => { const p = palDe(m.pallet) || {}, n = p.id ? pcx(p) : 6;
-        return `<div class="mv ${m.tipo}"><span class="h">${fmtH(m.em)}</span><span class="t">${m.tipo === 'entrega' ? esc(m.funcionario_nome || 'Sem pessoa') + ' · ' + esc(destTxt(m)) : TIPOS[m.tipo] + (m.unidade || m.pavimento ? ' · ' + esc(destTxt(m)) : '')}
-          <small>${esc(plt(p))} · ${esc(partidaTxt(p))} · por ${esc(nomeDe(m.por))}${m.obs ? ' · ' + esc(m.obs) : ''}</small></span>
-          <span style="display:grid;justify-items:end"><span class="q">${m.tipo === 'devolucao' ? '+' : ''}${fmtQ(m.tipo === 'ajuste' ? m.pecas : m.pecas, n)}</span>${podeApagar(m) ? `<button type="button" class="x" data-del="${esc(m.id)}">Desfazer</button>` : ''}</span></div>`; }).join('')}</section>`).join('')
+        return `<div class="mv ${m.tipo}"><span class="h">${fmtH(m.em)}</span><span class="t">${m.tipo === 'entrega' ? esc(m.funcionario_nome || 'Sem pessoa') + ' · ' + esc(locTxt(m)) : TIPOS[m.tipo] + (m.unidade || m.pavimento ? ' · ' + esc(destTxt(m)) : '')}
+          <small>${esc(plt(p))} · ${esc(partidaTxt(p))} · por ${esc(nomeDe(m.por))}${m.obs ? ' · ' + esc(m.obs) : ''}${m.excecao ? ' · <b style="color:var(--bad)">outra partida liberada pela Engenharia: ' + esc(m.excecao) + '</b>' : ''}</small></span>
+          <span style="display:grid;justify-items:end"><span class="q">${m.tipo === 'devolucao' ? '+' : ''}${fmtQ(m.pecasT, n)}</span>${podeApagar(m) ? `<button type="button" class="x" data-del="${esc(m.entrega || m.id)}" data-ent="${m.entrega ? 1 : ''}">Desfazer</button>` : ''}</span></div>`; }).join('')}</section>`).join('')
       : `<div class="vazio"><h3>${MOV.length ? 'Nenhum movimento com estes filtros' : 'Nenhuma entrega registrada'}</h3><p class="muted" style="margin:0">${estoque() ? 'Para entregar, toque em <b>Ler etiqueta</b> e aponte o celular para o código do pallet.' : 'As entregas do almoxarifado aparecem aqui.'}</p></div>`}`;
   $('fTipo').onchange = e => { F.tipo = e.target.value; renderEntregas(); };
   $('fPav').onchange = e => { F.pav = e.target.value; renderEntregas(); };
   $('fFunc').onchange = e => { F.func = e.target.value; renderEntregas(); };
   B.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    const m = MOV.find(x => x.id === b.dataset.del); if (!m || !confirm('Desfazer este movimento (' + TIPOS[m.tipo].toLowerCase() + ' de ' + fmtQ(m.pecas, pcx(palDe(m.pallet) || {})) + ')? O saldo do pallet volta como estava.')) return;
-    const { error } = await sb.from('cer_movs').delete().eq('id', m.id); if (error) { toast('Não foi possível: ' + erroMsg(error)); return; } toast('Movimento desfeito.'); await recarregar(); });
+    const ent = !!b.dataset.ent, ms = MOV.filter(x => ent ? x.entrega === b.dataset.del : x.id === b.dataset.del), m = ms[0];
+    if (!m || !confirm('Desfazer ' + (ms.length > 1 ? 'esta entrega (' + ms.length + ' locais, ' : 'este movimento (' + TIPOS[m.tipo].toLowerCase() + ' de ') + fmtQ(ms.reduce((a, x) => a + x.pecas, 0), pcx(palDe(m.pallet) || {})) + ')? O saldo do pallet volta como estava.')) return;
+    const { error } = await sb.from('cer_movs').delete().eq(ent ? 'entrega' : 'id', b.dataset.del); if (error) { toast('Não foi possível: ' + erroMsg(error)); return; } toast('Movimento desfeito.'); await recarregar(); });
 }
 
 /* ---------------- Apartamentos: entregue × estimado ---------------- */
@@ -735,8 +741,109 @@ function formPallet(id, pre) {
   desenhar();
 }
 
-/* ---------------- Entrega, devolução e quebra ---------------- */
+/* ---------------- Entrega para um ou vários locais ----------------
+   - Uma partida por andar: se o andar já tem outra partida (tonalidade, tamanho ou lote)
+     deste produto, os locais dele ficam bloqueados (a Engenharia pode liberar com justificativa).
+   - As caixas têm que bater com o que os locais marcados ainda precisam (pela estimativa):
+     nem menos (faltaria num local) nem mais (sobraria). */
+// partidas deste produto que já estão no andar (entregues menos devolvidas), diferentes da do pallet
+function outrasPartidas(pav, p) {
+  const net = new Map();
+  for (const m of MOV) { if (m.pavimento !== pav || !['entrega', 'devolucao'].includes(m.tipo)) continue; const q = palDe(m.pallet); if (!q || q.produto !== p.produto) continue;
+    const k = partidaK(q); if (!net.has(k)) net.set(k, { p: q, v: 0 }); net.get(k).v += m.tipo === 'entrega' ? m.pecas : -m.pecas; }
+  return [...net.entries()].filter(([k, o]) => k !== partidaK(p) && o.v > 0).map(([, o]) => o.p);
+}
+function formEntrega(palId) {
+  const p = palDe(palId); if (!p) return;
+  const pr = prodDe(p.produto), n = pcx(p);
+  const f = { func: ULT.func, pav: ULT.pav || '', sel: [], cx: null, cxMao: false, pc: 0, obs: '', todos: false, exc: '' };
+  const assenta = FUNC.filter(x => (x.cargos || []).some(c => ASSENTA.includes(String(c).toLowerCase())));
+  const K = d => destK(d.pav, d.un, d.amb);
+  // quanto um local ainda precisa (peças), pela estimativa; null = sem estimativa
+  const precisa = d => { const e = estDe(d.un || null, d.amb, p.produto); if (!e) return null; return Math.max(0, totalEst(e) - noDestino(d.pav, d.un, d.amb).pecas); };
+  const rot = d => (d.un ? d.un : 'Pav.') + (ambientesDe(d.un || null, p.produto).length > 1 || !d.un ? ' · ' + (d.un ? d.amb.replace(/^Banheiro\s*/i, '') || d.amb : d.amb) : '');
+  const desenhar = () => {
+    const s = saldo(p);
+    const bloq = pav => outrasPartidas(pav, p);
+    const N = f.sel.reduce((a, d) => a + (precisa(d) || 0), 0), B = Math.ceil(N / n - 1e-9);
+    if (!f.cxMao) { f.cx = f.sel.length ? B : null; f.pc = 0; }
+    const q = (f.cx || 0) * n + (f.pc || 0);
+    // validação: as caixas têm que fechar com os locais (a última caixa pode sobrar umas peças)
+    let ok = false, aviso = '';
+    if (!f.sel.length) aviso = '';
+    else if (!N) aviso = 'Os locais marcados já receberam tudo o estimado.';
+    else if (q > s) aviso = `O pallet tem só ${fmtQ(s, n)}. Desmarque locais (os marcados precisam de ${fmtQ(N, n)}).`;
+    else if (q > limCx(N, n)) aviso = `${fmtQ(q, n)} é mais do que os locais marcados usam (${B} cx). Marque mais locais ou diminua para ${B} cx.`;
+    else if (q <= (B - 1) * n) aviso = `${fmtQ(q, n)} não cobre os locais marcados (precisam de ${B} cx). Aumente para ${B} cx ou desmarque um local.`;
+    else ok = true;
+    const pavAtual = f.pav ? CFG.pavimentos.find(x => x.nome === f.pav) : null, uns = pavAtual ? pavAtual.unidades || [] : [];
+    const outras = f.pav ? bloq(f.pav) : [], liberadoPorExc = outras.length && edita() && f.exc.trim();
+    const selDoPav = pav => f.sel.filter(d => d.pav === pav).length;
+    const chip = d => { const k = K(d), on = f.sel.some(x => K(x) === k), pn = precisa(d), dis = !on && (pn === 0 || pn == null || (outras.length && !liberadoPorExc));
+      return `<button type="button" class="opt" data-sel='${esc(JSON.stringify(d))}' aria-pressed="${on}" ${dis ? 'disabled style="opacity:.45"' : ''} title="${pn == null ? 'Sem estimativa' : pn === 0 ? 'Já recebeu tudo' : 'Precisa de ' + fmtQ(pn, n)}">${esc(rot(d))}${pn === 0 ? ' ✓' : ''}</button>`; };
+    const locais = [];
+    for (const u of uns) for (const e of ambientesDe(u, p.produto)) locais.push({ pav: f.pav, un: u, amb: e.ambiente });
+    for (const e of ambientesDe(null, p.produto)) locais.push({ pav: f.pav, un: '', amb: e.ambiente });
+    openSheet('Entregar', `
+      <div class="palinfo"><b>${esc(plt(p))} · ${esc(pr.nome)}</b><span class="tags"><span class="tag">${esc(partidaTxt(p))}</span>${p.qualidade ? `<span class="tag${p.qualidade !== 'A' ? ' warn' : ''}">Qual ${esc(p.qualidade)}</span>` : ''}</span><span>Saldo do pallet: <b>${fmtQ(s, n)}</b></span></div>
+      <div class="fld"><span class="l">Para quem <span class="req">*</span></span><div class="opts">${(f.todos || !assenta.length ? FUNC : assenta).map(x => `<button type="button" class="opt" data-func="${esc(x.id)}" aria-pressed="${f.func === x.id}">${esc(x.nome)}</button>`).join('')}
+        ${assenta.length && !f.todos ? '<button type="button" class="opt" data-todos style="border-style:dashed">Outra pessoa…</button>' : ''}</div>${!FUNC.length ? '<span class="muted">Nenhum funcionário cadastrado nesta obra (Listas e regras → Funcionários).</span>' : ''}</div>
+      <div class="fld"><span class="l">Para onde <span class="req">*</span> <span style="text-transform:none;letter-spacing:0">(marque um ou vários locais)</span></span>
+        <div class="opts">${CFG.pavimentos.map(x => { const b = bloq(x.nome).length, k = selDoPav(x.nome);
+          return `<button type="button" class="opt" data-pav="${esc(x.nome)}" aria-pressed="${f.pav === x.nome}"${b ? ' style="border-color:var(--bad)"' : ''}>${esc(x.nome)}${k ? ' <b>(' + k + ')</b>' : ''}${b ? ' ⛔' : ''}</button>`; }).join('')}</div></div>
+      ${f.pav ? `${outras.length ? `<div class="aviso2 bad"><b>${esc(f.pav)} já recebeu outra partida deste produto:</b> ${outras.map(x => esc(partidaTxt(x))).join(' e ')}. Este pallet é <b>${esc(partidaTxt(p))}</b>. Para não misturar tonalidade no mesmo andar, este pallet não pode ir para este andar${edita() ? '.' : '. Use um pallet da mesma partida ou fale com a Engenharia.'}
+          ${edita() ? `<div class="fld" style="margin-top:8px"><label for="eExc">Liberar mesmo assim (Engenharia): justificativa</label><input id="eExc" value="${esc(f.exc)}" placeholder="Ex.: partida acabou; fornecedor sem estoque"></div>` : ''}</div>` : ''}
+        ${locais.length ? `<div class="fld"><span class="l">Locais no ${esc(f.pav)}</span><div class="opts">${locais.map(chip).join('')}</div>
+          ${outras.length && !liberadoPorExc ? '' : '<div class="opts"><button type="button" class="lnk" id="eTodosPav">Marcar todos os que faltam neste andar</button></div>'}</div>`
+          : `<p class="muted" style="margin:0">${uns.length ? 'Nenhum ambiente estimado para os apartamentos deste andar (aba Estimativa).' : 'Este pavimento não tem apartamentos cadastrados (Listas e regras → Pavimentos).'}</p>`}` : ''}
+      ${f.sel.length ? `<div class="tot"><span><b>${f.sel.length} local(is) marcado(s)</b> · precisam de <b>${fmtQ(N, n)}</b> (${N} peças) = <b>${B} cx</b></span>
+        <span style="display:flex;flex-wrap:wrap;gap:4px 10px;font-size:.85rem">${f.sel.map(d => `<span>${esc(d.pav.replace(/Pavimento/i, 'Pav.'))} ${esc(rot(d))}: ${fmtQ(precisa(d) || 0, n)} <button type="button" class="lnk" data-tira='${esc(K(d))}' aria-label="Desmarcar" style="padding:0">×</button></span>`).join('')}</span></div>` : ''}
+      <div class="fld"><span class="l">Quantidade <span class="req">*</span></span><div class="qtd"><button type="button" id="mMenos" aria-label="Menos uma caixa">−</button><input id="mCx" type="number" min="0" inputmode="numeric" value="${f.cx ?? ''}" aria-label="Caixas"><button type="button" id="mMais" aria-label="Mais uma caixa">+</button><span>caixas</span></div>
+        <details class="mais"${f.pc ? ' open' : ''}><summary>Peças avulsas (caixa aberta)</summary><div class="qtd"><input id="mPc" type="number" min="0" max="${n - 1}" inputmode="numeric" value="${f.pc || ''}" aria-label="Peças avulsas"><span>peças (cada caixa tem ${n})</span></div></details>
+        ${aviso ? `<div class="aviso2 bad">${aviso}</div>` : ok ? `<span class="muted" style="color:var(--ok)">✓ ${fmtQ(q, n)} fecha com os locais marcados.</span>` : '<span class="muted">Marque os locais: a quantidade é calculada pela estimativa de cada um.</span>'}</div>
+      <div class="fld"><label for="mObs">Observação (opcional)</label><input id="mObs" value="${esc(f.obs)}"></div>`,
+      `<span class="msg" id="mMsg"></span><button class="btn" type="button" id="mOk" ${ok && f.func ? '' : 'aria-disabled="true"'}>Registrar entrega</button>`, true);
+    const Bx = $('ovlB');
+    const ler = () => { f.obs = $('mObs').value.trim(); if ($('eExc')) f.exc = $('eExc').value; const c = $('mCx').value === '' ? null : Math.max(0, parseInt($('mCx').value, 10) || 0), pc = Math.max(0, Math.min(n - 1, parseInt(($('mPc') || {}).value, 10) || 0));
+      if (c !== f.cx || pc !== (f.pc || 0)) { f.cx = c; f.pc = pc; f.cxMao = true; } };
+    const re = () => { const y = $('ovlB').scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    Bx.querySelectorAll('[data-func]').forEach(b => b.onclick = () => { ler(); f.func = b.dataset.func; re(); });
+    Bx.querySelectorAll('[data-todos]').forEach(b => b.onclick = () => { ler(); f.todos = true; re(); });
+    Bx.querySelectorAll('[data-pav]').forEach(b => b.onclick = () => { ler(); f.pav = b.dataset.pav; re(); });
+    Bx.querySelectorAll('[data-sel]').forEach(b => b.onclick = () => { ler(); const d = JSON.parse(b.dataset.sel), k = K(d), i = f.sel.findIndex(x => K(x) === k); if (i >= 0) f.sel.splice(i, 1); else f.sel.push(d); f.cxMao = false; re(); });
+    Bx.querySelectorAll('[data-tira]').forEach(b => b.onclick = () => { ler(); f.sel = f.sel.filter(x => K(x) !== b.dataset.tira); f.cxMao = false; re(); });
+    if ($('eTodosPav')) $('eTodosPav').onclick = () => { ler(); if (outras.length && !liberadoPorExc) return; for (const d of locais) if ((precisa(d) || 0) > 0 && !f.sel.some(x => K(x) === K(d))) f.sel.push(d); f.cxMao = false; re(); };
+    if ($('eExc')) $('eExc').oninput = () => { const tinha = !!f.exc.trim(); f.exc = $('eExc').value; if (tinha !== !!f.exc.trim()) { re(); const x = $('eExc'); x.focus(); x.setSelectionRange(x.value.length, x.value.length); } };
+    $('mMenos').onclick = () => { ler(); f.cx = Math.max(0, (f.cx || 0) - 1); f.cxMao = true; re(); };
+    $('mMais').onclick = () => { ler(); f.cx = (f.cx || 0) + 1; f.cxMao = true; re(); };
+    $('mCx').onchange = () => { ler(); re(); }; if ($('mPc')) $('mPc').onchange = () => { ler(); re(); };
+    $('mOk').onclick = async () => {
+      ler(); const erro = t => { $('mMsg').className = 'msg err'; $('mMsg').textContent = t; };
+      if (!f.func) return erro('Escolha para quem.');
+      if (!f.sel.length) return erro('Marque ao menos um local.');
+      if (!ok) return erro(aviso || 'Confira a quantidade.');
+      // a mesma partida em cada andar marcado (a Engenharia pode liberar com justificativa)
+      const pavsBloq = [...new Set(f.sel.map(d => d.pav))].filter(pv => bloq(pv).length);
+      if (pavsBloq.length && !(edita() && f.exc.trim())) return erro('Outra partida já está em: ' + pavsBloq.join(', ') + '. Desmarque esses locais.');
+      // reparte as peças: cada local recebe o que falta, e a sobra da última caixa fica no último
+      const q2 = (f.cx || 0) * n + (f.pc || 0); let resta = q2; const ent = uuid(), fu = FUNC.find(x => x.id === f.func);
+      const rows = f.sel.map((d, i) => { const dar = i === f.sel.length - 1 ? resta : Math.min(precisa(d) || 0, resta); resta -= dar;
+        return { id: uuid(), obra: OBRA, pallet: p.id, tipo: 'entrega', pecas: dar, pavimento: d.pav, unidade: d.un || null, ambiente: d.amb, entrega: ent,
+          funcionario: fu ? fu.id : null, funcionario_nome: fu ? fu.nome : null, obs: f.obs || null, excecao: pavsBloq.includes(d.pav) ? f.exc.trim() : null }; }).filter(r => r.pecas > 0);
+      $('mOk').disabled = true;
+      const { error } = await sb.from('cer_movs').insert(rows);
+      if (error) { $('mOk').disabled = false; return erro('Não foi possível: ' + erroMsg(error)); }
+      ULT.func = f.func; ULT.pav = f.pav;
+      delete $('ovl').dataset.form; closeSheet(); await recarregar();
+      toast('Entregue: ' + fmtQ(q2, n) + ' para ' + (fu ? fu.nome : '') + ' · ' + rows.length + ' local(is): ' + rows.map(r => (r.unidade || r.pavimento) + (ambientesDe(r.unidade || null, p.produto).length > 1 ? ' ' + r.ambiente.replace(/^Banheiro\s*/i, '') : '')).join(', ') + '.', 6000);
+    };
+  };
+  desenhar();
+}
+
+/* ---------------- Devolução e quebra (e entrega antiga, de um local) ---------------- */
 function formMov(palId, tipo) {
+  if (tipo === 'entrega') return formEntrega(palId);
   const p = palDe(palId); if (!p) return;
   const pr = prodDe(p.produto), n = pcx(p);
   const f = { func: tipo === 'entrega' ? ULT.func : '', pav: tipo !== 'quebra' ? ULT.pav : '', un: '', amb: '', cx: null, pc: 0, obs: '', todos: false, texto: '' };

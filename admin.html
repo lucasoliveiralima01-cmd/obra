@@ -140,7 +140,7 @@ const PERFIS = [
 ];
 const rotPerfil = v => (PERFIS.find(p => p[0] === v) || [, v || 'Sem acesso'])[1];
 const descPerfil = v => (PERFIS.find(p => p[0] === v) || [, , ''])[2];
-const BANCO_ESPERADO = 20;   // versão do banco.sql que esta tela espera
+const BANCO_ESPERADO = 21;   // versão do banco.sql que esta tela espera
 
 let NV = null, sb = null, LISTA = [], DISC = [], OBRAS = [], LOG = null, ABA = 'pessoas', FILTRO = 'todos', BUSCA = '', EU = '', VERSAO = null;
 const nomeDe = e => { const u = LISTA.find(x => x.email === String(e || '').toLowerCase()); return (u && u.nome) || (NV ? NV.pessoas.nome(e) : String(e || '').split('@')[0]); };
