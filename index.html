@@ -246,7 +246,11 @@ const FERRAMENTAS = [
   { id: 'ceramica', nome: 'Cerâmicas', curto: 'Cerâmicas', pagina: 'ceramicas.html', soOnline: true,
     resumo: 'Pallets recebidos, entregas por apartamento e consumo estimado.',
     desc: 'Estoque por pallet (tonalidade, tamanho e lote da etiqueta), entregas lendo o código do pallet pelo celular, estimativa por ambiente com margem de perda e consumo por apartamento.',
-    icone: '<img src=\"icones/ceramicas.svg\" alt=\"\">' }
+    icone: '<img src=\"icones/ceramicas.svg\" alt=\"\">' },
+  { id: 'almox', nome: 'Almoxarifado', curto: 'Almoxarifado', pagina: 'almoxarifado.html', soOnline: true,
+    resumo: 'Estoque de materiais com QR Code e código de barras.',
+    desc: 'Todo material da obra: recebimento, etiqueta com QR Code para a prateleira (ou o código de barras da embalagem), entregas para funcionários e terceiros lendo o código pelo celular, estoque mínimo e inventário.',
+    icone: '<img src=\"icones/almoxarifado.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));
@@ -403,6 +407,11 @@ async function carregarResumo() {
       for (const p of lp.data || []) { const pc = (p.cer_produtos && p.cer_produtos.pecas_cx) || 6, s = p.caixas * pc - (sai[p.id] || 0); const r = g(p.obra); r.cer = r.cer || { pallets: 0, cx: 0 };
         if (s > 0) { r.cer.pallets++; r.cer.cx += s / pc; } } }
   } catch (e) {}
+  // almoxarifado: materiais e quantos estão abaixo do mínimo
+  if (NV.podeVer('almox')) try {
+    const { data, error } = await sb.rpc('alm_resumo');
+    if (!error) for (const x of data || []) g(x.obra).alm = x;
+  } catch (e) {}
   if (!['campo', 'almoxarifado'].includes(NV.perfil)) try {
     const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas', 'aplicacoes']);
     if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
@@ -422,6 +431,7 @@ function resumoDe(id, fid) {
   if (fid === 'fachada') { const c = r.fach; return c ? c.n + ' área' + (c.n > 1 ? 's' : '') + ' aplicada' + (c.n > 1 ? 's' : '') + (c.ultima ? ' · Última aplicação em ' + fmtD(c.ultima) : '') : 'Nenhuma aplicação'; }
   if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma personalização'; }
   if (fid === 'ceramica') { const k = r.cer; return k && k.pallets ? Math.floor(k.cx) + ' caixa' + (Math.floor(k.cx) === 1 ? '' : 's') + ' em estoque · ' + k.pallets + ' pallet' + (k.pallets > 1 ? 's' : '') : 'Nenhum pallet em estoque'; }
+  if (fid === 'almox') { const k = r.alm; return k && k.materiais ? k.materiais + ' materia' + (k.materiais > 1 ? 'is' : 'l') + (k.abaixo ? ` · <b class="ruim">${k.abaixo} abaixo do mínimo</b>` : '') : 'Nenhum material'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · Revisão R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }

@@ -1,0 +1,1052 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="description" content="Almoxarifado: estoque de materiais da obra com QR Code e código de barras, entregas para funcionários e terceiros e etiquetas para imprimir.">
+<meta name="theme-color" content="#22425c">
+<title>Almoxarifado</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icones/almoxarifado.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
+<style>
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
+/* faixa da marca */
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px))}
+.logo{display:block;color:inherit}
+.logo img{height:40px;width:40px;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
+.ttl .obra{font-size:.82rem;color:#d4e4ee}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+
+main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
+.crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:8px}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 18px;font:700 .92rem var(--f-body);color:var(--ink)}
+.tab:hover{border-color:var(--accent)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab b{font-family:var(--f-body);margin-left:4px;opacity:.85}
+.muted{color:var(--muted);font-size:.88rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:.82rem}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px}
+.lnk:hover{text-decoration:underline}
+
+/* avisos no topo */
+.alertas{display:grid;gap:8px}
+.alerta{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r);padding:10px 12px;color:var(--ink)}
+.alerta.info{background:var(--warn-soft);border-color:var(--warn)}
+.alerta .ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--bad);color:#fff;font:700 .9rem var(--f-body)}
+.alerta.info .ic{background:var(--warn)}
+.alerta b{font-weight:700}
+.alerta small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+
+/* filtros */
+.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.busca{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
+.fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);min-height:40px;max-width:100%}
+.fsel.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip{background:none;border:1px solid var(--line);border-radius:16px;padding:6px 11px;font:500 .84rem var(--f-body);color:var(--ink);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+
+/* lista */
+.grupo{display:grid;gap:8px}
+.grupo>h2{margin:4px 0 0;font:700 1rem var(--f-disp);color:var(--muted);letter-spacing:.02em}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.card{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;width:100%;color:inherit;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card.falta{border-left-color:var(--bad)} .card.ok{border-left-color:var(--ok)} .card.sol{border-left-color:var(--warn)}
+.c-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.c-loc{font-size:.8rem;color:var(--muted)}
+.c-tit{font:700 1rem/1.25 var(--f-body);overflow-wrap:anywhere}
+.st{flex:none;font:600 .74rem var(--f-body);padding:2px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st-solicitada{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.st-aprovada{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.st-executada,.st-conferida{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.st-cancelada{text-decoration:line-through}
+.svs{display:flex;flex-wrap:wrap;gap:5px}
+.sv{font:600 .76rem var(--f-body);padding:2px 8px;border-radius:12px;border:1px solid var(--line);color:var(--muted)}
+.sv.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.sv.falta{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
+.vazio h3{margin:0;font:700 1.15rem var(--f-disp)}
+
+/* frentes */
+.fr-wrap{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.fr{border-collapse:separate;border-spacing:0;width:100%;font-size:.86rem}
+table.fr th,table.fr td{padding:6px;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);text-align:center;vertical-align:middle}
+table.fr th{font:700 .8rem var(--f-disp);color:var(--muted);background:var(--panel);position:sticky;top:0}
+table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600;min-width:120px;z-index:1}
+.fc{display:grid;gap:2px;justify-items:center;width:100%;min-width:104px;background:none;border:1px solid transparent;border-radius:7px;padding:6px 4px;color:inherit}
+.fc:hover{border-color:var(--accent);background:var(--accent-soft)}
+.fc .s{font:600 .76rem var(--f-body);padding:1px 7px;border-radius:10px}
+.fc .d{font-size:.74rem;color:var(--muted)}
+.s-lib{background:var(--ok-soft);color:var(--ok)} .s-sol{background:var(--warn-soft);color:var(--warn)} .s-falta{background:var(--bad-soft);color:var(--bad)} .s-pronta{background:var(--accent-soft);color:var(--accent)} .s-nada{color:var(--muted)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+
+/* botão flutuante */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+
+/* janelas */
+.overlay{position:fixed;inset:0;background:rgba(6,20,30,.5);display:grid;place-items:center;padding:12px;z-index:20}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(760px,100%);max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.sheet>header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.sheet>header h3{margin:0;font:700 1.2rem var(--f-disp);flex:1}
+.sheet>header .x{background:none;border:1px solid var(--line);border-radius:8px;min-width:36px;height:36px;font-size:1.2rem;line-height:1;color:var(--ink)}
+.sheet .body{overflow:auto;padding:14px 16px;display:grid;gap:14px;align-content:start}
+.sheet>footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.sheet>footer:not(:has(.btn)){display:none}
+.fld{display:grid;gap:5px}
+.fld>label,.fld>.l{font:600 .72rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.req{color:var(--bad)}
+.fld input:not([type=file]):not([type=checkbox]),.fld select,.fld textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+.fld textarea{min-height:64px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font:600 .86rem var(--f-body);color:var(--ink);min-height:36px}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
+.msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.itens{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:8px}
+.item textarea{grid-column:1/-1;min-height:46px}
+.item select,.item textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 9px;width:100%;min-width:0}
+.arqs{display:flex;flex-wrap:wrap;gap:8px}
+.arq{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:.72rem;color:var(--muted);text-align:center;padding:4px}
+.arq img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.arq .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;line-height:22px;padding:0}
+.addarq{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:8px;padding:9px 13px;font:600 .9rem var(--f-body);color:var(--ink);cursor:pointer}
+.addarq input{display:none}
+/* ficha */
+.fi-tit{margin:0;font:700 1.4rem/1.2 var(--f-disp);overflow-wrap:anywhere}
+.fi-loc{margin:0;font:600 .98rem var(--f-body);color:var(--accent)}
+.fi-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.86rem;color:var(--muted)}
+.fi-desc{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fi h4{margin:0;font:700 1.02rem var(--f-disp)}
+.svc{display:grid;gap:6px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:10px 12px}
+.svc.ok{border-left-color:var(--ok)} .svc.falta{border-left-color:var(--bad)}
+.svc .h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between}
+.svc .h b{font:700 .98rem var(--f-body)}
+.svc .ins{margin:0;font-weight:600;white-space:pre-wrap}
+.svc .ci{font-size:.84rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.svc .ci.ok{color:var(--ok)} .svc .ci.falta{color:var(--bad)}
+.viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.viewer .vx:hover{background:rgba(20,30,40,.92)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
+.viewer img{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);object-fit:contain}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+@media (max-width:640px){
+  .brand::after{display:none}
+  .ttl{border-left:0;padding-left:0}
+  .hctl{width:auto;margin-left:auto;order:2}
+  #bQuem{display:none}
+  .lista{grid-template-columns:1fr}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;width:100%}
+  .tabs{display:grid}
+  .overlay{padding:0;place-items:end stretch}
+  .sheet{border-radius:14px 14px 0 0;max-height:94dvh;width:100%}
+  .item{grid-template-columns:1fr auto}
+  .item select:nth-of-type(2){grid-column:1/2}
+}
+
+/* ---------- comum com as Cerâmicas ---------- */
+#tabBody{display:grid;gap:14px;align-content:start}
+.resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:2px}
+.kpi b{font:700 1.45rem/1.1 var(--f-disp)}
+.kpi span{font-size:.8rem;color:var(--muted)}
+.kpi.ruim b{color:var(--bad)} .kpi.bom b{color:var(--ok)}
+.prod{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;gap:10px}
+.prod>header{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;justify-content:space-between}
+.prod>header h2{margin:0;font:700 1.05rem var(--f-disp)}
+.barra{height:8px;border-radius:5px;background:var(--line-2);overflow:hidden;display:flex}
+.barra i{display:block;height:100%}
+.barra .b-ent{background:var(--accent)} .barra .b-est{background:var(--ok)}
+.leg2{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted)}
+.leg2 i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.partida{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.partida>h3{margin:0;padding:8px 10px;background:var(--bg);font:700 .9rem var(--f-body);display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between}
+.partida>h3 small{font-weight:600;color:var(--muted)}
+.pl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line-2);padding:9px 10px;color:inherit}
+.pl:hover{background:var(--accent-soft)}
+.pl .n{font:700 .92rem var(--f-mono, monospace)}
+.pl .d{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.pl .q{font:700 .92rem var(--f-body);text-align:right;white-space:nowrap}
+.pl .q small{display:block;font-weight:500;color:var(--muted);font-size:.76rem}
+.pl.vazio-pl{opacity:.55}
+.tag{display:inline-block;font:700 .74rem var(--f-body);padding:1px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);white-space:nowrap}
+.tag.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.tag.bad{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+.tag.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+/* movimentos */
+.dia{display:grid;gap:6px}
+.dia>h3{margin:6px 0 0;font:700 .9rem var(--f-disp);color:var(--muted)}
+.mv{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:9px;padding:9px 11px}
+.mv.devolucao{border-left-color:var(--ok)} .mv.quebra{border-left-color:var(--bad)} .mv.ajuste{border-left-color:var(--warn)}
+.mv .h{font:700 .82rem var(--f-mono, monospace);color:var(--muted)}
+.mv .t{font-weight:600;overflow-wrap:anywhere}
+.mv .t small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.mv .q{font:700 .95rem var(--f-body);white-space:nowrap;text-align:right}
+.mv .x{background:none;border:0;color:var(--muted);font-size:.8rem;padding:2px 0;text-align:right}
+.mv .x:hover{color:var(--bad);text-decoration:underline}
+/* apartamentos */
+.pav{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:8px}
+.pav>h3{margin:0;font:700 .98rem var(--f-disp);display:flex;justify-content:space-between;gap:10px}
+.pav>h3 small{font:600 .8rem var(--f-body);color:var(--muted)}
+.aps{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+.ap{display:grid;gap:1px;text-align:left;background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:6px 8px;color:inherit;min-width:0}
+.ap:hover{border-color:var(--accent)}
+.ap b{font:700 .88rem var(--f-body)} .ap small{font-size:.74rem;color:var(--muted);overflow-wrap:anywhere}
+.ap.parcial{border-left-color:var(--warn)} .ap.ok{border-left-color:var(--ok)} .ap.acima{border-left-color:var(--bad)} .ap.mist{box-shadow:inset 0 0 0 2px var(--bad)}
+/* estimativa */
+.tw{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.es{border-collapse:collapse;width:100%;font-size:.86rem;min-width:760px}
+table.es th,table.es td{padding:6px 8px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+table.es th{font:700 .76rem var(--f-disp);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
+table.es th.g{text-align:center;border-left:1px solid var(--line)} table.es td.g{border-left:1px solid var(--line)}
+table.es td:first-child,table.es th:first-child,table.es td:nth-child(2),table.es th:nth-child(2){text-align:left}
+table.es tbody tr{cursor:pointer} table.es tbody tr:hover td{background:var(--accent-soft)}
+table.es tfoot td{font-weight:700;background:var(--bg)}
+table.es .mut{color:var(--muted);font-size:.78rem}
+.partes{display:grid;gap:8px}
+.parte{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,.9fr) auto;gap:6px;align-items:end;border:1px solid var(--line);border-radius:9px;padding:8px}
+.parte label{font:600 .68rem var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:grid;gap:3px}
+.parte input,.parte select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px;width:100%;min-width:0}
+.parte .calc{font:700 .9rem var(--f-body);padding-bottom:8px}
+.parte .rm{background:none;border:1px solid var(--line);border-radius:7px;height:36px;width:36px;color:var(--muted)}
+.tot{background:var(--accent-soft);border:1px solid var(--accent);border-radius:9px;padding:10px 12px;display:grid;gap:3px;font-size:.92rem}
+.tot b{font-size:1.05rem}
+/* formulário de entrega */
+.palinfo{display:grid;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.palinfo b{font:700 1rem var(--f-body)}
+.palinfo .tags{display:flex;flex-wrap:wrap;gap:5px}
+.qtd{display:flex;align-items:center;gap:8px}
+.qtd button{width:46px;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font:700 1.4rem var(--f-body);color:var(--ink)}
+.qtd input{width:90px!important;text-align:center;font:700 1.3rem var(--f-body)!important}
+.qtd span{color:var(--muted);font-size:.9rem}
+.aviso2{background:var(--warn-soft);border:1px solid var(--warn);border-radius:9px;padding:9px 11px;font-size:.9rem}
+.aviso2.bad{background:var(--bad-soft);border-color:var(--bad)}
+.dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;margin:0}
+.dados div{display:grid;gap:1px} .dados dt{font:600 .7rem var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)} .dados dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.etq{max-width:100%;max-height:260px;border-radius:9px;border:1px solid var(--line);cursor:zoom-in;justify-self:start}
+details.mais>summary{cursor:pointer;font:600 .9rem var(--f-body);color:var(--accent);padding:4px 0}
+details.mais[open]>summary{margin-bottom:10px}
+/* leitor do código */
+.scan{position:fixed;inset:0;z-index:45;background:#000;display:grid;grid-template-rows:1fr auto}
+.scan video{width:100%;height:100%;object-fit:cover;min-height:0}
+.scan .mira{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(64vw,300px);aspect-ratio:1;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 100vmax rgba(0,0,0,.38)}
+.scan .dica{position:absolute;left:0;right:0;top:calc(14px + env(safe-area-inset-top,0px));text-align:center;color:#fff;font:600 1rem var(--f-body);text-shadow:0 1px 4px #000;padding:0 60px}
+.scan .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px}
+.scan .acoes{background:#0d1a24;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.scan .acoes .btn{min-height:44px}
+.scan .st2{color:#cfe0ea;font-size:.88rem;width:100%;text-align:center}
+.fab svg{vertical-align:-4px;margin-right:6px}
+.tab .sm{display:none}
+@media (max-width:640px){
+  .tab .lg{display:none} .tab .sm{display:inline}
+  .tabs .seg .tab{padding:9px 6px;font-size:.86rem}
+  .resumo{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .resumo.q4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi{padding:8px 9px} .kpi b{font-size:1.2rem} .kpi span{font-size:.74rem}
+  .parte{grid-template-columns:1fr 1fr 1fr}
+  .parte .rm{grid-column:3}
+  .mv{grid-template-columns:minmax(0,1fr) auto}
+  .mv .h{grid-column:1/-1}
+}
+/* ---------- almoxarifado ---------- */
+.mat{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:center;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:9px 11px;color:inherit}
+.mat:hover{border-color:var(--accent);background:var(--accent-soft)}
+.mat.baixo{border-left-color:var(--bad)} .mat.zero{opacity:.6}
+.mat .n{font:700 .86rem var(--f-mono, monospace);color:var(--muted)}
+.mat .t{font-weight:600;overflow-wrap:anywhere}
+.mat .t small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.mat .q{font:700 .98rem var(--f-body);text-align:right;white-space:nowrap}
+.mat .q small{display:block;font-weight:500;color:var(--muted);font-size:.74rem}
+.mat.baixo .q{color:var(--bad)}
+.mv.entrada{border-left-color:var(--ok)} .mv.saida{border-left-color:var(--accent)} .mv.perda{border-left-color:var(--bad)}
+.saldo{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
+.saldo b{font:700 1.7rem/1.1 var(--f-disp)}
+.saldo.baixo b{color:var(--bad)}
+.qrbox{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.qrbox .qr{width:112px;height:112px;background:#fff;border-radius:6px;padding:4px;flex:none}
+.qrbox .qr svg{width:100%;height:100%;display:block}
+.qrbox .cod{font:700 1.3rem var(--f-mono, monospace)}
+.quem{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--accent-soft);border:1px solid var(--accent);border-radius:9px;padding:8px 11px}
+.quem b{font-weight:700}
+.opt small{font-weight:500;opacity:.75;margin-left:4px}
+.opt:disabled{opacity:.45}
+.cods{display:grid;gap:6px}
+.codl{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.9rem}
+.codl span{font:600 .9rem var(--f-mono, monospace);overflow-wrap:anywhere}
+.etl{display:grid;gap:6px;max-height:46dvh;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:8px}
+.etl label{display:flex;gap:8px;align-items:center;font-size:.92rem}
+.etl label small{color:var(--muted)}
+.etl h5{margin:6px 0 0;font:700 .8rem var(--f-disp);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.scan .mira{width:min(84vw,440px);aspect-ratio:1.5}
+@media (max-width:640px){ .mat{grid-template-columns:minmax(0,1fr) auto} .mat .n{grid-column:1/-1} }
+
+/* impressão das etiquetas: folha A4, preto e branco */
+#imp{display:none}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{background:#fff!important;padding:0!important;margin:0!important}
+  body>*:not(#imp){display:none!important}
+  #imp{display:block}
+  .folha{width:210mm;height:296mm;padding:9mm 8mm;box-sizing:border-box;display:grid;gap:0;break-after:page;page-break-after:always;overflow:hidden}
+  .folha:last-child{break-after:auto;page-break-after:auto}
+  .etq-i{border:.25mm dashed #000;box-sizing:border-box;display:grid;align-items:center;gap:2.5mm;padding:2.5mm;overflow:hidden;color:#000;font-family:Arial,Helvetica,sans-serif}
+  .etq-i svg{display:block;width:100%;height:auto}
+  .etq-i .tx{display:grid;gap:1mm;min-width:0;align-content:center}
+  .etq-i .c{font:700 5.2mm/1 'Courier New',monospace;letter-spacing:.2mm}
+  .etq-i .nm{font:700 3.6mm/1.15 Arial,sans-serif;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  .etq-i .in{font:400 2.8mm/1.2 Arial,sans-serif;overflow-wrap:anywhere}
+  .etq-i .ob{font:400 2.3mm/1.1 Arial,sans-serif}
+  .p .etq-i{grid-template-columns:29mm minmax(0,1fr)}
+  .g .etq-i{grid-template-columns:52mm minmax(0,1fr);padding:4mm;gap:4mm}
+  .g .etq-i .c{font-size:8mm} .g .etq-i .nm{font-size:5mm;-webkit-line-clamp:4} .g .etq-i .in{font-size:3.6mm} .g .etq-i .ob{font-size:2.8mm}
+}
+</style>
+</head>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/almoxarifado.svg" alt="" width="40" height="40"></a>
+  <div class="ttl"><h1>Almoxarifado</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="hctl"><button class="hbtn" id="bEtq" type="button" data-menu title="Folha A4 com os QR Codes para colar nas prateleiras">Imprimir etiquetas</button><button class="hbtn" id="bPes" type="button" data-menu title="Terceirizados e empreiteiros que retiram material">Pessoas e empresas</button></div>
+</div></header>
+
+<main id="main"><p class="muted">Carregando…</p></main>
+<button class="fab" id="fab" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9v6M11 9v6M14 9v6M17 9v6"/></svg>Ler código</button>
+
+<div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
+<div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Foto ampliada"></div>
+<div class="scan" id="scan" hidden><div style="position:relative;min-height:0"><video id="scanV" playsinline muted autoplay></video><div class="mira" aria-hidden="true"></div><div class="dica">Aponte para o QR Code da prateleira ou o código de barras da embalagem</div><button type="button" class="vx" id="scanX" aria-label="Fechar o leitor">×</button></div>
+  <div class="acoes"><span class="st2" id="scanSt">Abrindo a câmera…</span><label class="btn ghost" style="background:#fff">Tirar foto do código<input type="file" accept="image/*" capture="environment" id="scanF" hidden></label><button class="btn ghost" style="background:#fff" type="button" id="scanD">Digitar o código</button></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+<div id="imp" aria-hidden="true"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script>window.NUVEM_FERRAMENTA = 'almox';</script>
+<script src="nuvem.js"></script>
+<script>
+/* =====================================================================
+   Almoxarifado: estoque geral de materiais da obra
+   - Cada material tem um código do sistema (M0001...) que vai num QR Code
+     impresso em folha A4 e colado na prateleira. O QR guarda um link desta
+     página: até a câmera comum do celular abre o material.
+   - Materiais com código de barras na embalagem: o código fica ligado ao
+     material (pode ter vários; "cada leitura = 50" para caixa fechada).
+   - Ler o QR ou o código de barras abre a entrega: para quem (funcionário
+     cadastrado, próprio ou terceiro, ou pessoa/empresa avulsa), quanto e,
+     se quiser, para onde.
+   - Movimentos: recebimento, entrega, devolução, perda e ajuste de contagem.
+     O saldo é a soma deles e nunca fica negativo (o banco confere).
+   Regras de acesso no banco (banco.sql, passo 22).
+   ===================================================================== */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const fmtD = s => { if (!s) return '—'; const d = new Date(s.length === 10 ? s + 'T12:00:00' : s); return d.toLocaleDateString('pt-BR'); };
+const fmtH = s => new Date(s).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const diaDe = s => { const d = new Date(s); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const num = v => { const x = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(x) ? x : null; };
+const fq = v => (+v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const sem = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const UNIDADES = ['un', 'cx', 'pç', 'm', 'm²', 'm³', 'kg', 'saco', 'rolo', 'L', 'lata', 'galão', 'balde', 'par', 'barra', 'pacote', 'jogo'];
+const CATS = ['Elétrica', 'Hidráulica', 'Ferragens e fixação', 'EPI', 'Ferramentas', 'Pintura', 'Acabamento', 'Argamassa e cimento', 'Madeira', 'Limpeza', 'Escritório', 'Outros'];
+const TIPOS = { entrada: 'Recebimento', saida: 'Entrega', devolucao: 'Devolução', perda: 'Perda', ajuste: 'Ajuste de contagem' };
+const ENTRA = t => ['entrada', 'devolucao', 'ajuste'].includes(t);
+
+let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
+let MAT = [], COD = [], MOV = [], PES = [], FUNC = [], PAVS = [];
+let SALDO = {};
+let TAB = 'estoque';
+const F = { busca: '', cat: '', so: '', tipo: '', quem: '', mbusca: '' };
+let ULT = null;   // última pessoa que recebeu (para entregar vários itens em sequência)
+
+/* ---------------- quem pode o quê (o banco confere de novo) ---------------- */
+const estoque = () => NV && ['admin', 'engenharia', 'almoxarifado'].includes(NV.perfil);
+const edita = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
+const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
+const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=Saldo|O código|Informe|Diga|O ajuste)/, '');
+
+/* ---------------- contas ---------------- */
+function contar() { SALDO = {}; for (const m of MOV) SALDO[m.material] = (SALDO[m.material] || 0) + (ENTRA(m.tipo) ? +m.qtd : -m.qtd); }
+const saldo = m => Math.round((SALDO[m.id] || 0) * 1000) / 1000;
+const baixo = m => m.minimo != null && m.minimo !== '' && saldo(m) < +m.minimo;
+const matDe = id => MAT.find(m => m.id === id) || null;
+const qt = (v, m) => fq(v) + ' ' + ((m && m.unidade) || 'un');
+const codsDe = m => COD.filter(c => c.material === m.id);
+// rótulo de quem retirou: nome · empresa (ou equipe própria/terceirizada do cadastro)
+const funcDe = id => FUNC.find(f => f.id === id) || null;
+const pesDe = id => PES.find(p => p.id === id) || null;
+function empresaDe(mv) { if (mv.empresa) return mv.empresa; const f = mv.funcionario && funcDe(mv.funcionario); return f ? (f.equipe === 'terceiro' ? 'Terceirizado' : f.equipe === 'proprio' ? 'Equipe própria' : '') : ''; }
+const quemTxt = mv => [mv.pessoa_nome, empresaDe(mv)].filter(Boolean).join(' · ');
+const destTxt = mv => [mv.pavimento, mv.local].filter(Boolean).join(' · ');
+// candidatos para "para quem": funcionários cadastrados (próprios e terceiros) e pessoas avulsas
+function candidatos() {
+  return FUNC.map(f => ({ k: 'f:' + f.id, nome: f.nome, info: [f.equipe === 'terceiro' ? 'Terceiro' : f.equipe === 'proprio' ? 'Próprio' : '', (f.cargos || []).join(', ')].filter(Boolean).join(' · '), busca: sem(f.nome + ' ' + (f.cargos || []).join(' ') + ' ' + (f.equipe === 'terceiro' ? 'terceiro' : 'proprio')) }))
+    .concat(PES.filter(p => p.ativo !== false).map(p => ({ k: 'p:' + p.id, nome: p.nome, info: p.empresa || 'Avulso', busca: sem(p.nome + ' ' + (p.empresa || '')) })));
+}
+const candDe = k => candidatos().find(c => c.k === k) || null;
+// quem retirou por último (as mais recentes primeiro)
+function recentes() { const vis = new Set(), r = []; for (const m of MOV) { if (m.tipo !== 'saida') continue; const k = m.funcionario ? 'f:' + m.funcionario : m.pessoa ? 'p:' + m.pessoa : ''; if (!k || vis.has(k)) continue; vis.add(k); const c = candDe(k); if (c) r.push(c); if (r.length >= 8) break; } return r; }
+
+/* ---------------- dados ---------------- */
+async function carregar() {
+  const [lo, lm, lc, lv, lp, lf, lpv] = await Promise.all([
+    NV.obras.obter(OBRA),
+    sb.from('alm_materiais').select('*').eq('obra', OBRA).order('nome'),
+    sb.from('alm_codigos').select('*').eq('obra', OBRA),
+    sb.from('alm_movs').select('*').eq('obra', OBRA).order('em', { ascending: false }),
+    sb.from('alm_pessoas').select('*').eq('obra', OBRA).order('nome'),
+    sb.from('pend_funcionarios').select('id,obra,nome,cargos,equipe,ativo').order('nome'),
+    sb.from('pend_config').select('pavimentos').eq('obra', OBRA).maybeSingle()
+  ]);
+  if (lm.error) { const e = new Error(lm.error.message); e.banco = /alm_materiais|relation|schema cache/i.test(lm.error.message || ''); throw e; }
+  if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
+  OBRA_NOME = lo.nome; MAT = lm.data || []; COD = lc.data || []; MOV = lv.data || []; PES = lp.data || [];
+  FUNC = (lf.data || []).filter(f => f.ativo !== false && (!f.obra || f.obra === OBRA));
+  PAVS = ((lpv.data && lpv.data.pavimentos) || []).map(p => p.nome).filter(Boolean);
+  contar();
+}
+async function recarregar() { try { await carregar(); render(); const o = $('ovl'); if (!o.hidden && o.dataset.mat && !o.dataset.form) fichaMat(o.dataset.mat); } catch (e) { console.warn(e); } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && NV) recarregar(); });
+
+/* ======================= telas ======================= */
+function render() {
+  const m = $('main'), nBaixo = MAT.filter(x => x.ativo !== false && baixo(x)).length;
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Almoxarifado</span></nav>
+    <div class="tabs"><div class="seg">${[['estoque', 'Estoque', nBaixo ? '<b style="color:inherit">· ' + nBaixo + ' baixo' + (nBaixo > 1 ? 's' : '') + '</b>' : ''], ['movs', 'Movimentos', '']]
+      .map(([k, t, n]) => `<button type="button" class="tab" data-tab="${k}" aria-pressed="${TAB === k}">${t}${n}</button>`).join('')}</div></div>
+    <div id="tabBody"></div>`;
+  m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  (TAB === 'movs' ? renderMovs : renderEstoque)();
+  $('fab').hidden = !estoque();
+}
+
+/* ---------------- Estoque ---------------- */
+function venceLogo() {
+  // entradas com validade nos próximos 30 dias (ou vencidas) de materiais que ainda têm saldo
+  const lim = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10), r = new Map();
+  for (const mv of MOV) if (mv.tipo === 'entrada' && mv.validade && mv.validade <= lim) { const m = matDe(mv.material); if (m && saldo(m) > 0 && (!r.has(m.id) || mv.validade < r.get(m.id))) r.set(m.id, mv.validade); }
+  return r;
+}
+function renderEstoque() {
+  const B = $('tabBody'), ativos = MAT.filter(m => m.ativo !== false);
+  const hoje = diaDe(new Date()), entHoje = MOV.filter(m => m.tipo === 'saida' && diaDe(m.em) === hoje).length;
+  const baixos = ativos.filter(baixo), venc = venceLogo();
+  const cats = [...new Set(ativos.map(m => m.categoria || 'Sem categoria'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const q = sem(F.busca);
+  const vis = ativos.filter(m => (!F.cat || (m.categoria || 'Sem categoria') === F.cat) && (F.so !== 'baixo' || baixo(m)) && (F.so !== 'saldo' || saldo(m) > 0) && (F.so !== 'venc' || venc.has(m.id))
+    && (!q || sem([m.nome, m.codigo, m.categoria, m.posicao].join(' ')).includes(q) || codsDe(m).some(c => c.codigo.includes(F.busca.trim()))));
+  const grupos = new Map(); vis.forEach(m => { const k = m.categoria || 'Sem categoria'; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(m); });
+  B.innerHTML = `<div class="resumo">
+      <div class="kpi"><b>${ativos.length}</b><span>materiais</span></div>
+      <div class="kpi${baixos.length ? ' ruim' : ''}"><b>${baixos.length}</b><span>abaixo do mínimo</span></div>
+      <div class="kpi"><b>${entHoje}</b><span>entregas hoje</span></div></div>
+    ${baixos.length || venc.size ? `<div class="alertas">${baixos.length ? `<button type="button" class="alerta" data-so="baixo"><span class="ic">!</span><span><b>${baixos.length} ${baixos.length > 1 ? 'materiais' : 'material'} abaixo do mínimo</b><small>${esc(baixos.slice(0, 4).map(m => m.nome + ' (' + qt(saldo(m), m) + ')').join(' · '))}${baixos.length > 4 ? '…' : ''}</small></span></button>` : ''}
+      ${venc.size ? `<button type="button" class="alerta info" data-so="venc"><span class="ic">!</span><span><b>${venc.size} ${venc.size > 1 ? 'materiais' : 'material'} com validade vencendo em até 30 dias</b><small>${esc([...venc.entries()].slice(0, 4).map(([id, d]) => matDe(id).nome + ' (' + fmtD(d) + ')').join(' · '))}</small></span></button>` : ''}</div>` : ''}
+    ${estoque() ? `<div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn" type="button" id="bReceber">+ Receber material</button><button class="btn ghost" type="button" id="bEtq2">Imprimir etiquetas</button></div>` : ''}
+    <div class="filtros"><label class="busca"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input id="fBusca" placeholder="Buscar material, código ou prateleira" value="${esc(F.busca)}"></label>
+      <select class="fsel${F.cat ? ' on' : ''}" id="fCat" aria-label="Categoria"><option value="">Todas as categorias</option>${cats.map(c => `<option ${c === F.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+      <select class="fsel${F.so ? ' on' : ''}" id="fSo" aria-label="Mostrar"><option value="">Todos</option><option value="saldo" ${F.so === 'saldo' ? 'selected' : ''}>Com saldo</option><option value="baixo" ${F.so === 'baixo' ? 'selected' : ''}>Abaixo do mínimo</option><option value="venc" ${F.so === 'venc' ? 'selected' : ''}>Validade próxima</option></select></div>
+    <div id="lista">${listaHtml(grupos, ativos.length)}</div>`;
+  if ($('bReceber')) $('bReceber').onclick = () => formReceber(null, {});
+  if ($('bEtq2')) $('bEtq2').onclick = () => formEtiquetas([]);
+  B.querySelectorAll('[data-so]').forEach(b => b.onclick = () => { F.so = b.dataset.so; renderEstoque(); });
+  $('fBusca').oninput = e => { F.busca = e.target.value; const y = e.target.selectionStart; renderEstoque(); const i = $('fBusca'); i.focus(); i.setSelectionRange(y, y); };
+  $('fCat').onchange = e => { F.cat = e.target.value; renderEstoque(); };
+  $('fSo').onchange = e => { F.so = e.target.value; renderEstoque(); };
+  B.querySelectorAll('[data-mat]').forEach(b => b.onclick = () => fichaMat(b.dataset.mat));
+}
+function listaHtml(grupos, total) {
+  if (!grupos.size) return `<div class="vazio"><h3>${total ? 'Nenhum material com estes filtros' : 'Nenhum material cadastrado'}</h3><p class="muted" style="margin:0">${total ? '' : estoque() ? 'Quando chegar material, toque em <b>+ Receber material</b> (ou em <b>Ler código</b> e leia o código de barras da embalagem). O sistema gera um QR Code para colar na prateleira; depois, cada entrega é só ler o código.' : 'Os materiais recebidos aparecem aqui.'}</p></div>`;
+  return [...grupos.entries()].map(([g, ms]) => `<section class="grupo"><h2>${esc(g)} <span class="muted" style="font-weight:600">(${ms.length})</span></h2><div class="lista">${ms.map(m => { const s = saldo(m);
+    return `<button type="button" class="mat${baixo(m) ? ' baixo' : ''}${s <= 0 ? ' zero' : ''}" data-mat="${esc(m.id)}"><span class="n">${esc(m.codigo)}</span><span class="t">${esc(m.nome)}<small>${[m.posicao ? 'Prateleira: ' + m.posicao : '', codsDe(m).length ? '▮▯ código de barras' : ''].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small></span><span class="q">${qt(s, m)}${m.minimo != null ? '<small>mín. ' + fq(m.minimo) + '</small>' : ''}</span></button>`; }).join('')}</div></section>`).join('');
+}
+
+/* ---------------- Movimentos ---------------- */
+function renderMovs() {
+  const B = $('tabBody');
+  const pess = [...new Set(MOV.filter(m => m.pessoa_nome).map(m => 'p|' + m.pessoa_nome))].sort(), emps = [...new Set(MOV.map(empresaDe).filter(Boolean))].sort();
+  const q = sem(F.mbusca);
+  const vis = MOV.filter(m => (!F.tipo || m.tipo === F.tipo) && (!F.quem || (F.quem.startsWith('p|') ? 'p|' + m.pessoa_nome === F.quem : empresaDe(m) === F.quem.slice(2)))
+    && (!q || sem((matDe(m.material) || {}).nome + ' ' + (matDe(m.material) || {}).codigo + ' ' + (m.nf || '') + ' ' + (m.fornecedor || '')).includes(q)));
+  const dias = new Map(); vis.forEach(m => { const d = diaDe(m.em); if (!dias.has(d)) dias.set(d, []); dias.get(d).push(m); });
+  B.innerHTML = `<div class="filtros"><label class="busca"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input id="fMb" placeholder="Material, nota fiscal ou fornecedor" value="${esc(F.mbusca)}"></label>
+      <select class="fsel${F.tipo ? ' on' : ''}" id="fTipo" aria-label="Tipo"><option value="">Todos os movimentos</option>${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}" ${F.tipo === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <select class="fsel${F.quem ? ' on' : ''}" id="fQuem" aria-label="Pessoa ou empresa"><option value="">Todas as pessoas e empresas</option>${emps.length ? '<optgroup label="Empresa">' + emps.map(e => `<option value="e|${esc(e)}" ${F.quem === 'e|' + e ? 'selected' : ''}>${esc(e)}</option>`).join('') + '</optgroup>' : ''}${pess.length ? '<optgroup label="Pessoa">' + pess.map(p => `<option value="${esc(p)}" ${F.quem === p ? 'selected' : ''}>${esc(p.slice(2))}</option>`).join('') + '</optgroup>' : ''}</select></div>
+    ${F.quem && vis.length ? `<p class="muted" style="margin:0">${esc(F.quem.slice(2))}: ${resumoRetiradas(vis)}</p>` : ''}
+    ${vis.length ? [...dias.entries()].map(([d, ms]) => `<section class="dia"><h3>${d === diaDe(new Date()) ? 'Hoje' : fmtD(d + 'T12:00:00')}</h3>${ms.map(x => movHtml(x)).join('')}</section>`).join('')
+      : `<div class="vazio"><h3>${MOV.length ? 'Nenhum movimento com estes filtros' : 'Nenhum movimento ainda'}</h3><p class="muted" style="margin:0">Recebimentos, entregas, devoluções e perdas aparecem aqui, com quem fez e quando.</p></div>`}`;
+  $('fTipo').onchange = e => { F.tipo = e.target.value; renderMovs(); };
+  $('fQuem').onchange = e => { F.quem = e.target.value; renderMovs(); };
+  $('fMb').oninput = e => { F.mbusca = e.target.value; const y = e.target.selectionStart; renderMovs(); const i = $('fMb'); i.focus(); i.setSelectionRange(y, y); };
+  ligarMovs(B);
+}
+// o que uma pessoa/empresa retirou, somado por material
+function resumoRetiradas(ms) {
+  const s = new Map(); for (const m of ms) { if (m.tipo !== 'saida' && m.tipo !== 'devolucao') continue; s.set(m.material, (s.get(m.material) || 0) + (m.tipo === 'saida' ? +m.qtd : -m.qtd)); }
+  return [...s.entries()].filter(([, v]) => v > 0).map(([id, v]) => '<b>' + esc(qt(v, matDe(id))) + '</b> ' + esc((matDe(id) || {}).nome || '?')).join(' · ') || 'nada retirado';
+}
+const podeApagar = m => edita() || (estoque() && String(m.por || '').toLowerCase() === String(NV.usuario.email || '').toLowerCase() && Date.now() - new Date(m.em) < 864e5);
+function movHtml(m, naFicha) {
+  const mt = matDe(m.material) || { nome: '?', unidade: '' };
+  const tit = m.tipo === 'saida' ? esc(quemTxt(m) || 'Sem pessoa') + (destTxt(m) ? ' · ' + esc(destTxt(m)) : '')
+    : m.tipo === 'entrada' ? 'Recebimento' + (m.fornecedor ? ' · ' + esc(m.fornecedor) : '') + (m.nf ? ' · NF ' + esc(m.nf) : '')
+    : TIPOS[m.tipo] + (m.pessoa_nome ? ' · ' + esc(quemTxt(m)) : '');
+  const det = [naFicha ? '' : mt.codigo + ' ' + mt.nome, m.tipo === 'saida' ? '' : '', m.lote ? 'lote ' + m.lote : '', m.validade ? 'validade ' + fmtD(m.validade) : '', 'por ' + nomeDe(m.por), m.obs || ''].filter(Boolean).map(esc).join(' · ');
+  return `<div class="mv ${m.tipo}"><span class="h">${naFicha ? fmtD(m.em) : fmtH(m.em)}</span><span class="t">${tit}<small>${det}${m.foto ? ' · <button type="button" class="lnk" data-foto="' + esc(m.foto) + '" style="padding:0;font-size:.8rem">ver foto</button>' : ''}</small></span>
+    <span style="display:grid;justify-items:end"><span class="q">${ENTRA(m.tipo) && m.qtd > 0 ? '+' : '−'}${esc(qt(Math.abs(m.qtd), mt))}</span>${podeApagar(m) ? `<button type="button" class="x" data-del="${esc(m.id)}">Desfazer</button>` : ''}</span></div>`;
+}
+function ligarMovs(B) {
+  B.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const m = MOV.find(x => x.id === b.dataset.del); if (!m) return; const mt = matDe(m.material);
+    if (!confirm('Desfazer ' + TIPOS[m.tipo].toLowerCase() + ' de ' + qt(Math.abs(m.qtd), mt) + ' (' + (mt ? mt.nome : '') + ')? O saldo volta como estava.')) return;
+    const { error, data } = await sb.from('alm_movs').delete().eq('id', m.id).select('id');
+    if (error || !(data || []).length) { toast('Não foi possível desfazer' + (error ? ': ' + erroMsg(error) : ' (só quem registrou, no mesmo dia, ou a Engenharia).'), 6000); return; }
+    toast('Movimento desfeito.'); await recarregar(); });
+  B.querySelectorAll('[data-foto]').forEach(b => b.onclick = async () => { try { $('viewerImg').src = await NV.blobUrl(b.dataset.foto); $('viewer').hidden = false; } catch (e) { toast('Não foi possível abrir a foto.'); } });
+}
+
+/* ---------------- Ficha do material ---------------- */
+function fichaMat(id) {
+  const m = matDe(id); if (!m) { closeSheet(); return; }
+  const s = saldo(m), movs = MOV.filter(x => x.material === m.id), cods = codsDe(m);
+  openSheet(m.nome, `<div style="display:grid;gap:12px">
+    <div class="saldo${baixo(m) ? ' baixo' : ''}"><b>${esc(qt(s, m))}</b><span class="muted">em estoque${m.minimo != null ? ' · mínimo ' + esc(qt(m.minimo, m)) : ''}${baixo(m) ? ' · <b style="color:var(--bad)">abaixo do mínimo</b>' : ''}</span></div>
+    <div class="qrbox"><div class="qr" id="fQr"></div><div style="display:grid;gap:4px"><span class="cod">${esc(m.codigo)}</span><span class="muted">${esc([m.categoria, m.posicao ? 'Prateleira: ' + m.posicao : ''].filter(Boolean).join(' · ') || 'Sem categoria')}</span>
+      <button type="button" class="btn ghost sm" id="fEtq" style="justify-self:start">Imprimir etiqueta</button></div></div>
+    <div class="fld"><span class="l">Códigos de barras ligados</span><div class="cods">${cods.map(c => `<div class="codl"><span>${esc(c.codigo)}</span><span class="muted" style="font-family:var(--f-body);font-weight:500">cada leitura = ${esc(qt(c.fator, m))}</span>${estoque() ? `<button type="button" class="lnk" data-rmcod="${esc(c.id)}">tirar</button>` : ''}</div>`).join('') || '<span class="muted">Nenhum. Materiais sem código de barras usam só o QR Code da etiqueta.</span>'}</div>
+      ${estoque() ? '<button type="button" class="lnk" id="fCod" style="justify-self:start">+ Ligar um código de barras</button>' : ''}</div>
+    ${m.obs ? `<p style="margin:0;white-space:pre-wrap">${esc(m.obs)}</p>` : ''}
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Movimentos (${movs.length})</h4>
+    <div class="dia">${movs.length ? movs.map(x => movHtml(x, true)).join('') : '<p class="muted" style="margin:0">Nenhum movimento ainda.</p>'}</div></div>`,
+    estoque() ? `<button class="btn ghost" type="button" id="fEd">Editar</button><button class="btn ghost" type="button" id="fCt">Contagem</button>${s > 0 ? '<button class="btn ghost" type="button" id="fPd">Perda</button>' : ''}<button class="btn ghost" type="button" id="fDv">Devolução</button><button class="btn ghost" type="button" id="fRc">Receber</button>${s > 0 ? '<button class="btn" type="button" id="fEn">Entregar</button>' : ''}` : '');
+  $('ovl').dataset.mat = m.id;
+  qrLib().then(q => { if ($('fQr')) $('fQr').innerHTML = qrSvg(q, linkDe(m)); }).catch(() => { if ($('fQr')) $('fQr').textContent = 'sem internet para o QR'; });
+  ligarMovs($('ovlB'));
+  $('fEtq').onclick = () => formEtiquetas([m.id]);
+  if ($('fCod')) $('fCod').onclick = async () => { const c = await lerCodigo('Leia o código de barras da embalagem'); if (c) ligarCodigo(m, c); };
+  $('ovlB').querySelectorAll('[data-rmcod]').forEach(b => b.onclick = async () => { if (!confirm('Tirar este código de barras do material?')) return; const { error } = await sb.from('alm_codigos').delete().eq('id', b.dataset.rmcod); if (error) { toast(erroMsg(error)); return; } await recarregar(); fichaMat(m.id); });
+  if ($('fEd')) $('fEd').onclick = () => formMaterial(m.id);
+  if ($('fEn')) $('fEn').onclick = () => formSaida(m.id, {});
+  if ($('fRc')) $('fRc').onclick = () => formReceber(m.id, {});
+  if ($('fDv')) $('fDv').onclick = () => formMov(m.id, 'devolucao');
+  if ($('fPd')) $('fPd').onclick = () => formMov(m.id, 'perda');
+  if ($('fCt')) $('fCt').onclick = () => formMov(m.id, 'ajuste');
+}
+async function ligarCodigo(m, codigo, depois) {
+  const ja = acharCodigo(codigo);
+  if (ja && ja.m.id === m.id) { toast('Este código já está ligado a ' + m.nome + '.'); if (depois) depois(); else fichaMat(m.id); return; }
+  if (ja) { toast('Este código já está ligado a ' + ja.m.nome + ' (' + ja.m.codigo + ').', 6000); return; }
+  const f = prompt('Código ' + codigo + ' → ' + m.nome + '.\nCada leitura deste código conta quantos ' + m.unidade + '? (1 para a unidade; 50 se for a caixa fechada com 50)', '1');
+  if (f === null) return; const fator = num(f); if (!fator || fator <= 0) { toast('Quantidade inválida.'); return; }
+  const { error } = await sb.from('alm_codigos').insert({ id: uuid(), obra: OBRA, material: m.id, codigo, fator });
+  if (error) { toast('Não foi possível: ' + erroMsg(error), 6000); return; }
+  await carregar(); render(); toast('Código ' + codigo + ' ligado a ' + m.nome + '.'); if (depois) depois(); else fichaMat(m.id);
+}
+
+/* ---------------- Cadastro do material ---------------- */
+function camposMaterial(p) {
+  const cats = [...new Set(CATS.concat(MAT.map(m => m.categoria).filter(Boolean)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  return `<div class="fld"><label for="maN">Material <span class="req">*</span></label><input id="maN" placeholder="Ex.: Caixa elétrica 4x2 amarela" value="${esc(p.nome || '')}"></div>
+    <div class="g2"><div class="fld"><label for="maU">Unidade</label><input id="maU" list="maUl" value="${esc(p.unidade || 'un')}"><datalist id="maUl">${UNIDADES.map(u => `<option value="${esc(u)}">`).join('')}</datalist></div>
+      <div class="fld"><label for="maC">Categoria</label><input id="maC" list="maCl" placeholder="Elétrica" value="${esc(p.categoria || '')}"><datalist id="maCl">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
+      <div class="fld"><label for="maM">Estoque mínimo</label><input id="maM" inputmode="decimal" placeholder="Avisa abaixo disso" value="${esc(p.minimo ?? '')}"></div>
+      <div class="fld"><label for="maP">Prateleira / posição</label><input id="maP" placeholder="Ex.: Estante 2, B3" value="${esc(p.posicao || '')}"></div></div>`;
+}
+const lerMaterial = () => ({ nome: $('maN').value.trim(), unidade: $('maU').value.trim() || 'un', categoria: $('maC').value.trim() || null, minimo: $('maM').value.trim() === '' ? null : num($('maM').value), posicao: $('maP').value.trim() || null });
+function formMaterial(id) {
+  const m = matDe(id); if (!m) return;
+  const movs = MOV.some(x => x.material === m.id);
+  openSheet('Editar ' + m.codigo, camposMaterial(m) + `<div class="fld"><label for="maO">Observação</label><textarea id="maO">${esc(m.obs || '')}</textarea></div>
+    <label class="chk"><input type="checkbox" id="maA" ${m.ativo === false ? 'checked' : ''}> Não uso mais (esconde da lista)</label>`,
+    `<span class="msg" id="maMsg"></span>${edita() && !movs ? '<button class="btn danger" type="button" id="maDel">Excluir</button>' : ''}<button class="btn" type="button" id="maOk">Salvar</button>`, true);
+  const msg = t => { $('maMsg').className = 'msg err'; $('maMsg').textContent = t; };
+  if ($('maDel')) $('maDel').onclick = async () => { if (!confirm('Excluir ' + m.nome + '?')) return; const { error } = await sb.from('alm_materiais').delete().eq('id', m.id); if (error) return msg(erroMsg(error)); delete $('ovl').dataset.form; closeSheet(); await recarregar(); };
+  $('maOk').onclick = async () => { const row = lerMaterial(); if (!row.nome) return msg('Escreva o nome do material.'); row.obs = $('maO').value.trim() || null; row.ativo = !$('maA').checked;
+    $('maOk').disabled = true; const { error } = await sb.from('alm_materiais').update(row).eq('id', m.id);
+    if (error) { $('maOk').disabled = false; return msg(erroMsg(error)); } delete $('ovl').dataset.form; await carregar(); render(); fichaMat(m.id); toast('Material salvo.'); };
+}
+
+/* ---------------- Receber material ---------------- */
+function formReceber(matId, pre) {
+  const f = Object.assign({ mat: matId || null, novo: false, np: {}, busca: '', barra: '', fator: 1, qtd: '', fornecedor: '', nf: '', lote: '', validade: '', obs: '' }, pre || {});
+  if (!f.mat && f.barra && !acharCodigo(f.barra)) f.novo = true;
+  let foto = null;
+  const desenhar = () => {
+    const m = f.mat ? matDe(f.mat) : null;
+    const lista = !m && !f.novo ? MAT.filter(x => x.ativo !== false && (!f.busca || sem(x.nome + ' ' + x.codigo + ' ' + (x.categoria || '')).includes(sem(f.busca)))).slice(0, 14) : [];
+    const ultForn = (MOV.find(x => x.tipo === 'entrada' && x.fornecedor) || {}).fornecedor || '';
+    const forns = [...new Set(MOV.map(x => x.fornecedor).filter(Boolean))];
+    openSheet('Receber material', `
+      ${m ? `<div class="palinfo"><b>${esc(m.codigo)} · ${esc(m.nome)}</b><span>Saldo agora: <b>${esc(qt(saldo(m), m))}</b>${m.posicao ? ' · prateleira ' + esc(m.posicao) : ''}</span>${!matId ? '<button type="button" class="lnk" id="rTroca" style="justify-self:start;padding:0">Trocar o material</button>' : ''}</div>`
+        : f.novo ? `<div class="fld"><span class="l">Material novo</span></div>${camposMaterial(f.np)}${MAT.length ? '<button type="button" class="lnk" id="rExist" style="justify-self:start">Escolher um material já cadastrado</button>' : ''}`
+        : `<div class="fld"><label for="rBusca">Qual material chegou? <span class="req">*</span></label><input id="rBusca" placeholder="Buscar pelo nome ou código" value="${esc(f.busca)}" autocomplete="off">
+            <div class="opts" id="rOpts">${lista.map(x => `<button type="button" class="opt" data-pick="${esc(x.id)}">${esc(x.nome)}<small>${esc(x.codigo)}</small></button>`).join('')}</div>
+            <button type="button" class="btn ghost" id="rNovo" style="justify-self:start">+ Material novo (primeira vez que chega)</button></div>`}
+      <div class="fld"><label for="rBar">Código de barras da embalagem (se tiver)</label><div style="display:flex;gap:8px"><input id="rBar" inputmode="numeric" placeholder="Ex.: 7891234567895" value="${esc(f.barra)}"><button class="btn ghost" type="button" id="rLer">Ler</button></div>
+        ${f.barra && acharCodigo(f.barra) && (!m || acharCodigo(f.barra).m.id !== m.id) ? `<div class="aviso2 bad">Este código já está ligado a <b>${esc(acharCodigo(f.barra).m.nome)}</b>.</div>` : f.barra && !(m && acharCodigo(f.barra)) ? `<div class="g2"><div class="fld"><label for="rFat">Cada leitura deste código conta</label><input id="rFat" inputmode="decimal" value="${esc(f.fator)}"></div></div><span class="muted">1 se o código está na unidade; 50 se está na caixa fechada com 50.</span>` : '<span class="muted">Fica ligado ao material: depois, ler este código já abre a entrega. Sem código de barras, use o QR Code da etiqueta.</span>'}</div>
+      <div class="fld"><span class="l">Quantidade recebida <span class="req">*</span></span><div class="qtd"><button type="button" id="rMenos" aria-label="Menos">−</button><input id="rQ" inputmode="decimal" value="${esc(f.qtd)}" aria-label="Quantidade"><button type="button" id="rMais" aria-label="Mais">+</button><span>${esc(m ? m.unidade : (f.np.unidade || 'un'))}</span></div></div>
+      <div class="g2"><div class="fld"><label for="rFo">Fornecedor</label><input id="rFo" list="rFol" placeholder="${esc(ultForn)}" value="${esc(f.fornecedor)}"><datalist id="rFol">${forns.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+        <div class="fld"><label for="rNf">Nota fiscal</label><input id="rNf" inputmode="numeric" value="${esc(f.nf)}"></div></div>
+      <details class="mais"${f.lote || f.validade || f.obs || foto ? ' open' : ''}><summary>Lote, validade, foto e observação</summary><div class="g2">
+        <div class="fld"><label for="rLo">Lote</label><input id="rLo" value="${esc(f.lote)}"></div>
+        <div class="fld"><label for="rVa">Validade</label><input id="rVa" type="date" value="${esc(f.validade)}"></div></div>
+        <div class="fld" style="margin-top:10px"><span class="l">Foto (nota ou material)</span><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">${foto ? `<img class="etq" src="${foto.url}" alt="Foto" style="max-height:110px">` : ''}<label class="addarq">${foto ? 'Trocar foto' : '📷 Tirar foto'}<input type="file" accept="image/*" capture="environment" id="rFoto"></label></div></div>
+        <div class="fld" style="margin-top:10px"><label for="rObs">Observação</label><textarea id="rObs" placeholder="Ex.: 2 caixas amassadas">${esc(f.obs)}</textarea></div></details>`,
+      `<span class="msg" id="rMsg"></span><button class="btn" type="button" id="rOk">Registrar recebimento</button>`, true);
+    const re = () => { const y = $('ovlB').scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    if ($('rBusca')) { $('rBusca').oninput = e => { f.busca = e.target.value; const l = MAT.filter(x => x.ativo !== false && sem(x.nome + ' ' + x.codigo + ' ' + (x.categoria || '')).includes(sem(f.busca))).slice(0, 14);
+      $('rOpts').innerHTML = l.map(x => `<button type="button" class="opt" data-pick="${esc(x.id)}">${esc(x.nome)}<small>${esc(x.codigo)}</small></button>`).join('') || '<span class="muted">Nenhum material com esse nome. Toque em <b>+ Material novo</b>.</span>'; ligarPick(); }; }
+    const ligarPick = () => $('ovlB').querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { ler(); f.mat = b.dataset.pick; re(); });
+    ligarPick();
+    if ($('rNovo')) $('rNovo').onclick = () => { ler(); f.novo = true; f.np = { nome: f.busca }; re(); };
+    if ($('rExist')) $('rExist').onclick = () => { ler(); f.novo = false; re(); };
+    if ($('rTroca')) $('rTroca').onclick = () => { ler(); f.mat = null; re(); };
+    $('rLer').onclick = async () => { ler(); const c = await lerCodigo('Leia o código de barras da embalagem'); if (!c) return; const a = acharCodigo(c);
+      if (a && !f.mat && !f.novo) { f.mat = a.m.id; f.barra = c; toast('Código já cadastrado: ' + a.m.nome); } else f.barra = c; re(); };
+    $('rBar').onchange = () => { ler(); const a = acharCodigo(f.barra); if (a && !f.mat && !f.novo) f.mat = a.m.id; re(); };
+    $('rMenos').onclick = () => { ler(); f.qtd = Math.max(0, (num(f.qtd) || 0) - 1); re(); };
+    $('rMais').onclick = () => { ler(); f.qtd = (num(f.qtd) || 0) + 1; re(); };
+    $('rFoto').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; ler(); try { const b = await comprimir(a); if (foto) URL.revokeObjectURL(foto.url); foto = { blob: b, url: URL.createObjectURL(b) }; } catch (e) { toast('Não foi possível usar a foto.'); } re(); };
+    $('rOk').onclick = salvar;
+  };
+  const ler = () => {
+    if (f.novo && $('maN')) f.np = lerMaterial();
+    f.barra = $('rBar').value.trim(); if ($('rFat')) f.fator = num($('rFat').value) || 1;
+    f.qtd = $('rQ').value.trim(); f.fornecedor = $('rFo').value.trim(); f.nf = $('rNf').value.trim(); f.lote = $('rLo').value.trim(); f.validade = $('rVa').value; f.obs = $('rObs').value.trim();
+  };
+  const msg = t => { $('rMsg').className = 'msg err'; $('rMsg').textContent = t; };
+  async function salvar() {
+    ler(); const q = num(f.qtd);
+    if (!f.mat && !f.novo) return msg('Escolha o material ou toque em + Material novo.');
+    if (f.novo && !f.np.nome) return msg('Escreva o nome do material.');
+    if (f.novo && MAT.some(x => sem(x.nome) === sem(f.np.nome)) && !confirm('Já existe um material chamado "' + f.np.nome + '". Cadastrar outro mesmo assim?')) return;
+    if (!q || q <= 0) return msg('Informe a quantidade.');
+    const a = f.barra ? acharCodigo(f.barra) : null;
+    if (a && f.mat && a.m.id !== f.mat) return msg('Este código de barras já é de ' + a.m.nome + '.');
+    $('rOk').disabled = true;
+    try {
+      let mid = f.mat, novoMat = null;
+      if (f.novo) { const r = await sb.from('alm_materiais').insert(Object.assign({ id: uuid(), obra: OBRA }, f.np)).select().single(); if (r.error) throw r.error; novoMat = r.data; mid = r.data.id; }
+      if (f.barra && !a) { const r = await sb.from('alm_codigos').insert({ id: uuid(), obra: OBRA, material: mid, codigo: f.barra, fator: f.fator || 1 }); if (r.error) throw r.error; }
+      let caminho = null; const id = uuid();
+      if (foto) { caminho = 'almoxarifado/' + OBRA + '/' + id + '.jpg'; const { error } = await sb.storage.from('arquivos').upload(caminho, foto.blob, { contentType: 'image/jpeg', upsert: false }); if (error) throw error; }
+      const r = await sb.from('alm_movs').insert({ id, obra: OBRA, material: mid, tipo: 'entrada', qtd: q, fornecedor: f.fornecedor || null, nf: f.nf || null, lote: f.lote || null, validade: f.validade || null, foto: caminho, obs: f.obs || null });
+      if (r.error) throw r.error;
+      if (foto) URL.revokeObjectURL(foto.url);
+      delete $('ovl').dataset.form; await carregar(); render();
+      const m = matDe(mid);
+      openSheet('Recebido ✓', `<div class="palinfo"><b>${esc(m.codigo)} · ${esc(m.nome)}</b><span>Entrou: <b>${esc(qt(q, m))}</b> · saldo agora <b>${esc(qt(saldo(m), m))}</b></span></div>
+        <div class="qrbox"><div class="qr" id="okQr"></div><div style="display:grid;gap:4px"><span class="cod">${esc(m.codigo)}</span><span class="muted">${novoMat ? 'Material novo: imprima a etiqueta e cole na prateleira onde ele vai ficar.' : 'A etiqueta deste material já foi impressa antes? Se não, imprima agora.'}</span></div></div>`,
+        `<button class="btn ghost" type="button" id="okOutro">Receber outro</button><button class="btn ghost" type="button" id="okFicha">Ver material</button><button class="btn" type="button" id="okEtq">Imprimir etiqueta</button>`);
+      qrLib().then(qq => { if ($('okQr')) $('okQr').innerHTML = qrSvg(qq, linkDe(m)); }).catch(() => {});
+      $('okOutro').onclick = () => formReceber(null, { fornecedor: f.fornecedor, nf: f.nf });
+      $('okFicha').onclick = () => fichaMat(m.id);
+      $('okEtq').onclick = () => formEtiquetas([m.id]);
+    } catch (e) { console.error(e); $('rOk').disabled = false; msg('Não foi possível salvar: ' + erroMsg(e)); }
+  }
+  desenhar();
+}
+
+/* ---------------- Entregar ---------------- */
+// escolher a pessoa: funcionários cadastrados (próprios e terceiros) e pessoas avulsas (com empresa)
+function seletorQuem(f, opcional) {
+  if (f.quem) { const c = candDe(f.quem);
+    return `<div class="fld"><span class="l">${opcional ? 'De quem (opcional)' : 'Para quem <span class="req">*</span>'}</span><div class="quem"><b>${esc(c ? c.nome : '?')}</b><span class="muted">${esc(c ? c.info : '')}</span><button type="button" class="lnk" id="qTroca" style="margin-left:auto">Trocar</button></div></div>`; }
+  if (f.nova) return `<div class="fld"><span class="l">${opcional ? 'De quem' : 'Para quem <span class="req">*</span>'}: pessoa nova</span><div class="g2"><div class="fld"><label for="qNome">Nome <span class="req">*</span></label><input id="qNome" value="${esc(f.nova.nome || '')}"></div>
+      <div class="fld"><label for="qEmp">Empresa / empreiteira</label><input id="qEmp" list="qEmpl" placeholder="Ex.: Elétrica Silva" value="${esc(f.nova.empresa || '')}"><datalist id="qEmpl">${[...new Set(PES.map(p => p.empresa).filter(Boolean))].map(e => `<option value="${esc(e)}">`).join('')}</datalist></div></div>
+      <span class="muted">Fica salva para as próximas entregas.</span><button type="button" class="lnk" id="qVolta" style="justify-self:start">Voltar à lista</button></div>`;
+  return `<div class="fld"><label for="qBusca">${opcional ? 'De quem (opcional)' : 'Para quem <span class="req">*</span>'}</label><input id="qBusca" placeholder="Buscar nome, ofício ou empresa" value="${esc(f.qb || '')}" autocomplete="off">
+    <div class="opts" id="qOpts">${chipsQuem(f.qb)}</div><button type="button" class="lnk" id="qNova" style="justify-self:start">+ Pessoa que não está na lista (terceirizado, empreiteiro…)</button></div>`;
+}
+function chipsQuem(busca) {
+  const q = sem(busca), todos = candidatos();
+  const l = q ? todos.filter(c => c.busca.includes(q)).slice(0, 24) : (recentes().length ? recentes() : todos.slice(0, 12));
+  return (!q && recentes().length ? '<span class="muted" style="width:100%">Últimos que retiraram:</span>' : '') + (l.map(c => `<button type="button" class="opt" data-quem="${esc(c.k)}">${esc(c.nome)}${c.info ? '<small>' + esc(c.info) + '</small>' : ''}</button>`).join('')
+    || `<span class="muted">${todos.length ? 'Ninguém com esse nome.' : 'Nenhum funcionário cadastrado (Listas e regras → Funcionários).'} Toque em <b>+ Pessoa que não está na lista</b>.</span>`);
+}
+function ligarQuem(f, re, ler) {
+  const B = $('ovlB');
+  const ligarChips = () => B.querySelectorAll('[data-quem]').forEach(b => b.onclick = () => { ler(); f.quem = b.dataset.quem; f.qb = ''; re(); });
+  ligarChips();
+  if ($('qBusca')) $('qBusca').oninput = e => { f.qb = e.target.value; $('qOpts').innerHTML = chipsQuem(f.qb); ligarChips(); };
+  if ($('qTroca')) $('qTroca').onclick = () => { ler(); f.quem = null; re(); };
+  if ($('qNova')) $('qNova').onclick = () => { ler(); f.nova = { nome: f.qb || '', empresa: '' }; re(); };
+  if ($('qVolta')) $('qVolta').onclick = () => { ler(); f.nova = null; re(); };
+}
+function lerNova(f) { if (f.nova && $('qNome')) f.nova = { nome: $('qNome').value.trim(), empresa: $('qEmp').value.trim() }; }
+// grava a pessoa nova (se for o caso) e devolve os campos de quem do movimento
+async function quemDoMov(f) {
+  if (f.nova && f.nova.nome) {
+    const ja = PES.find(p => sem(p.nome) === sem(f.nova.nome) && sem(p.empresa) === sem(f.nova.empresa));
+    if (ja) f.quem = 'p:' + ja.id;
+    else { const r = await sb.from('alm_pessoas').insert({ id: uuid(), obra: OBRA, nome: f.nova.nome, empresa: f.nova.empresa || null }).select().single(); if (r.error) throw r.error; PES.push(r.data); f.quem = 'p:' + r.data.id; }
+    f.nova = null;
+  }
+  if (!f.quem) return {};
+  const [t, id] = f.quem.split(':');
+  if (t === 'f') { const x = funcDe(id); return { funcionario: id, pessoa_nome: x ? x.nome : null }; }
+  const p = pesDe(id); return { pessoa: id, pessoa_nome: p ? p.nome : null, empresa: p ? p.empresa : null };
+}
+function formSaida(matId, pre) {
+  const m = matDe(matId); if (!m) return;
+  const f = Object.assign({ quem: ULT, qb: '', nova: null, qtd: '', pav: '', local: '', obs: '' }, pre || {});
+  if (f.qtd === '' || f.qtd == null) f.qtd = 1;
+  const avisoQ = () => { const s = saldo(m), q = num(f.qtd);
+    return q > s ? `<div class="aviso2 bad">Só há ${esc(qt(s, m))} em estoque.</div>` : q && m.minimo != null && s - q < +m.minimo ? `<span class="muted" style="color:var(--warn)">Depois desta entrega fica abaixo do mínimo (${esc(qt(s - q, m))}).</span>` : ''; };
+  const desenhar = () => {
+    const s = saldo(m);
+    openSheet('Entregar', `
+      <div class="palinfo"><b>${esc(m.codigo)} · ${esc(m.nome)}</b><span>Em estoque: <b>${esc(qt(s, m))}</b>${m.posicao ? ' · prateleira ' + esc(m.posicao) : ''}</span></div>
+      ${seletorQuem(f, false)}
+      <div class="fld"><span class="l">Quantidade <span class="req">*</span></span><div class="qtd"><button type="button" id="sMenos" aria-label="Menos">−</button><input id="sQ" inputmode="decimal" value="${esc(f.qtd)}" aria-label="Quantidade"><button type="button" id="sMais" aria-label="Mais">+</button><span>${esc(m.unidade)}</span></div>
+        <div id="sAv">${avisoQ()}</div></div>
+      <div class="fld"><span class="l">Para onde (opcional)</span>${PAVS.length ? `<div class="opts">${PAVS.map(p => `<button type="button" class="opt" data-pav="${esc(p)}" aria-pressed="${f.pav === p}">${esc(p)}</button>`).join('')}</div>` : ''}
+        <input id="sLoc" placeholder="Apartamento, área ou serviço (ex.: 402, garagem)" value="${esc(f.local)}"></div>
+      <div class="fld"><label for="sObs">Observação (opcional)</label><input id="sObs" value="${esc(f.obs)}"></div>`,
+      `<span class="msg" id="sMsg"></span><button class="btn" type="button" id="sOk">Registrar entrega</button>`, true);
+    const re = () => { const y = $('ovlB').scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    ligarQuem(f, re, ler);
+    $('ovlB').querySelectorAll('[data-pav]').forEach(b => b.onclick = () => { ler(); f.pav = f.pav === b.dataset.pav ? '' : b.dataset.pav; re(); });
+    $('sMenos').onclick = () => { ler(); f.qtd = Math.max(0, (num(f.qtd) || 0) - 1); re(); };
+    $('sMais').onclick = () => { ler(); f.qtd = (num(f.qtd) || 0) + 1; re(); };
+    $('sQ').oninput = () => { f.qtd = $('sQ').value.trim(); $('sAv').innerHTML = avisoQ(); };
+    $('sOk').onclick = async () => {
+      ler(); const erro = t => { $('sMsg').className = 'msg err'; $('sMsg').textContent = t; };
+      const q2 = num(f.qtd);
+      if (!f.quem && !(f.nova && f.nova.nome)) return erro('Escolha para quem.');
+      if (!q2 || q2 <= 0) return erro('Informe a quantidade.');
+      if (q2 > saldo(m)) return erro('Só há ' + qt(saldo(m), m) + ' em estoque.');
+      $('sOk').disabled = true;
+      try {
+        const quem = await quemDoMov(f);
+        const { error } = await sb.from('alm_movs').insert(Object.assign({ id: uuid(), obra: OBRA, material: m.id, tipo: 'saida', qtd: q2, pavimento: f.pav || null, local: f.local || null, obs: f.obs || null }, quem));
+        if (error) throw error;
+        ULT = f.quem; delete $('ovl').dataset.form; await carregar(); render();
+        const c = candDe(f.quem), nome = c ? c.nome : quem.pessoa_nome;
+        openSheet('Entregue ✓', `<div class="palinfo"><b>${esc(qt(q2, m))} · ${esc(m.nome)}</b><span>Para <b>${esc(nome)}</b>${c && c.info ? ' (' + esc(c.info) + ')' : ''}${f.pav || f.local ? ' · ' + esc([f.pav, f.local].filter(Boolean).join(' · ')) : ''}</span><span>Ficou em estoque: <b>${esc(qt(saldo(m), m))}</b></span></div>
+          ${baixo(m) ? `<div class="aviso2 bad"><b>${esc(m.nome)}</b> ficou abaixo do mínimo (${esc(qt(m.minimo, m))}). Avise a compra.</div>` : ''}`,
+          `<button class="btn ghost" type="button" id="okFim">Concluir</button><button class="btn" type="button" id="okMais">Ler outro item para ${esc(String(nome).split(' ')[0])}</button>`);
+        $('okFim').onclick = () => { ULT = null; closeSheet(); };
+        $('okMais').onclick = () => { closeSheet(); lerEEntregar(f.quem); };
+      } catch (e) { console.error(e); $('sOk').disabled = false; erro('Não foi possível: ' + erroMsg(e)); }
+    };
+  };
+  const ler = () => { lerNova(f); f.qtd = $('sQ').value.trim(); f.local = $('sLoc').value.trim(); f.obs = $('sObs').value.trim(); };
+  desenhar();
+}
+
+/* ---------------- Devolução, perda e contagem ---------------- */
+function formMov(matId, tipo) {
+  const m = matDe(matId); if (!m) return;
+  const f = { quem: null, qb: '', nova: null, qtd: '', obs: '', cont: '' };
+  const difTxt = () => { if (f.cont === '' || num(f.cont) == null) return ''; const dif = Math.round((num(f.cont) - saldo(m)) * 1000) / 1000;
+    return dif === 0 ? 'Bate com o sistema.' : '<b style="color:var(--warn)">Diferença: ' + (dif > 0 ? '+' : '−') + esc(qt(Math.abs(dif), m)) + '</b> (o saldo passa a ser ' + esc(qt(num(f.cont), m)) + ')'; };
+  const titulo = { devolucao: 'Devolução ao estoque', perda: 'Registrar perda', ajuste: 'Contagem (inventário)' }[tipo];
+  const desenhar = () => {
+    const s = saldo(m);
+    openSheet(titulo, `
+      <div class="palinfo"><b>${esc(m.codigo)} · ${esc(m.nome)}</b><span>No sistema: <b>${esc(qt(s, m))}</b></span></div>
+      ${tipo === 'devolucao' ? seletorQuem(f, true) : ''}
+      ${tipo === 'ajuste' ? `<div class="fld"><label for="cQ">Quanto tem na prateleira agora? <span class="req">*</span></label><div class="qtd"><input id="cQ" inputmode="decimal" value="${esc(f.cont)}"><span>${esc(m.unidade)}</span></div>
+          <span class="muted" id="cDif">${difTxt()}</span></div>`
+        : `<div class="fld"><span class="l">Quantidade <span class="req">*</span></span><div class="qtd"><button type="button" id="mMenos" aria-label="Menos">−</button><input id="mQ" inputmode="decimal" value="${esc(f.qtd)}"><button type="button" id="mMais" aria-label="Mais">+</button><span>${esc(m.unidade)}</span></div></div>`}
+      <div class="fld"><label for="mObs">${tipo === 'perda' ? 'O que aconteceu <span class="req">*</span>' : 'Observação (opcional)'}</label><input id="mObs" value="${esc(f.obs)}" placeholder="${tipo === 'perda' ? 'Ex.: caiu e quebrou; molhou na chuva' : tipo === 'ajuste' ? 'Ex.: inventário de novembro' : ''}"></div>`,
+      `<span class="msg" id="mMsg"></span><button class="btn${tipo === 'perda' ? ' danger' : ''}" type="button" id="mOk">${{ devolucao: 'Registrar devolução', perda: 'Registrar perda', ajuste: 'Salvar contagem' }[tipo]}</button>`, true);
+    const re = () => { const y = $('ovlB').scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    if (tipo === 'devolucao') ligarQuem(f, re, ler);
+    if ($('mMenos')) { $('mMenos').onclick = () => { ler(); f.qtd = Math.max(0, (num(f.qtd) || 0) - 1); re(); }; $('mMais').onclick = () => { ler(); f.qtd = (num(f.qtd) || 0) + 1; re(); }; }
+    if ($('cQ')) $('cQ').oninput = () => { f.cont = $('cQ').value.trim(); $('cDif').innerHTML = difTxt(); };
+    $('mOk').onclick = async () => {
+      ler(); const erro = t => { $('mMsg').className = 'msg err'; $('mMsg').textContent = t; };
+      let q = num(f.qtd);
+      if (tipo === 'ajuste') { if (f.cont === '' || num(f.cont) == null || num(f.cont) < 0) return erro('Informe quanto tem na prateleira.'); q = Math.round((num(f.cont) - saldo(m)) * 1000) / 1000; if (!q) { closeSheet(); toast('Contagem confere com o sistema.'); return; } }
+      else if (!q || q <= 0) return erro('Informe a quantidade.');
+      if (tipo === 'perda' && !f.obs) return erro('Diga o que aconteceu.');
+      if (tipo === 'perda' && q > saldo(m)) return erro('Só há ' + qt(saldo(m), m) + ' em estoque.');
+      $('mOk').disabled = true;
+      try {
+        const quem = tipo === 'devolucao' ? await quemDoMov(f) : {};
+        const { error } = await sb.from('alm_movs').insert(Object.assign({ id: uuid(), obra: OBRA, material: m.id, tipo, qtd: q, obs: f.obs || null }, quem));
+        if (error) throw error;
+        delete $('ovl').dataset.form; await carregar(); render(); fichaMat(m.id);
+        toast(tipo === 'ajuste' ? 'Contagem salva: saldo ' + qt(saldo(m), m) + '.' : TIPOS[tipo] + ' registrada: ' + qt(q, m) + '.', 5000);
+      } catch (e) { $('mOk').disabled = false; erro('Não foi possível: ' + erroMsg(e)); }
+    };
+  };
+  const ler = () => { lerNova(f); if ($('mQ')) f.qtd = $('mQ').value.trim(); if ($('cQ')) f.cont = $('cQ').value.trim(); f.obs = $('mObs').value.trim(); };
+  desenhar();
+}
+
+/* ---------------- Pessoas e empresas (avulsas) ---------------- */
+function listaPessoas() {
+  const ps = PES.slice().sort((a, b) => (a.empresa || '').localeCompare(b.empresa || '', 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
+  openSheet('Pessoas e empresas', `<p class="muted" style="margin:0">Quem retira material e não está no cadastro de funcionários (terceirizados, empreiteiros, visitantes). Os <b>funcionários cadastrados</b> em Listas e regras (próprios e terceiros: ${FUNC.length}) já aparecem na entrega.</p>
+    <div style="display:grid;gap:6px">${ps.map(p => `<div class="codl" style="${p.ativo === false ? 'opacity:.5' : ''}"><span style="font-family:var(--f-body)"><b>${esc(p.nome)}</b> <span class="muted">${esc(p.empresa || 'sem empresa')}</span></span>${estoque() ? `<button type="button" class="lnk" data-pes="${esc(p.id)}">editar</button>` : ''}</div>`).join('') || '<span class="muted">Ninguém ainda. Na entrega, toque em <b>+ Pessoa que não está na lista</b>.</span>'}</div>`,
+    estoque() ? '<button class="btn" type="button" id="pNova">+ Pessoa</button>' : '');
+  $('ovlB').querySelectorAll('[data-pes]').forEach(b => b.onclick = () => formPessoa(b.dataset.pes));
+  if ($('pNova')) $('pNova').onclick = () => formPessoa(null);
+}
+function formPessoa(id) {
+  const p = id ? pesDe(id) : null;
+  openSheet(p ? 'Editar pessoa' : 'Pessoa nova', `<div class="g2"><div class="fld"><label for="peN">Nome <span class="req">*</span></label><input id="peN" value="${esc(p ? p.nome : '')}"></div>
+    <div class="fld"><label for="peE">Empresa / empreiteira</label><input id="peE" list="peEl" value="${esc(p ? p.empresa || '' : '')}"><datalist id="peEl">${[...new Set(PES.map(x => x.empresa).filter(Boolean))].map(e => `<option value="${esc(e)}">`).join('')}</datalist></div>
+    <div class="fld"><label for="peT">Telefone</label><input id="peT" inputmode="tel" value="${esc(p ? p.telefone || '' : '')}"></div></div>
+    ${p ? `<label class="chk"><input type="checkbox" id="peA" ${p.ativo === false ? 'checked' : ''}> Não está mais na obra (some da lista de entrega)</label>` : ''}`,
+    '<span class="msg" id="peMsg"></span><button class="btn" type="button" id="peOk">Salvar</button>', true);
+  $('peOk').onclick = async () => { const row = { nome: $('peN').value.trim(), empresa: $('peE').value.trim() || null, telefone: $('peT').value.trim() || null }; if ($('peA')) row.ativo = !$('peA').checked;
+    if (!row.nome) { $('peMsg').className = 'msg err'; $('peMsg').textContent = 'Escreva o nome.'; return; }
+    const r = p ? await sb.from('alm_pessoas').update(row).eq('id', p.id) : await sb.from('alm_pessoas').insert(Object.assign({ id: uuid(), obra: OBRA }, row));
+    if (r.error) { $('peMsg').className = 'msg err'; $('peMsg').textContent = erroMsg(r.error); return; }
+    delete $('ovl').dataset.form; await carregar(); listaPessoas(); };
+}
+
+/* ======================= QR Code e etiquetas ======================= */
+const QRJS = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+let qrP = null;
+function qrLib() { if (window.qrcode) return Promise.resolve(window.qrcode); if (!qrP) { qrP = carregarScript(QRJS).then(() => window.qrcode); qrP.catch(() => { qrP = null; }); } return qrP; }
+// link que vai dentro do QR: abre este material nesta página (até pela câmera comum do celular)
+function linkDe(m) { const u = new URL('almoxarifado.html', location.href); u.search = ''; u.hash = ''; return u.href + '?obra=' + encodeURIComponent(OBRA) + '&m=' + encodeURIComponent(m.codigo); }
+function qrSvg(qrcode, txt) {
+  const c = qrcode(0, 'M'); c.addData(txt); c.make();
+  const n = c.getModuleCount(), mg = 3; let d = '';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (c.isDark(r, k)) d += 'M' + (k + mg) + ' ' + (r + mg) + 'h1v1h-1z';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n + 2 * mg} ${n + 2 * mg}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+const LAYOUT = { p: { c: 3, r: 7, nome: 'Pequena: 21 por folha (cerca de 6,4 × 4 cm)' }, g: { c: 2, r: 4, nome: 'Grande: 8 por folha (cerca de 9,7 × 7 cm)' } };
+function formEtiquetas(pre) {
+  const ativos = MAT.filter(m => m.ativo !== false).sort((a, b) => (a.categoria || '').localeCompare(b.categoria || '', 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
+  const sel = new Set(pre && pre.length ? pre : []); let tam = sel.size === 1 ? 'g' : 'p', copias = 1, busca = '';
+  const desenhar = () => {
+    const q = sem(busca), vis = ativos.filter(m => !q || sem(m.nome + ' ' + m.codigo + ' ' + (m.categoria || '') + ' ' + (m.posicao || '')).includes(q));
+    let cat = null;
+    const tot = sel.size * copias, L = LAYOUT[tam], folhas = Math.ceil(tot / (L.c * L.r));
+    openSheet('Imprimir etiquetas', `
+      <p class="muted" style="margin:0">Folha A4 comum, impressora preto e branco. Recorte nas linhas tracejadas e cole na prateleira (fita larga transparente por cima protege do pó). Também dá para usar folha adesiva A4.</p>
+      <div class="fld"><span class="l">Tamanho</span><div class="opts">${Object.entries(LAYOUT).map(([k, l]) => `<button type="button" class="opt" data-tam="${k}" aria-pressed="${tam === k}">${esc(l.nome)}</button>`).join('')}</div></div>
+      <div class="g2"><div class="fld"><label for="eCp">Cópias de cada</label><input id="eCp" type="number" min="1" max="50" inputmode="numeric" value="${copias}"></div>
+        <div class="fld"><label for="eBu">Buscar</label><input id="eBu" placeholder="Nome, código ou prateleira" value="${esc(busca)}"></div></div>
+      <div class="fld"><span class="l">Materiais (${sel.size} marcado${sel.size === 1 ? '' : 's'}) <button type="button" class="lnk" id="eTodos">Marcar ${q ? 'os da busca' : 'todos'}</button> <button type="button" class="lnk" id="eNenhum">Desmarcar</button></span>
+        <div class="etl">${vis.map(m => { const h = (m.categoria || 'Sem categoria') !== cat ? '<h5>' + esc(cat = (m.categoria || 'Sem categoria')) + '</h5>' : '';
+          return h + `<label><input type="checkbox" data-sel="${esc(m.id)}" ${sel.has(m.id) ? 'checked' : ''}><span><b>${esc(m.codigo)}</b> ${esc(m.nome)} <small>${esc(m.posicao || '')}</small></span></label>`; }).join('') || '<span class="muted">Nenhum material.</span>'}</div></div>`,
+      `<span class="msg" id="eMsg">${tot ? tot + ' etiqueta' + (tot > 1 ? 's' : '') + ' · ' + folhas + ' folha' + (folhas > 1 ? 's' : '') : ''}</span><button class="btn" type="button" id="eOk" ${tot ? '' : 'disabled'}>Imprimir</button>`);
+    const re = () => { const y = $('ovlB').scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    $('ovlB').querySelectorAll('[data-tam]').forEach(b => b.onclick = () => { tam = b.dataset.tam; re(); });
+    $('ovlB').querySelectorAll('[data-sel]').forEach(b => b.onchange = () => { if (b.checked) sel.add(b.dataset.sel); else sel.delete(b.dataset.sel); re(); });
+    $('eCp').onchange = () => { copias = Math.max(1, Math.min(50, parseInt($('eCp').value, 10) || 1)); re(); };
+    $('eBu').oninput = e => { busca = e.target.value; const y = e.target.selectionStart; re(); const i = $('eBu'); i.focus(); i.setSelectionRange(y, y); };
+    $('eTodos').onclick = () => { vis.forEach(m => sel.add(m.id)); re(); };
+    $('eNenhum').onclick = () => { sel.clear(); re(); };
+    $('eOk').onclick = async () => { $('eOk').disabled = true; try { await imprimir(ativos.filter(m => sel.has(m.id)), copias, tam); } catch (e) { toast('Não foi possível gerar as etiquetas: ' + (e.message || e), 6000); } $('eOk').disabled = false; };
+  };
+  desenhar();
+}
+async function imprimir(mats, copias, tam) {
+  const q = await qrLib(), L = LAYOUT[tam], porFolha = L.c * L.r, itens = [];
+  mats.forEach(m => { for (let i = 0; i < copias; i++) itens.push(m); });
+  const svg = new Map(mats.map(m => [m.id, qrSvg(q, linkDe(m))]));
+  let html = '';
+  for (let i = 0; i < itens.length; i += porFolha) {
+    const cel = itens.slice(i, i + porFolha).map(m => `<div class="etq-i">${svg.get(m.id)}<div class="tx"><span class="c">${esc(m.codigo)}</span><span class="nm">${esc(m.nome)}</span><span class="in">${esc([m.unidade, m.posicao ? 'Prat. ' + m.posicao : ''].filter(Boolean).join(' · '))}</span><span class="ob">${esc(OBRA_NOME)}</span></div></div>`);
+    while (cel.length < porFolha) cel.push('<div></div>');
+    html += `<div class="folha ${tam}" style="grid-template-columns:repeat(${L.c},1fr);grid-template-rows:repeat(${L.r},1fr)">${cel.join('')}</div>`;
+  }
+  $('imp').innerHTML = html;
+  await new Promise(r => setTimeout(r, 120));
+  window.print();
+}
+
+/* ======================= leitor: QR Code e código de barras ======================= */
+const ZX = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/iife/reader/index.js';
+const ZX_WASM = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/reader/zxing_reader.wasm';
+const FORMATOS = ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'data_matrix'];
+let detectorP = null;
+function carregarScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('sem internet para carregar')); document.head.appendChild(s); }); }
+function detector() {
+  if (detectorP) return detectorP;
+  detectorP = (async () => {
+    // Android (Chrome): leitor do próprio navegador; iPhone e outros: zxing-wasm
+    if ('BarcodeDetector' in window) try {
+      const fs = await window.BarcodeDetector.getSupportedFormats(), usa = FORMATOS.filter(x => fs.includes(x));
+      if (usa.includes('qr_code') && usa.includes('ean_13')) { const d = new window.BarcodeDetector({ formats: usa }); return async cv => { const r = await d.detect(cv); return r[0] ? r[0].rawValue : null; }; }
+    } catch (e) {}
+    if (!window.ZXingWASM) await carregarScript(ZX);
+    window.ZXingWASM.setZXingModuleOverrides({ locateFile: (f, pre) => f.endsWith('.wasm') ? ZX_WASM : pre + f });
+    return async cv => { const id = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+      const r = await window.ZXingWASM.readBarcodes(id, { formats: ['QRCode', 'AllLinear', 'DataMatrix'], tryHarder: true, maxNumberOfSymbols: 1 }); return r[0] && r[0].isValid !== false ? r[0].text : null; };
+  })();
+  detectorP.catch(() => { detectorP = null; });
+  return detectorP;
+}
+const limpar = t => String(t || '').trim();
+async function decodificarArquivo(arq) {
+  const url = URL.createObjectURL(arq); const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; }); } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  const det = await detector();
+  for (const lado of [1600, 2400, 1000]) {
+    const sc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight)); const cv = document.createElement('canvas');
+    cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    const t = await det(cv).catch(() => null); cv.width = cv.height = 0; if (t) return limpar(t);
+  }
+  return null;
+}
+function lerCodigo(dica) {
+  return new Promise(resolve => {
+    const box = $('scan'), v = $('scanV'), st = $('scanSt'); let fim = false, stream = null, t = null;
+    box.querySelector('.dica').textContent = dica || 'Aponte para o QR Code da prateleira ou o código de barras da embalagem';
+    const acabar = val => { if (fim) return; fim = true; clearTimeout(t); if (stream) stream.getTracks().forEach(x => x.stop()); v.srcObject = null; box.hidden = true; $('scanF').value = ''; resolve(val ? limpar(val) : null); };
+    box.hidden = false; st.textContent = 'Abrindo a câmera…';
+    $('scanX').onclick = () => acabar(null);
+    $('scanD').onclick = () => { const x = prompt('Código da etiqueta (ex.: M0012) ou o número do código de barras:'); if (x && x.trim()) acabar(x); };
+    $('scanF').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; st.textContent = 'Lendo a foto…';
+      const c = await decodificarArquivo(a).catch(e => { st.textContent = 'Não foi possível: ' + (e.message || e); return null; });
+      if (c) acabar(c); else if (!fim) st.textContent = 'Não achei o código na foto. Tente mais perto e sem reflexo, ou digite o código.'; };
+    const cv = document.createElement('canvas');
+    const ciclo = async det => {
+      if (fim) return;
+      if (v.readyState >= 2 && v.videoWidth) {
+        const sc = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight)); cv.width = Math.round(v.videoWidth * sc); cv.height = Math.round(v.videoHeight * sc);
+        cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+        try { const c = await det(cv); if (c) { if (navigator.vibrate) navigator.vibrate(80); acabar(c); return; } } catch (e) {}
+      }
+      t = setTimeout(() => ciclo(det), 200);
+    };
+    (async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('câmera indisponível neste navegador');
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+        if (fim) { stream.getTracks().forEach(x => x.stop()); return; }
+        v.srcObject = stream; await v.play().catch(() => {});
+        st.textContent = 'Procurando o código…';
+        const det = await detector(); ciclo(det);
+      } catch (e) { if (!fim) st.textContent = 'Sem câmera ao vivo (' + (e.message || e.name || e) + '). Use "Tirar foto do código" ou digite o código.'; }
+    })();
+  });
+}
+// o código lido é de quem? QR da etiqueta (link com ?m=M0001 ou só M0001) ou código de barras ligado
+const semZero = c => String(c || '').replace(/\D/g, '').replace(/^0+/, '');
+function acharCodigo(t) {
+  t = limpar(t); if (!t) return null;
+  const c = COD.find(x => x.codigo === t) || (/^\d{6,}$/.test(t) ? COD.find(x => semZero(x.codigo) === semZero(t)) : null);
+  if (c) { const m = matDe(c.material); return m ? { m, fator: +c.fator || 1, barra: true } : null; }
+  return null;
+}
+function resolver(t) {
+  t = limpar(t); let cod = null, obra = null;
+  try { const u = new URL(t); cod = u.searchParams.get('m'); obra = u.searchParams.get('obra'); } catch (e) {}
+  if (!cod && /^M\d{3,}$/i.test(t)) cod = t.toUpperCase();
+  if (cod) { if (obra && obra !== OBRA) return { outraObra: obra }; const m = MAT.find(x => x.codigo === cod.toUpperCase()); return m ? { m, fator: 1 } : { naoAchou: cod }; }
+  return acharCodigo(t) || { desconhecido: t };
+}
+// botão principal: lê e abre a entrega (ou o recebimento, se o código ainda não existe)
+async function lerEEntregar(quem) {
+  const c = await lerCodigo(); if (!c) { if (quem) ULT = quem; return; }
+  abrirCodigo(c, quem);
+}
+function abrirCodigo(c, quem) {
+  const r = resolver(c);
+  if (r.outraObra) { toast('Esta etiqueta é de outra obra (' + r.outraObra + ').', 6000); return; }
+  if (r.naoAchou) { toast('O material ' + r.naoAchou + ' não existe nesta obra.', 6000); return; }
+  if (r.m) {
+    if (!estoque()) { fichaMat(r.m.id); return; }
+    if (r.m.ativo === false) toast(r.m.nome + ' está marcado como "não uso mais".');
+    if (saldo(r.m) <= 0) { toast(r.m.nome + ' está sem saldo. Registre o recebimento.', 6000); formReceber(r.m.id, {}); return; }
+    formSaida(r.m.id, { quem: quem || ULT, qtd: r.fator || 1 }); return;
+  }
+  // código de barras que ainda não está ligado a nenhum material
+  openSheet('Código não cadastrado', `<p style="margin:0">O código <b>${esc(r.desconhecido)}</b> ainda não está ligado a nenhum material.</p>
+    <p class="muted" style="margin:0">Se o material acabou de chegar, registre o recebimento: o código fica ligado a ele. Se o material já existe (por exemplo, outro fornecedor), ligue o código a ele.</p>`,
+    '<button class="btn ghost" type="button" id="ncOutro">Ler outro</button><button class="btn ghost" type="button" id="ncLigar">Ligar a um material</button><button class="btn" type="button" id="ncRec">Receber material novo</button>');
+  $('ncOutro').onclick = () => { closeSheet(); lerEEntregar(quem); };
+  $('ncRec').onclick = () => formReceber(null, { barra: r.desconhecido });
+  $('ncLigar').onclick = () => escolherMaterial('Ligar ' + r.desconhecido + ' a qual material?', m => ligarCodigo(m, r.desconhecido, () => fichaMat(m.id)));
+}
+function escolherMaterial(titulo, cb) {
+  let busca = '';
+  const lista = () => MAT.filter(x => x.ativo !== false && (!busca || sem(x.nome + ' ' + x.codigo + ' ' + (x.categoria || '')).includes(sem(busca)))).slice(0, 30);
+  const chips = () => lista().map(x => `<button type="button" class="opt" data-pick="${esc(x.id)}">${esc(x.nome)}<small>${esc(x.codigo)}</small></button>`).join('') || '<span class="muted">Nenhum material.</span>';
+  openSheet(titulo, `<input id="emB" placeholder="Buscar pelo nome ou código" autocomplete="off" style="background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px"><div class="opts" id="emL">${chips()}</div>`, '');
+  const ligar = () => $('ovlB').querySelectorAll('[data-pick]').forEach(b => b.onclick = () => cb(matDe(b.dataset.pick)));
+  ligar(); $('emB').oninput = e => { busca = e.target.value; $('emL').innerHTML = chips(); ligar(); };
+}
+
+/* ---------------- janelas ---------------- */
+function openSheet(t, body, foot, form) { const o = $('ovl'); delete o.dataset.mat; $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; o.hidden = false; if (form) o.dataset.form = '1'; else delete o.dataset.form; $('ovlB').scrollTop = 0; }
+function closeSheet() { const o = $('ovl'); o.hidden = true; $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete o.dataset.form; delete o.dataset.mat; render(); }
+$('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl').dataset.form) closeSheet(); });
+$('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem salvar?')) return; closeSheet(); };
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!$('viewer').hidden) { $('viewer').hidden = true; return; } if (!$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); } });
+$('viewer').onclick = () => { $('viewer').hidden = true; };
+$('viewerX').onclick = ev => { ev.stopPropagation(); $('viewer').hidden = true; };
+document.addEventListener('click', ev => { const img = ev.target.closest('img.etq'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
+
+async function comprimir(arq) {
+  const url = URL.createObjectURL(arq); const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('não foi possível ler a imagem')); img.src = url; }); }
+  finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  for (const lado of [1600, 1200, 900]) {
+    const sc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.naturalWidth * sc)); cv.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    const ctx = cv.getContext('2d'); if (!ctx) continue;
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .8); } catch (e) { r(null); } });
+    cv.width = cv.height = 0;
+    if (b && b.size) return b;
+  }
+  if (/jpe?g/i.test(arq.type) && arq.size < 8e6) return arq;
+  throw new Error('não foi possível reduzir a foto');
+}
+
+/* ======================= início ======================= */
+(async function iniciar() {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">O almoxarifado é compartilhado pela equipe e precisa do Supabase configurado no config.js.</p></div>'; return; }
+  sb = NV.cliente; OBRA = NV.obraId;
+  try { await carregar(); }
+  catch (e) {
+    if (e.naoTem) { $('main').innerHTML = '<div class="vazio"><h3>Obra não encontrada</h3><a class="btn" href="index.html" style="text-decoration:none">Ver as obras</a></div>'; return; }
+    if (e.banco) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
+    $('main').innerHTML = `<div class="vazio"><h3>Não foi possível carregar</h3><p class="muted" style="margin:0">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return;
+  }
+  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Almoxarifado';
+  $('fab').onclick = () => lerEEntregar(null);
+  $('bEtq').onclick = () => formEtiquetas([]);
+  $('bPes').onclick = listaPessoas;
+  const q = new URLSearchParams(location.search);
+  if (q.get('aba') === 'movs') TAB = 'movs';
+  render();
+  // aberto pelo QR Code da etiqueta (câmera comum do celular): já abre o material
+  if (q.get('m')) { const cod = q.get('m'); history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA)); abrirCodigo('M' === cod[0].toUpperCase() ? cod : 'M' + cod); }
+  if (estoque()) setTimeout(() => detector().catch(() => {}), 1500);
+  try { sb.channel('alm-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'alm_movs', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'alm_materiais', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); }).subscribe(); } catch (e) {}
+})();
+})();
+</script>
+</body>
+</html>

@@ -3462,6 +3462,289 @@ $p21$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 22: Almoxarifado (estoque geral de materiais com QR Code e código de barras)
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 22 then return; end if;
+  execute $p22$
+-- ---------------------------------------------------------------------
+-- 1. Quem vê / quem movimenta / quem corrige (mesmos perfis das Cerâmicas)
+-- ---------------------------------------------------------------------
+create or replace function public.alm_ve(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'consulta', 'almoxarifado'), false)
+$$;
+create or replace function public.alm_estoque(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'almoxarifado'), false)
+$$;
+create or replace function public.alm_edita(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia'), false)
+$$;
+grant execute on function public.alm_ve(text), public.alm_estoque(text), public.alm_edita(text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 2. Tabelas
+-- ---------------------------------------------------------------------
+-- material: cada um ganha um código do sistema (M0001...), que vai no QR Code da etiqueta
+create table if not exists public.alm_materiais (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  codigo      text not null,                 -- M0001 (gerado pelo banco)
+  nome        text not null,                 -- Caixa elétrica 4x2 amarela
+  unidade     text not null default 'un',    -- un, cx, pç, m, m², kg, saco, rolo, L...
+  categoria   text,                          -- Elétrica, Hidráulica, Ferragens, EPI...
+  minimo      numeric check (minimo is null or minimo >= 0),   -- avisa quando o saldo fica abaixo
+  posicao     text,                          -- prateleira / onde fica no almoxarifado
+  obs         text,
+  ativo       boolean not null default true,
+  criado_em   timestamptz not null default now(),
+  criado_por  text
+);
+create unique index if not exists alm_materiais_codigo on public.alm_materiais (obra, codigo);
+create index if not exists alm_materiais_obra on public.alm_materiais (obra);
+
+-- códigos de barras ligados a um material (um material pode ter vários: fornecedores diferentes,
+-- unidade e caixa fechada). fator = quanto do material uma leitura representa (caixa com 50 = 50)
+create table if not exists public.alm_codigos (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  material    uuid not null references public.alm_materiais(id) on delete cascade,
+  codigo      text not null,
+  fator       numeric not null default 1 check (fator > 0),
+  criado_em   timestamptz not null default now()
+);
+create unique index if not exists alm_codigos_codigo on public.alm_codigos (obra, codigo);
+create index if not exists alm_codigos_material on public.alm_codigos (material);
+
+-- quem retira e não é funcionário cadastrado (terceirizados, empreiteiros, visitantes...)
+create table if not exists public.alm_pessoas (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  nome        text not null,
+  empresa     text,                          -- empreiteira / empresa terceirizada
+  telefone    text,
+  ativo       boolean not null default true,
+  criado_em   timestamptz not null default now(),
+  criado_por  text
+);
+create index if not exists alm_pessoas_obra on public.alm_pessoas (obra);
+
+-- movimentos (entrada = recebimento; saida = entrega; devolucao; perda; ajuste = contagem, + ou -)
+create table if not exists public.alm_movs (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  material    uuid not null references public.alm_materiais(id) on delete cascade,
+  tipo        text not null check (tipo in ('entrada', 'saida', 'devolucao', 'perda', 'ajuste')),
+  qtd         numeric not null,
+  funcionario uuid references public.pend_funcionarios(id) on delete set null,
+  pessoa      uuid references public.alm_pessoas(id) on delete set null,
+  pessoa_nome text,                          -- o nome e a empresa ficam guardados mesmo se o cadastro mudar
+  empresa     text,
+  pavimento   text,                          -- destino (opcional)
+  local       text,
+  fornecedor  text,                          -- entrada
+  nf          text,
+  lote        text,
+  validade    date,
+  foto        text,                          -- foto da nota / do material
+  obs         text,
+  em          timestamptz not null default now(),
+  por         text
+);
+create index if not exists alm_movs_obra on public.alm_movs (obra, em desc);
+create index if not exists alm_movs_material on public.alm_movs (material);
+
+alter table public.alm_materiais enable row level security;
+alter table public.alm_codigos enable row level security;
+alter table public.alm_pessoas enable row level security;
+alter table public.alm_movs enable row level security;
+
+drop policy if exists "ve alm_materiais" on public.alm_materiais;
+drop policy if exists "cria alm_materiais" on public.alm_materiais;
+drop policy if exists "edita alm_materiais" on public.alm_materiais;
+drop policy if exists "apaga alm_materiais" on public.alm_materiais;
+create policy "ve alm_materiais" on public.alm_materiais for select to authenticated using (public.alm_ve(obra));
+create policy "cria alm_materiais" on public.alm_materiais for insert to authenticated with check (public.alm_estoque(obra));
+create policy "edita alm_materiais" on public.alm_materiais for update to authenticated using (public.alm_estoque(obra)) with check (public.alm_estoque(obra));
+create policy "apaga alm_materiais" on public.alm_materiais for delete to authenticated using (public.alm_edita(obra));
+
+drop policy if exists "ve alm_codigos" on public.alm_codigos;
+drop policy if exists "grava alm_codigos" on public.alm_codigos;
+create policy "ve alm_codigos" on public.alm_codigos for select to authenticated using (public.alm_ve(obra));
+create policy "grava alm_codigos" on public.alm_codigos for all to authenticated using (public.alm_estoque(obra)) with check (public.alm_estoque(obra));
+
+drop policy if exists "ve alm_pessoas" on public.alm_pessoas;
+drop policy if exists "grava alm_pessoas" on public.alm_pessoas;
+create policy "ve alm_pessoas" on public.alm_pessoas for select to authenticated using (public.alm_ve(obra));
+create policy "grava alm_pessoas" on public.alm_pessoas for all to authenticated using (public.alm_estoque(obra)) with check (public.alm_estoque(obra));
+
+-- movimento: quem cuida do estoque registra; corrigir/apagar: a Engenharia, ou quem registrou (em 24 h)
+drop policy if exists "ve alm_movs" on public.alm_movs;
+drop policy if exists "cria alm_movs" on public.alm_movs;
+drop policy if exists "edita alm_movs" on public.alm_movs;
+drop policy if exists "apaga alm_movs" on public.alm_movs;
+create policy "ve alm_movs" on public.alm_movs for select to authenticated using (public.alm_ve(obra));
+create policy "cria alm_movs" on public.alm_movs for insert to authenticated with check (public.alm_estoque(obra));
+create policy "edita alm_movs" on public.alm_movs for update to authenticated using (public.alm_edita(obra)) with check (public.alm_edita(obra));
+create policy "apaga alm_movs" on public.alm_movs for delete to authenticated
+  using (public.alm_edita(obra) or (public.alm_estoque(obra) and lower(por) = lower(auth.jwt() ->> 'email') and em > now() - interval '24 hours'));
+
+-- ---------------------------------------------------------------------
+-- 3. Saldo e regras
+-- ---------------------------------------------------------------------
+create or replace function public.alm_saldo(p_material uuid) returns numeric
+language sql stable security definer set search_path = public as $$
+  select coalesce(sum(case when tipo in ('entrada', 'devolucao', 'ajuste') then qtd else -qtd end), 0)
+  from public.alm_movs where material = p_material
+$$;
+grant execute on function public.alm_saldo(uuid) to authenticated;
+
+-- material: código do sistema em sequência por obra (M0001, M0002...)
+create or replace function public.alm_material_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  new.nome := trim(coalesce(new.nome, ''));
+  if new.nome = '' then raise exception 'Informe o nome do material.'; end if;
+  new.unidade := coalesce(nullif(trim(coalesce(new.unidade, '')), ''), 'un');
+  if tg_op = 'INSERT' then
+    perform pg_advisory_xact_lock(hashtext('alm_codigo:' || new.obra));
+    select coalesce(max(nullif(regexp_replace(codigo, '\D', '', 'g'), '')::int), 0) + 1 into n
+      from public.alm_materiais where obra = new.obra and codigo ~ '^M\d+$';
+    new.codigo := 'M' || lpad(n::text, 4, '0');
+    new.criado_por := lower(coalesce(auth.jwt() ->> 'email', new.criado_por)); new.criado_em := now();
+  else
+    new.obra := old.obra; new.codigo := old.codigo; new.criado_por := old.criado_por; new.criado_em := old.criado_em;
+  end if;
+  return new;
+end $$;
+drop trigger if exists alm_material_ao_gravar on public.alm_materiais;
+create trigger alm_material_ao_gravar before insert or update on public.alm_materiais for each row execute function public.alm_material_ao_gravar();
+
+create or replace function public.alm_codigo_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare outro text;
+begin
+  new.codigo := trim(coalesce(new.codigo, ''));
+  if new.codigo = '' then raise exception 'Código de barras vazio.'; end if;
+  select obra into new.obra from public.alm_materiais where id = new.material;
+  select m.nome into outro from public.alm_codigos c join public.alm_materiais m on m.id = c.material
+   where c.obra = new.obra and c.codigo = new.codigo and c.id <> new.id;
+  if outro is not null then raise exception 'O código % já está ligado a: %.', new.codigo, outro; end if;
+  return new;
+end $$;
+drop trigger if exists alm_codigo_ao_gravar on public.alm_codigos;
+create trigger alm_codigo_ao_gravar before insert or update on public.alm_codigos for each row execute function public.alm_codigo_ao_gravar();
+
+create or replace function public.alm_pessoa_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.nome := trim(coalesce(new.nome, '')); new.empresa := nullif(trim(coalesce(new.empresa, '')), '');
+  if new.nome = '' then raise exception 'Informe o nome da pessoa.'; end if;
+  if tg_op = 'INSERT' then new.criado_por := lower(coalesce(auth.jwt() ->> 'email', new.criado_por));
+  else new.obra := old.obra; new.criado_por := old.criado_por; end if;
+  return new;
+end $$;
+drop trigger if exists alm_pessoa_ao_gravar on public.alm_pessoas;
+create trigger alm_pessoa_ao_gravar before insert or update on public.alm_pessoas for each row execute function public.alm_pessoa_ao_gravar();
+
+-- movimento: autoria, obra do material, nome/empresa de quem retirou e saldo nunca negativo
+create or replace function public.alm_mov_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare s numeric; d numeric; un text; nm text; st text; f record; p record;
+begin
+  perform 1 from public.alm_materiais where id = new.material for update;
+  select obra, unidade, nome into new.obra, un, nm from public.alm_materiais where id = new.material;
+  if new.tipo = 'ajuste' then
+    if new.qtd = 0 then raise exception 'O ajuste não muda nada (diferença zero).'; end if;
+  elsif new.qtd is null or new.qtd <= 0 then raise exception 'Informe a quantidade.'; end if;
+  if tg_op = 'INSERT' then
+    new.por := lower(coalesce(auth.jwt() ->> 'email', new.por)); new.em := now();
+    s := public.alm_saldo(new.material);
+  else
+    new.por := old.por; new.em := old.em;
+    s := public.alm_saldo(new.material) - case when old.tipo in ('entrada', 'devolucao', 'ajuste') then old.qtd else -old.qtd end;
+  end if;
+  d := case when new.tipo in ('entrada', 'devolucao', 'ajuste') then new.qtd else -new.qtd end;
+  if s + d < 0 then
+    st := round(s, 3)::text;
+    if position('.' in st) > 0 then st := rtrim(rtrim(st, '0'), '.'); end if;
+    raise exception 'Saldo insuficiente: há só % % de %.', st, un, nm;
+  end if;
+  if new.tipo = 'saida' and new.funcionario is null and new.pessoa is null and coalesce(trim(new.pessoa_nome), '') = '' then
+    raise exception 'Diga para quem é a entrega.';
+  end if;
+  if new.funcionario is not null then
+    select nome, equipe into f from public.pend_funcionarios where id = new.funcionario;
+    new.pessoa_nome := coalesce(nullif(trim(coalesce(new.pessoa_nome, '')), ''), f.nome);
+  elsif new.pessoa is not null then
+    select nome, empresa into p from public.alm_pessoas where id = new.pessoa;
+    new.pessoa_nome := coalesce(nullif(trim(coalesce(new.pessoa_nome, '')), ''), p.nome);
+    new.empresa := coalesce(nullif(trim(coalesce(new.empresa, '')), ''), p.empresa);
+  end if;
+  return new;
+end $$;
+drop trigger if exists alm_mov_ao_gravar on public.alm_movs;
+create trigger alm_mov_ao_gravar before insert or update on public.alm_movs for each row execute function public.alm_mov_ao_gravar();
+
+-- resumo por obra para a página inicial (as regras de acesso valem: security invoker)
+create or replace function public.alm_resumo() returns table (obra text, materiais int, com_saldo int, abaixo int)
+language sql stable set search_path = public as $$
+  select m.obra, count(*)::int,
+         count(*) filter (where coalesce(s.v, 0) > 0)::int,
+         count(*) filter (where m.minimo is not null and coalesce(s.v, 0) < m.minimo)::int
+  from public.alm_materiais m
+  left join (select material, sum(case when tipo in ('entrada', 'devolucao', 'ajuste') then qtd else -qtd end) v from public.alm_movs group by material) s on s.material = m.id
+  where m.ativo
+  group by m.obra
+$$;
+grant execute on function public.alm_resumo() to authenticated;
+
+-- tempo real
+do $x$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'alm_movs') then
+      alter publication supabase_realtime add table public.alm_movs; end if;
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'alm_materiais') then
+      alter publication supabase_realtime add table public.alm_materiais; end if;
+  end if;
+end $x$;
+
+-- ---------------------------------------------------------------------
+-- 4. Arquivos: almoxarifado/<obra>/… (foto da nota ou do material)
+-- ---------------------------------------------------------------------
+create or replace function public.arquivo_ok(p_nome text, p_editar boolean) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when split_part(p_nome, '/', 1) in ('risco', 'concretagem', 'fachada')
+      then public.painel_ok(split_part(p_nome, '/', 1) || ':' || split_part(p_nome, '/', 2), p_editar)
+    when split_part(p_nome, '/', 1) = 'obras'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'seguranca') or (not p_editar and public.perfil_atual() is not null), false)
+    when p_nome like 'pendencias/%/plantas/%'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and (not p_editar or public.ferramenta_ok('risco', true))
+    when split_part(p_nome, '/', 1) = 'pendencias'
+      then public.pend_visivel_id(split_part(p_nome, '/', 3))
+           and (not p_editar or coalesce(public.perfil_atual() <> 'consulta', false))
+    when split_part(p_nome, '/', 1) = 'personalizacoes'
+      then case when p_editar then public.pers_edita(split_part(p_nome, '/', 2))
+                else public.pers_edita(split_part(p_nome, '/', 2)) or public.pers_visivel_id(split_part(p_nome, '/', 3)) end
+    when split_part(p_nome, '/', 1) = 'ceramicas'
+      then case when p_editar then public.cer_estoque(split_part(p_nome, '/', 2)) else public.cer_ve(split_part(p_nome, '/', 2)) end
+    when split_part(p_nome, '/', 1) = 'almoxarifado'
+      then case when p_editar then public.alm_estoque(split_part(p_nome, '/', 2)) else public.alm_ve(split_part(p_nome, '/', 2)) end
+    else false end
+$$;
+
+$p22$;
+  update public.banco_versao set versao = 22, atualizado_em = now();
+  raise notice 'Passo 22 aplicado: Almoxarifado (estoque geral com QR Code e código de barras)';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin
