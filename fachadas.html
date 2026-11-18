@@ -171,6 +171,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .logo img{height:40px;width:40px;display:block}
+.lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
 </style></head><body>
 
 <div class="app">
@@ -291,15 +292,58 @@ const corCam = c => (c && c.cor) || '#888888';
 // cores da fachada: 'camada' (cor da camada), 'data' (cada aplicação de um dia tem uma cor, como os caminhões
 // na Concretagem) ou 'cura' (verde = liberada, vermelho = ainda em cura)
 let CORES = (() => { try { return localStorage.getItem('fach_cores') || 'data'; } catch (e) { return 'data'; } })();
-const PAL_DATA = ['#1f77b4', '#ff7f0e', '#9467bd', '#17becf', '#e377c2', '#bcbd22', '#8c564b', '#3a5fcd', '#d4a017', '#00897b', '#c2185b', '#5d4037', '#7cb342', '#6a1b9a', '#ef6c00', '#455a64'];
+// paleta das datas: cores bem diferentes entre si (sem verde e vermelho puros, que são do modo cura e da quebra)
+const PAL_DATA = ['#1f77b4', '#ff7f0e', '#8e44ad', '#17becf', '#e377c2', '#bcbd22', '#8c564b', '#283593', '#f2c200', '#00897b', '#c2185b', '#7cb342', '#5d4037'];
 const COR_LIB = '#2e9e57', COR_CURA = '#d93a2b', COR_QUEBRA = '#7b1fa2';
-// a cor de cada "camada + dia" é fixa na obra inteira (a mesma em todas as fachadas)
-let CDATA = null, CDATA_K = '';
+// distância entre cores como o olho vê (CIE Lab)
+function lab(h) { const v = [1, 3, 5].map(i => { const c = parseInt(h.substr(i, 2), 16) / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+  const X = (v[0] * .4124 + v[1] * .3576 + v[2] * .1805) / .95047, Y = v[0] * .2126 + v[1] * .7152 + v[2] * .0722, Z = (v[0] * .0193 + v[1] * .1192 + v[2] * .9505) / 1.08883;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))]; }
+const LAB_DATA = PAL_DATA.map(lab);
+const dCor = (i, j) => Math.hypot(LAB_DATA[i][0] - LAB_DATA[j][0], LAB_DATA[i][1] - LAB_DATA[j][1], LAB_DATA[i][2] - LAB_DATA[j][2]);
+// duas aplicações se encostam (ou se sobrepõem) na mesma fachada? folga de 0,5 m
+function segDist(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); }
+function encostam(A, B, tol) {
+  if (inPoly(A, B[0][0], B[0][1]) || inPoly(B, A[0][0], A[0][1])) return true;
+  for (const P of [[A, B], [B, A]]) { const [X, Y] = P; for (const p of X) for (let i = 0, j = Y.length - 1; i < Y.length; j = i++) if (segDist(p, Y[i], Y[j]) <= tol) return true; }
+  for (let i = 0, j = A.length - 1; i < A.length; j = i++) for (let k = 0, l = B.length - 1; k < B.length; l = k++) {   // arestas que se cruzam
+    const a = A[j], b = A[i], c = B[l], d = B[k]; const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    if (o(a, b, c) !== o(a, b, d) && o(c, d, a) !== o(c, d, b)) return true; }
+  return false;
+}
+// cada "camada + dia" tem uma cor fixa na obra inteira (a mesma em todas as fachadas). A cor sai da data
+// (em ordem), mas foge das cores das áreas vizinhas (que se encostam na mesma fachada) e das datas logo antes.
+let CDATA = null, CDATA_K = -1;
 function corData(a) {
-  const k = S.apl.length + ':' + S.cam.length + ':' + (S.apl.length ? S.apl[S.apl.length - 1].id : '');
-  if (!CDATA || CDATA_K !== k) { CDATA_K = k; const ks = [...new Set(S.apl.filter(x => camById(x.camada)).slice().sort((x, y) => x.data < y.data ? -1 : x.data > y.data ? 1 : ((camById(x.camada).ordem || 0) - (camById(y.camada).ordem || 0))).map(x => x.camada + '|' + x.data))];
-    CDATA = new Map(ks.map((q, i) => [q, PAL_DATA[i % PAL_DATA.length]])); }
+  if (!CDATA || CDATA_K !== VER) { CDATA_K = VER; CDATA = coresDasDatas(); }
   return CDATA.get(a.camada + '|' + a.data) || '#888888';
+}
+function coresDasDatas() {
+  const L = S.apl.filter(x => camById(x.camada) && Array.isArray(x.pts) && x.pts.length >= 3);
+  const k = x => x.camada + '|' + x.data;
+  const ks = [...new Set(L.slice().sort((x, y) => x.data < y.data ? -1 : x.data > y.data ? 1 : ((camById(x.camada).ordem || 0) - (camById(y.camada).ordem || 0))).map(k))];
+  // vizinhos no desenho
+  const viz = new Map(ks.map(q => [q, new Set()]));
+  const porF = new Map(); for (const x of L) { if (!porF.has(x.fachada)) porF.set(x.fachada, []); porF.get(x.fachada).push({ x, b: bbox(x.pts), k: k(x) }); }
+  const tol = 0.5;
+  for (const G of porF.values()) for (let i = 0; i < G.length; i++) for (let j = i + 1; j < G.length; j++) {
+    const A = G[i], B = G[j]; if (A.k === B.k || viz.get(A.k).has(B.k)) continue;
+    if (A.b[0] > B.b[2] + tol || B.b[0] > A.b[2] + tol || A.b[1] > B.b[3] + tol || B.b[1] > A.b[3] + tol) continue;
+    if (encostam(A.x.pts, B.x.pts, tol)) { viz.get(A.k).add(B.k); viz.get(B.k).add(A.k); } }
+  const cor = new Map(), uso = PAL_DATA.map(() => 0);
+  ks.forEach((q, n) => {
+    const vs = [...viz.get(q)].filter(v => cor.has(v)).map(v => cor.get(v));
+    const ant = ks.slice(Math.max(0, n - 3), n).map(v => cor.get(v));
+    let best = 0, bs = -1e9;
+    for (let c = 0; c < PAL_DATA.length; c++) {
+      const sp = vs.length ? Math.min(...vs.map(v => dCor(c, v))) : 150;   // vizinhos no desenho: o que mais pesa
+      const tp = ant.length ? Math.min(...ant.map(v => dCor(c, v))) : 150; // datas logo antes
+      const sc = Math.min(sp, tp + 25) - uso[c] * 1.5;
+      if (sc > bs + 1e-9) { bs = sc; best = c; }
+    }
+    cor.set(q, best); uso[best]++;
+  });
+  return new Map([...cor].map(([q, c]) => [q, PAL_DATA[c]]));
 }
 const corDe = a => CORES === 'data' ? corData(a) : CORES === 'cura' ? (estado(a).st === 'lib' ? COR_LIB : COR_CURA) : corCam(camById(a.camada));
 const visiveis = fid => S.apl.filter(a => a.fachada === fid && a.data <= S.ref && camById(a.camada));
@@ -462,13 +506,15 @@ let raf = 0; function req() { if (!raf) raf = requestAnimationFrame(() => { raf 
 const PATS = new Map();
 function hachura(c, cor) { const k = cor; if (PATS.has(k)) return PATS.get(k); const p = document.createElement('canvas'); p.width = p.height = 10; const x = p.getContext('2d'); x.strokeStyle = cor; x.globalAlpha = .9; x.lineWidth = 2.2; x.beginPath(); x.moveTo(-2, 12); x.lineTo(12, -2); x.moveTo(-2, 2); x.lineTo(2, -2); x.moveTo(8, 12); x.lineTo(12, 8); x.stroke(); const pt = c.createPattern(p, 'repeat'); PATS.set(k, pt); return pt; }
 function caminho(c, T, pts) { pts.forEach((q, i) => { const [x, y] = T(q[0], q[1]); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath(); }
-function rotulo(c, T, pts, txt, cor, ctr) {
+let ROTS = [];   // etiquetas desenhadas na tela: {id, x, y, w, h} (para arrastar)
+function rotulo(c, T, pts, txt, cor, ctr, id) {
   const b = bbox(pts); const [x0, y0] = T(b[0], b[3]); const [x1, y1] = T(b[2], b[1]); if (x1 - x0 < 46 || y1 - y0 < 16) return;
   let cx = (b[0] + b[2]) / 2, cz = (b[1] + b[3]) / 2; if (ctr) { cx = ctr[0]; cz = ctr[1]; } else if (!inPoly(pts, cx, cz)) { const p = pts.reduce((s, q) => [s[0] + q[0] / pts.length, s[1] + q[1] / pts.length], [0, 0]); cx = p[0]; cz = p[1]; }
   const [x, y] = T(cx, cz); c.font = '600 ' + (11 * FS) + 'px "Source Sans 3",sans-serif'; const w = c.measureText(txt).width + 10 * FS;
-  if (w > x1 - x0 + 30) return;
+  if (w > x1 - x0 + 8) return;   // não cabe: só aparece com mais zoom (evita etiquetas umas sobre as outras)
   c.fillStyle = 'rgba(255,255,255,.92)'; c.strokeStyle = cor; c.lineWidth = 1; c.beginPath(); if (c.roundRect) c.roundRect(x - w / 2, y - 9 * FS, w, 18 * FS, 4 * FS); else c.rect(x - w / 2, y - 9 * FS, w, 18 * FS); c.fill(); c.stroke();
   c.fillStyle = '#14222e'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, x, y + 0.5);
+  if (id) ROTS.push({ id, x: x - w / 2, y: y - 9 * FS, w, h: 18 * FS });
 }
 // máscara dos pixels de parede de um pano (para recortar o desenho das áreas)
 function mascaraPlano(f, I, p) {
@@ -499,15 +545,50 @@ function porPlano(c, f, I, T, itens, plOf, fn) {
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(CAMADA, 0, 0); c.restore();
   }
 }
-// ponto para o rótulo: o meio da parte que fica no pano (as áreas recortadas podem ter o centro em outro pano)
+// ponto para a etiqueta: o lugar "mais por dentro" da parte visível da área (longe das bordas, das janelas
+// e de outro pano), dando preferência a faixas largas, onde o texto cabe. Formatos em L, U etc. não
+// jogam a etiqueta para fora. Se alguém arrastou a etiqueta, vale a posição escolhida (a.rot).
+const PIN = new Map();
+function pontoInterno(W, H, dentro) {
+  // distância até a borda mais próxima (andar na horizontal custa 1, na vertical 3: o texto é largo)
+  const n = W * H, d = new Float32Array(n); const G = 1e9;
+  for (let i = 0; i < n; i++) d[i] = dentro[i] ? G : 0;
+  const v = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[y * W + x];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (!d[i]) continue;
+    d[i] = Math.min(d[i], v(x - 1, y) + 1, v(x, y - 1) + 3, v(x - 1, y - 1) + 3.2, v(x + 1, y - 1) + 3.2); }
+  for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) { const i = y * W + x; if (!d[i]) continue;
+    d[i] = Math.min(d[i], v(x + 1, y) + 1, v(x, y + 1) + 3, v(x + 1, y + 1) + 3.2, v(x - 1, y + 1) + 3.2); }
+  let mx = 0, sx = 0, sy = 0, cnt = 0; for (let i = 0; i < n; i++) { if (d[i] > mx) mx = d[i]; if (dentro[i]) { sx += i % W; sy += (i / W) | 0; cnt++; } }
+  if (!mx) return null;
+  // entre os pontos quase tão "por dentro" quanto o melhor, o mais perto do meio
+  const gx = sx / cnt, gy = sy / cnt; let bi = -1, bd = 1e18;
+  for (let i = 0; i < n; i++) if (d[i] >= mx * 0.9) { const e = (i % W - gx) ** 2 + (((i / W) | 0) - gy) ** 2; if (e < bd) { bd = e; bi = i; } }
+  return [bi % W, (bi / W) | 0];
+}
 function centroDe(a) {
-  const m = CACHE.ct || (CACHE.ct = new Map()); if (m.has(a.id)) return m.get(a.id);
-  const f = fachDe(a.fachada); const I = IMG.get(a.fachada); const p = planoDe(a); let r = null;
+  if (Array.isArray(a.rot) && a.rot.length === 2) return a.rot;
+  const f = fachDe(a.fachada); const I = IMG.get(a.fachada); const p = I && I.lab ? planoDe(a) : null;
+  const key = a.id + '|' + JSON.stringify(a.pts) + '|' + p + '|' + (I && I.lab ? 1 : 0);
+  if (PIN.has(key)) return PIN.get(key);
+  const b = bbox(a.pts); let r = null;
   if (f && I && I.lab && p != null) {
-    let su = 0, sz = 0, n = 0; pixDentro(f, [a.pts], i => { if (I.lab[i] === p) { su += i % f.W; sz += (i / f.W) | 0; n++; } });
-    if (n) r = [f.u0 + (su / n + 0.5) * f.px, f.z1 - (sz / n + 0.5) * f.px];
+    // na grade de pixels da imagem (reduzida até ~160 casas no lado maior)
+    const c0 = Math.max(0, Math.floor((b[0] - f.u0) / f.px)), c1 = Math.min(f.W - 1, Math.ceil((b[2] - f.u0) / f.px));
+    const r0 = Math.max(0, Math.floor((f.z1 - b[3]) / f.px)), r1 = Math.min(f.H - 1, Math.ceil((f.z1 - b[1]) / f.px));
+    const k = Math.max(1, Math.ceil(Math.max(c1 - c0 + 1, r1 - r0 + 1) / 160));
+    const W = Math.ceil((c1 - c0 + 1) / k), H = Math.ceil((r1 - r0 + 1) / k); const dn = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const cx = Math.min(c1, c0 + x * k + (k >> 1)), cy = Math.min(r1, r0 + y * k + (k >> 1));
+      if (I.lab[cy * f.W + cx] === p && inPoly(a.pts, f.u0 + (cx + 0.5) * f.px, f.z1 - (cy + 0.5) * f.px)) dn[y * W + x] = 1; }
+    const q = pontoInterno(W, H, dn);
+    if (q) r = [f.u0 + (c0 + q[0] * k + Math.min(k, c1 - c0 - q[0] * k + 1) / 2) * f.px, f.z1 - (r0 + q[1] * k + Math.min(k, r1 - r0 - q[1] * k + 1) / 2) * f.px];
   }
-  m.set(a.id, r); return r;
+  if (!r) {   // sem a imagem dos panos: só o desenho
+    const st = Math.max(b[2] - b[0], b[3] - b[1]) / 120 || 1; const W = Math.max(1, Math.ceil((b[2] - b[0]) / st)), H = Math.max(1, Math.ceil((b[3] - b[1]) / st)); const dn = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inPoly(a.pts, b[0] + (x + 0.5) * st, b[3] - (y + 0.5) * st)) dn[y * W + x] = 1;
+    const q = pontoInterno(W, H, dn); if (q) r = [b[0] + (q[0] + 0.5) * st, b[3] - (q[1] + 0.5) * st];
+  }
+  if (PIN.size > 3000) PIN.clear();
+  PIN.set(key, r); return r;
 }
 // desenha a fachada atual num contexto (tela ou exportação); FS = escala das letras (maior na exportação)
 let FS = 1;
@@ -517,7 +598,11 @@ function rotDe(a, comCamada) {
   if (CORES === 'data') return pre + fmtDs(a.data) + (e.st === 'cura' ? ' · faltam ' + nDias(e.faltam) : ' ✓');
   return comCamada ? cm.nome + (e.st === 'cura' ? ' · faltam ' + nDias(e.faltam) : ' ✓') : (e.st === 'lib' ? 'Liberada' : 'Faltam ' + nDias(e.faltam));
 }
+// durante o arrasto, a etiqueta segue o dedo
+let ARRASTO = null;   // {id, pos:[u,z]}
+const ctrTela = (a, tela) => tela && ARRASTO && ARRASTO.id === a.id ? ARRASTO.pos : centroDe(a);
 function desenhar(c, W, H, dpr, v, tela) {
+  if (tela) ROTS = [];
   const T = (u, z) => [(u - v.cu) * v.s + W / 2, H / 2 - (z - v.cz) * v.s];
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
   const f = fachAtual(); if (!f) return;
@@ -541,7 +626,7 @@ function desenhar(c, W, H, dpr, v, tela) {
       if (e.st === 'cura' && CORES !== 'cura') { c.fillStyle = hachura(c, cor); c.fill(); }
       c.lineWidth = 1.6; c.strokeStyle = cor; c.setLineDash(e.st === 'cura' && CORES !== 'cura' ? [5, 3] : []); c.stroke(); c.setLineDash([]);
     } });
-    for (const a of ord) rotulo(c, T, a.pts, rotDe(a, true), corDe(a), centroDe(a));
+    for (const a of ord) rotulo(c, T, a.pts, rotDe(a, true), corDe(a), ctrTela(a, tela), tela && a.id);
   } else {
     const cm = camById(S.modo); if (cm) {
       const seg = vis.filter(a => { const cb = camById(a.camada); return (cb.ordem || 0) > (cm.ordem || 0) && a.camada !== cm.id; });
@@ -550,7 +635,7 @@ function desenhar(c, W, H, dpr, v, tela) {
       porPlano(c, f, I, T, da, planoDe, (c, L) => { for (const a of L) { const e = estado(a); const cor = corDe(a);
         c.beginPath(); caminho(c, T, a.pts); c.globalAlpha = 0.5; c.fillStyle = cor; c.fill(); c.globalAlpha = 1; if (e.st === 'cura' && CORES !== 'cura') { c.fillStyle = hachura(c, cor); c.fill(); }
         c.lineWidth = 1.8; c.strokeStyle = cor; c.stroke(); } });
-      for (const a of da) rotulo(c, T, a.pts, rotDe(a, false), corDe(a), centroDe(a));
+      for (const a of da) rotulo(c, T, a.pts, rotDe(a, false), corDe(a), ctrTela(a, tela), tela && a.id);
     }
   }
   // quebras de cura nesta fachada
@@ -682,7 +767,7 @@ async function concluirArea(pts) {
   let a;
   if (d.aplId) { const o = aplById(d.aplId); if (!o) { encerrarDesenho(); return; } a = Object.assign(clone(o), { pts, areaBruta: +bruta.toFixed(2), area: +(liq != null ? liq : bruta).toFixed(2) }); }
   else a = { id: uid('a-'), fachada: f.id, camada: d.dados.camada, data: d.dados.data, equipe: d.dados.equipe || '', obs: d.dados.obs || '', pts, areaBruta: +bruta.toFixed(2), area: +(liq != null ? liq : bruta).toFixed(2), criado: new Date().toISOString() };
-  delete a.plano;   // o pano sai da imagem (parede contínua onde está a maior parte do desenho)
+  delete a.plano; delete a.rot;   // o pano sai da imagem; a etiqueta volta ao lugar automático (parede contínua onde está a maior parte do desenho)
   const salvo = await gravar('aplicacoes/' + a.id, a); if (!salvo) return;
   const i = S.apl.findIndex(x => x.id === a.id); if (i >= 0) S.apl[i] = salvo; else S.apl.push(salvo); mudou();
   S.sel = a.id;
@@ -717,6 +802,9 @@ cv.addEventListener('pointerdown', ev => {
   if (ptrs.size === 2) { const v = [...ptrs.values()]; gest = { pinch: true, d0: Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]), s0: V.s, c0: toM((v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2) }; if (S.draw) { S.draw.p0 = S.draw.p1 = null; } return; }
   const pan = ev.button === 1 || ev.button === 2 || ev.shiftKey;
   gest = { x0: p[0], y0: p[1], cu: V.cu, cz: V.cz, moved: false, pan, ret: !!(S.draw && S.draw.tool === 'ret' && !pan) };
+  // etiqueta da área selecionada: arrastar muda o lugar dela
+  const et = !pan && !S.draw && !S.ro && S.sel && etiquetaEm(p, S.sel);
+  if (et) { const a = aplById(S.sel); const c0 = centroDe(a); const m = toM(p[0], p[1]); if (c0) gest.rot = { id: a.id, off: [c0[0] - m[0], c0[1] - m[1]] }; }
   if (gest.ret) { const m = toM(p[0], p[1]); const s = snap(m[0], m[1], ev.altKey); S.draw.p0 = [s.u, s.z]; S.draw.p1 = [s.u, s.z]; S.draw.guia = s.g; req(); }
 });
 cv.addEventListener('pointermove', ev => {
@@ -727,10 +815,12 @@ cv.addEventListener('pointermove', ev => {
   if (gest && ptrs.size === 1) {
     const dx = p[0] - gest.x0, dy = p[1] - gest.y0; if (Math.hypot(dx, dy) > 5) gest.moved = true;
     if (gest.ret) { const m = toM(p[0], p[1]); const s = snap(m[0], m[1], ev.altKey); S.draw.p1 = [s.u, s.z]; S.draw.guia = s.g; req(); return; }
+    if (gest.rot) { if (gest.moved) { const m = toM(p[0], p[1]); ARRASTO = { id: gest.rot.id, pos: [m[0] + gest.rot.off[0], m[1] + gest.rot.off[1]] }; req(); } return; }
     if (gest.moved) { V.cu = gest.cu - dx / V.s; V.cz = gest.cz + dy / V.s; req(); }
     return;
   }
   // passando o mouse
+  cv.style.cursor = !S.draw && !S.ro && S.sel && etiquetaEm(p, S.sel) ? 'grab' : '';
   if (S.draw && S.draw.tool === 'pol') { const m = toM(p[0], p[1]); const s = snap(m[0], m[1], ev.altKey); S.draw.hover = [s.u, s.z]; S.draw.guia = s.g; req(); }
   else if (S.draw && S.draw.tool === 'ret' && !S.draw.p0) { const m = toM(p[0], p[1]); const s = snap(m[0], m[1], ev.altKey); S.draw.guia = s.g; req(); }
   dica(p);
@@ -743,6 +833,7 @@ function fimPtr(ev) {
   const p = ptrPos(ev);
   if (g.ret && S.draw) { const d = S.draw; const pts = d.p0 && d.p1 ? retPts(d.p0, d.p1) : null; d.p0 = d.p1 = null; d.guia = null;
     if (pts && polyArea(pts) >= 0.05 && g.moved) concluirArea(pts); else req(); return; }
+  if (g.rot) { const A = ARRASTO; if (g.moved && A) { moverEtiqueta(A.id, A.pos); return; } ARRASTO = null; }
   if (g.moved || g.pan) return;
   // toque simples
   const m = toM(p[0], p[1]);
@@ -765,6 +856,14 @@ document.addEventListener('keydown', ev => {
   if (ev.key === 'Enter' && S.draw && S.draw.tool === 'pol' && S.draw.pts.length >= 3 && $('ovl').hidden) concluirArea(S.draw.pts.slice());
   if ((ev.key === 'Backspace' || (ev.key === 'z' && (ev.ctrlKey || ev.metaKey))) && S.draw && S.draw.pts.length && $('ovl').hidden && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { ev.preventDefault(); S.draw.pts.pop(); renderDrawbar(); req(); }
 });
+function etiquetaEm(p, id) { const r = ROTS.find(x => x.id === id); const m = TOQUE ? 10 : 4; return !!r && p[0] >= r.x - m && p[0] <= r.x + r.w + m && p[1] >= r.y - m && p[1] <= r.y + r.h + m; }
+async function moverEtiqueta(id, pos) {
+  const a = aplById(id); if (!a) { ARRASTO = null; req(); return; }
+  const n = clone(a); if (pos) n.rot = [r2(pos[0]), r2(pos[1])]; else delete n.rot;
+  const salvo = await gravar('aplicacoes/' + id, n); ARRASTO = null;
+  if (salvo) { const i = S.apl.findIndex(x => x.id === id); if (i >= 0) S.apl[i] = salvo; mudou(); renderSide(); toast(pos ? 'Etiqueta mudada de lugar.' : 'Etiqueta de volta ao lugar automático.'); }
+  req();
+}
 function ordemDesenho(fid) { return visiveis(fid).filter(a => S.modo === 'sit' || a.camada === S.modo).sort((a, b) => ((camById(a.camada).ordem || 0) - (camById(b.camada).ordem || 0)) || (a.data < b.data ? -1 : 1)); }
 // o ponto está na parte visível da área? (dentro do desenho e, se ela tem pano, sobre a parede desse pano)
 function noPano(a, f, u, z) {
@@ -827,7 +926,9 @@ function renderDetail() {
     <dt>Área</dt><dd class="mono">${f1(areaDe(a))} m²${liq ? ` <span class="muted">(desenhada ${f1(a.areaBruta)} m²; conta só a parede do pano, sem as aberturas)</span>` : ''}</dd>
     ${a.equipe ? `<dt>Equipe</dt><dd>${esc(a.equipe)}</dd>` : ''}${a.obs ? `<dt>Observação</dt><dd>${esc(a.obs)}</dd>` : ''}
     <dt>Registro</dt><dd class="muted">${esc(quem(a.por) || '—')}${a.atualizado ? ' · ' + new Date(a.atualizado).toLocaleDateString('pt-BR') : ''}</dd></dl>${nota}
+    ${S.ro ? '' : `<p class="muted" style="margin:8px 0 0;font-size:.85rem">Para mudar a etiqueta de lugar, arraste-a no desenho.${a.rot ? ' <button class="lnk" type="button" id="aRot">Voltar ao lugar automático</button>' : ''}</p>`}
     <div class="acts">${S.ro ? '' : '<button class="btn sm" id="aEd">Editar dados</button><button class="btn sm ghost" id="aRed">Redesenhar</button><button class="btn sm danger" id="aDel">Excluir</button>'}<button class="btn sm ghost" id="aX">Fechar</button></div>`;
+  if ($('aRot')) $('aRot').onclick = () => moverEtiqueta(a.id, null);
   $('aX').onclick = () => { S.sel = null; renderSide(); req(); };
   if ($('aEd')) $('aEd').onclick = () => formAplicacao(a);
   if ($('aRed')) $('aRed').onclick = () => { if (S.fid !== a.fachada) irPara(a); iniciarDesenho({ camada: a.camada, data: a.data }, a.id); };
