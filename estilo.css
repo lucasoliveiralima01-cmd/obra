@@ -1,3 +1,7 @@
+/* troca de tela suave (navegadores que suportam): sem o clarão branco entre páginas */
+@view-transition{navigation:auto}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
+
 /* =====================================================================
    Ferramentas da Obra · cores e fontes comuns a todas as páginas
    ---------------------------------------------------------------------

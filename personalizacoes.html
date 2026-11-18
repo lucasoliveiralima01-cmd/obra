@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="description" content="Personalizações dos apartamentos: modificações pedidas pelos compradores, ciência das equipes e liberação das frentes de trabalho.">
+<meta name="description" content="Modificações dos apartamentos pedidas pelos compradores: ciência das equipes e liberação das frentes de trabalho.">
 <meta name="theme-color" content="#22425c">
-<title>Personalizações</title>
+<title>Modificações</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="icones/personalizacoes.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -169,12 +169,12 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
 <body>
 <header class="brand"><div class="brand-in">
   <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/personalizacoes.svg" alt="" width="40" height="40"></a>
-  <div class="ttl"><h1>Personalizações</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="ttl"><h1>Modificações</h1><span class="obra" id="obraNome">Carregando…</span></div>
   <div class="hctl"></div>
 </div></header>
 
 <main id="main"><p class="muted">Carregando…</p></main>
-<button class="fab" id="fab" type="button" hidden>+ Nova personalização</button>
+<button class="fab" id="fab" type="button" hidden>+ Nova modificação</button>
 
 <div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
 <div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Arquivo ampliado"></div>
@@ -188,7 +188,7 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
 <script src="listas-comum.js"></script>
 <script>
 /* =====================================================================
-   Personalizações dos apartamentos
+   Modificações dos apartamentos
    - A Engenharia registra a modificação pedida pelo comprador e diz quais
      serviços ela afeta (com a instrução para a equipe de cada ofício).
    - Aprovada, a equipe de cada ofício dá "Estou ciente" (ou a Engenharia
@@ -212,7 +212,7 @@ const fmtDH = s => { if (!s) return '—'; const d = new Date(s); return d.toLoc
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 const LO = window.ListasObra;
 const AVISO_DIAS = 7;   // frentes previstas para os próximos dias entram nos avisos
-const nPers = n => n + ' personaliza' + (n > 1 ? 'ções' : 'ção');
+const nPers = n => n + ' modifica' + (n > 1 ? 'ções' : 'ção');
 
 const ST = { solicitada: 'Aguardando aprovação', aprovada: 'Aprovada', executada: 'Executada', conferida: 'Conferida', cancelada: 'Cancelada' };
 const SIT = [['ativas', 'Ativas', ['solicitada', 'aprovada', 'executada']], ['solicitada', 'Aguardando aprovação', ['solicitada']], ['aprovada', 'Aprovadas', ['aprovada']],
@@ -265,7 +265,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && NV
 const frenteDe = (sv, pav) => FRENTES.find(f => f.servico === sv && f.pavimento === pav) || null;
 const persDaFrente = (sv, pav) => PERS.filter(p => p.pavimento === pav && ['aprovada', 'executada', 'conferida', 'solicitada'].includes(p.status) && (p.itens || []).some(i => i.servico === sv));
 const faltasFrente = (sv, pav) => persDaFrente(sv, pav).filter(p => p.status === 'aprovada' && !ciencia(p, sv));
-// serviços que aparecem nas personalizações ou nas frentes (as colunas da tabela)
+// serviços que aparecem nas modificações ou nas frentes (as colunas da tabela)
 function servicosUsados() {
   const s = new Set(); PERS.forEach(p => p.status !== 'cancelada' && (p.itens || []).forEach(i => i.servico && s.add(i.servico))); FRENTES.forEach(f => s.add(f.servico)); COLS_EXTRA.forEach(x => s.add(x));
   const ord = ativos('servico'); return [...s].sort((a, b) => (ord.indexOf(a) < 0 ? 999 : ord.indexOf(a)) - (ord.indexOf(b) < 0 ? 999 : ord.indexOf(b)) || a.localeCompare(b));
@@ -281,8 +281,8 @@ function frentesEmRisco() {
 function render() {
   const m = $('main'), risco = frentesEmRisco(), minhas = PERS.filter(minhaFalta);
   const nAtivas = PERS.filter(p => ['solicitada', 'aprovada', 'executada'].includes(p.status)).length;
-  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Personalizações</span></nav>
-    <div class="tabs"><div class="seg"><button type="button" class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Personalizações<b>${nAtivas}</b></button><button type="button" class="tab" data-tab="frentes" aria-pressed="${TAB === 'frentes'}">Frentes de trabalho</button></div></div>
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Modificações</span></nav>
+    <div class="tabs"><div class="seg"><button type="button" class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Modificações<b>${nAtivas}</b></button><button type="button" class="tab" data-tab="frentes" aria-pressed="${TAB === 'frentes'}">Frentes de trabalho</button></div></div>
     ${risco.length || minhas.length ? `<div class="alertas">${risco.slice(0, 6).map(({ f, fa }) => `<button type="button" class="alerta" data-fr='${esc(JSON.stringify([f.servico, f.pavimento]))}'><span class="ic">!</span><span><b>${esc(f.servico)} · ${esc(f.pavimento)}</b> ${f.previsto < hoje() ? 'devia ter começado em' : 'começa em'} ${fmtD(f.previsto)} e falta a ciência da equipe em ${nPers(fa.length)}<small>${fa.map(p => 'Apto ' + esc(p.unidade) + ': ' + esc(p.titulo)).join(' · ')}</small></span></button>`).join('')}
       ${minhas.length && !edita() ? `<button type="button" class="alerta info" data-minhas><span class="ic">✓</span><span><b>${nPers(minhas.length)} ${minhas.length > 1 ? 'aguardam' : 'aguarda'} o seu “Estou ciente”</b><small>Leia o que muda em cada apartamento antes de montar.</small></span></button>` : ''}</div>` : ''}
     <div id="tabBody"></div>`;
@@ -320,7 +320,7 @@ function renderLista() {
       <button type="button" class="chip" id="fFalta" aria-pressed="${F.falta}">${edita() ? 'Falta ciência' : 'Aguardando meu “ciente”'} <b>${nFalta}</b></button>
     </div>
     ${vis.length ? [...grupos.entries()].map(([pav, L2]) => `<section class="grupo"><h2>${esc(pav)}</h2><div class="lista">${L2.map(cardHtml).join('')}</div></section>`).join('')
-      : `<div class="vazio"><h3>${PERS.length ? 'Nenhuma personalização com estes filtros' : 'Nenhuma personalização registrada'}</h3><p class="muted" style="margin:0">${PERS.length ? 'Mude os filtros acima.' : edita() ? 'Registre aqui as modificações pedidas pelos compradores (ex.: fechar uma porta, mudar um ponto elétrico). As equipes de cada serviço afetado precisam confirmar que estão cientes antes de montar.' : 'Quando houver personalizações que afetam o seu ofício, elas aparecem aqui.'}</p>${!PERS.length && edita() ? '<button class="btn" type="button" id="bNova2">+ Nova personalização</button>' : ''}</div>`}`;
+      : `<div class="vazio"><h3>${PERS.length ? 'Nenhuma modificação com estes filtros' : 'Nenhuma modificação registrada'}</h3><p class="muted" style="margin:0">${PERS.length ? 'Mude os filtros acima.' : edita() ? 'Registre aqui as modificações pedidas pelos compradores (ex.: fechar uma porta, mudar um ponto elétrico). As equipes de cada serviço afetado precisam confirmar que estão cientes antes de montar.' : 'Quando houver modificações que afetam o seu ofício, elas aparecem aqui.'}</p>${!PERS.length && edita() ? '<button class="btn" type="button" id="bNova2">+ Nova modificação</button>' : ''}</div>`}`;
   const b = $('tabBody');
   $('fQ').oninput = e => { F.q = e.target.value; clearTimeout(renderLista.t); renderLista.t = setTimeout(() => { renderLista(); const q = $('fQ'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); };
   $('fSit').onchange = e => { F.sit = e.target.value; renderLista(); };
@@ -333,7 +333,7 @@ function renderLista() {
 function renderFrentes() {
   const svs = servicosUsados(), pavs = CFG.pavimentos.map(x => x.nome).concat([...new Set(PERS.map(p => p.pavimento))].filter(n => !CFG.pavimentos.some(x => x.nome === n)));
   const resto = ativos('servico').filter(s => !svs.includes(s));
-  if (!svs.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhuma frente ainda</h3><p class="muted" style="margin:0">As colunas aparecem com os serviços das personalizações. ${edita() ? 'Você também pode acrescentar um serviço para já marcar as datas previstas.' : ''}</p>${edita() && resto.length ? `<select class="fsel" id="fAdd"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
+  if (!svs.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhuma frente ainda</h3><p class="muted" style="margin:0">As colunas aparecem com os serviços das modificações. ${edita() ? 'Você também pode acrescentar um serviço para já marcar as datas previstas.' : ''}</p>${edita() && resto.length ? `<select class="fsel" id="fAdd"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
     if ($('fAdd')) $('fAdd').onchange = e => { if (e.target.value) { COLS_EXTRA.push(e.target.value); renderFrentes(); } }; return; }
   const cel = (sv, pav) => {
     const fr = frenteDe(sv, pav), ps = persDaFrente(sv, pav), fa = faltasFrente(sv, pav);
@@ -346,7 +346,7 @@ function renderFrentes() {
     const prev = fr && fr.previsto && !fr.liberada_em ? `<span class="d">prev. ${fmtDs(fr.previsto)}</span>` : '';
     return `<button type="button" class="fc" data-fr='${esc(JSON.stringify([sv, pav]))}'>${s}${prev}${ps.length ? `<span class="d">${ps.length} personaliz.</span>` : ''}</button>`;
   };
-  $('tabBody').innerHTML = `<p class="muted" style="margin:0">Cada célula é um serviço num pavimento. Marque a <b>data prevista</b> para receber o aviso com antecedência, e <b>libere a frente</b> antes de a equipe começar: a liberação só sai com o “Estou ciente” de todas as personalizações daquele trecho.</p>
+  $('tabBody').innerHTML = `<p class="muted" style="margin:0">Cada célula é um serviço num pavimento. Marque a <b>data prevista</b> para receber o aviso com antecedência, e <b>libere a frente</b> antes de a equipe começar: a liberação só sai com o “Estou ciente” de todas as modificações daquele trecho.</p>
     <div class="fr-wrap"><table class="fr"><thead><tr><th>Pavimento</th>${svs.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
     <tbody>${pavs.map(pav => `<tr><td>${esc(pav)}</td>${svs.map(sv => `<td>${cel(sv, pav)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <div class="leg"><span><span class="s s-lib" style="padding:1px 7px;border-radius:10px">Liberada</span> pode começar</span><span><span class="s s-falta" style="padding:1px 7px;border-radius:10px">Falta ciência</span> equipe ainda não confirmou</span><span><span class="s s-pronta" style="padding:1px 7px;border-radius:10px">Pronta</span> tudo confirmado, falta liberar</span><span>⚠ liberada com justificativa</span>
@@ -366,13 +366,13 @@ $('viewerX').onclick = ev => { ev.stopPropagation(); $('viewer').hidden = true; 
 document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
 const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=Falta|Só|Você)/, '');
 
-/* ---------------- ficha da personalização ---------------- */
+/* ---------------- ficha da modificação ---------------- */
 function ficha(id, manter) {
   const p = PERS.find(x => x.id === id); if (!p) { closeSheet(); return; }
   const rol = manter ? $('ovlB').scrollTop : 0;
   const imgs = (p.arquivos || []);
   const prox = { solicitada: ['aprovada', 'Aprovar e avisar as equipes'], aprovada: ['executada', 'Marcar como executada'], executada: ['conferida', 'Conferir (feito conforme)'] }[p.status];
-  openSheet('Personalização #' + (p.numero || '—'), `<div class="fi" style="display:grid;gap:14px">
+  openSheet('Modificação #' + (p.numero || '—'), `<div class="fi" style="display:grid;gap:14px">
     <div style="display:grid;gap:6px"><h2 class="fi-tit">${esc(p.titulo)}</h2><p class="fi-loc">${esc(rotLocal(p))}</p>
       <div class="fi-meta"><span class="st st-${p.status}">${ST[p.status]}</span>${p.solicitante ? `<span>Pedido de: <b>${esc(p.solicitante)}</b></span>` : ''}<span>Registrada em ${fmtDH(p.criado_em)} por ${esc(nomeDe(p.criado_por))}</span></div>
       ${p.descricao ? `<p class="fi-desc">${esc(p.descricao)}</p>` : ''}</div>
@@ -399,12 +399,12 @@ function ficha(id, manter) {
   const mudar = async (st, txt) => { const { error } = await sb.from('personalizacoes').update({ status: st }).eq('id', p.id); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } toast(txt); await recarregar(); };
   if ($('dProx')) $('dProx').onclick = () => mudar(prox[0], prox[0] === 'aprovada' ? 'Aprovada. As equipes dos serviços afetados foram avisadas.' : 'Situação atualizada.');
   if ($('dEd')) $('dEd').onclick = () => formPers(p.id);
-  if ($('dCanc')) $('dCanc').onclick = () => { if (confirm('Cancelar esta personalização? Ela deixa de cobrar ciência e de travar as frentes.')) mudar('cancelada', 'Personalização cancelada.'); };
+  if ($('dCanc')) $('dCanc').onclick = () => { if (confirm('Cancelar esta modificação? Ela deixa de cobrar ciência e de travar as frentes.')) mudar('cancelada', 'Modificação cancelada.'); };
   if ($('dReat')) $('dReat').onclick = () => mudar('solicitada', 'Reativada: aguardando aprovação.');
-  if ($('dDel')) $('dDel').onclick = async () => { if (!confirm('Excluir de vez a personalização #' + p.numero + '?')) return;
+  if ($('dDel')) $('dDel').onclick = async () => { if (!confirm('Excluir de vez a modificação #' + p.numero + '?')) return;
     const { error } = await sb.from('personalizacoes').delete().eq('id', p.id); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; }
     const cam = (p.arquivos || []).map(a => a.caminho); if (cam.length) sb.storage.from('arquivos').remove(cam).catch(() => {});
-    closeSheet(); toast('Personalização excluída.'); await recarregar(); };
+    closeSheet(); toast('Modificação excluída.'); await recarregar(); };
 }
 
 /* ---------------- cadastro / edição ---------------- */
@@ -459,7 +459,7 @@ function formPers(id) {
     if (g('pUn') != null) f.unidade = g('pUn').trim(); if (g('pCom') != null) f.comodo = g('pCom').trim(); if (g('pTit') != null) f.titulo = g('pTit'); if (g('pDesc') != null) f.descricao = g('pDesc'); if (g('pSol') != null) f.solicitante = g('pSol');
     $('ovlB').querySelectorAll('[data-is]').forEach(s => { f.itens[+s.dataset.is].servico = s.value; }); $('ovlB').querySelectorAll('[data-io]').forEach(s => { f.itens[+s.dataset.io].oficio = s.value; });
     $('ovlB').querySelectorAll('[data-ii]').forEach(s => { f.itens[+s.dataset.ii].instrucao = s.value; }); };
-  openSheet(ed ? 'Editar personalização #' + ed.numero : 'Nova personalização', '', `<span class="msg" id="pMsg"></span><button class="btn ghost" id="pC" type="button">Cancelar</button><button class="btn" id="pOk" type="button">${ed ? 'Salvar' : 'Registrar'}</button>`, true);
+  openSheet(ed ? 'Editar modificação #' + ed.numero : 'Nova modificação', '', `<span class="msg" id="pMsg"></span><button class="btn ghost" id="pC" type="button">Cancelar</button><button class="btn" id="pOk" type="button">${ed ? 'Salvar' : 'Registrar'}</button>`, true);
   desenhar();
   $('pC').onclick = () => { if (ed) { delete $('ovl').dataset.form; ficha(ed.id); } else closeSheet(); };
   $('pOk').onclick = async () => {
@@ -481,7 +481,7 @@ function formPers(id) {
       const cam = tirar.map(a => a.caminho); if (cam.length) sb.storage.from('arquivos').remove(cam).catch(() => {});
       novos.forEach(a => a.url && URL.revokeObjectURL(a.url));
       delete $('ovl').dataset.form; await carregar(); render(); ficha(pid);
-      toast(ed ? 'Personalização salva.' : aprovar ? 'Registrada e aprovada: as equipes foram avisadas.' : 'Registrada: aguardando aprovação.', 5000);
+      toast(ed ? 'Modificação salva.' : aprovar ? 'Registrada e aprovada: as equipes foram avisadas.' : 'Registrada: aguardando aprovação.', 5000);
     } catch (e) { console.error(e); $('pOk').disabled = false; msg('Não foi possível salvar: ' + erroMsg(e)); }
   };
 }
@@ -495,12 +495,12 @@ function fichaFrente(sv, pav) {
       : fa.length ? `<div class="alerta"><span class="ic">!</span><span><b>Falta a ciência da equipe em ${nPers(fa.length)}.</b><small>Confirme com a equipe antes de liberar a frente.</small></span></div>` : ''}
     <div class="fld"><label for="frPrev">Data prevista para começar</label>${edita() && !lib ? `<input type="date" id="frPrev" value="${esc((fr && fr.previsto) || '')}">` : `<span>${fr && fr.previsto ? fmtD(fr.previsto) : '—'}</span>`}
       <span class="muted">O aviso aparece ${AVISO_DIAS} dias antes, enquanto houver ciência faltando.</span></div>
-    <h4 style="margin:0;font:700 1rem var(--f-disp)">Personalizações neste trecho (${ps.length})</h4>
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Modificações neste trecho (${ps.length})</h4>
     ${ps.length ? ps.sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), 'pt', { numeric: true })).map(p => { const i = (p.itens || []).find(x => x.servico === sv) || {}, c = ciencia(p, sv);
       const k = p.status === 'aprovada' ? (c ? 'ok' : 'falta') : '';
       return `<button type="button" class="svc ${k}" data-p="${esc(p.id)}" style="text-align:left;background:none;color:inherit;width:100%"><span class="h"><b>Apto ${esc(p.unidade)} · ${esc(p.titulo)}</b><span class="st st-${p.status}">${ST[p.status]}</span></span>
         ${i.instrucao ? `<span class="ins">${esc(i.instrucao)}</span>` : ''}<span class="ci ${k}">${c ? '✓ Ciente: ' + esc(nomeDe(c.por)) + ' · ' + fmtDH(c.em) : p.status === 'aprovada' ? 'Falta a ciência da equipe (' + esc(i.oficio || '') + ')' : p.status === 'solicitada' ? 'Ainda não aprovada' : ''}</span></button>`; }).join('')
-      : '<p class="muted" style="margin:0">Nenhuma personalização afeta este serviço neste pavimento.</p>'}
+      : '<p class="muted" style="margin:0">Nenhuma modificação afeta este serviço neste pavimento.</p>'}
     ${edita() && !lib && fa.length ? `<div class="fld"><label for="frJus">Liberar mesmo assim (justificativa)</label><textarea id="frJus" placeholder="Ex.: equipe avisada por telefone pelo mestre João"></textarea></div>` : ''}</div>`,
     edita() ? `<span class="msg" id="frMsg"></span>${lib ? '<button class="btn ghost danger" id="frDesf" type="button">Desfazer liberação</button>' : '<button class="btn ghost" id="frSalvar" type="button">Salvar data</button><button class="btn ok" id="frLib" type="button">Liberar a frente</button>'}` : '');
   $('ovl').dataset.fr = JSON.stringify([sv, pav]);
@@ -522,7 +522,7 @@ function fichaFrente(sv, pav) {
 /* ======================= início ======================= */
 (async function iniciar() {
   NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
-  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">As personalizações são compartilhadas pela equipe e precisam do Supabase configurado no config.js.</p></div>'; return; }
+  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">As modificações são compartilhadas pela equipe e precisam do Supabase configurado no config.js.</p></div>'; return; }
   sb = NV.cliente; OBRA = NV.obraId;
   try { await carregar(); }
   catch (e) {
@@ -530,7 +530,7 @@ function fichaFrente(sv, pav) {
     if (e.banco) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
     $('main').innerHTML = `<div class="vazio"><h3>Não foi possível carregar</h3><p class="muted" style="margin:0">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return;
   }
-  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Personalizações';
+  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Modificações';
   $('fab').onclick = () => formPers(null);
   const q = new URLSearchParams(location.search);
   if (q.get('aba') === 'frentes') TAB = 'frentes';

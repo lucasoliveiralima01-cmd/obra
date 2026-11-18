@@ -165,7 +165,7 @@ async function fachadasLiberadas(hoje: string, site: string, nomeObra: (id: stri
   return n;
 }
 
-/* ---------------- personalizações dos apartamentos ---------------- */
+/* ---------------- modificações dos apartamentos ---------------- */
 type Item = { servico?: string; oficio?: string; instrucao?: string };
 // aprovada: cada equipe afetada recebe o que muda e precisa dar "Estou ciente"
 async function personalizacao(p: Record<string, unknown>, site: string) {
@@ -176,7 +176,7 @@ async function personalizacao(p: Record<string, unknown>, site: string) {
   let n = 0;
   for (const i of ((p.itens || []) as Item[])) {
     if (!i.oficio) continue;
-    n += await enviar(campoDe(ms, i.oficio, obra), { title: 'Personalização · Apto ' + p.unidade + ' · ' + (i.servico || ''),
+    n += await enviar(campoDe(ms, i.oficio, obra), { title: 'Modificação · Apto ' + p.unidade + ' · ' + (i.servico || ''),
       body: (o ? o.nome + ' · ' : '') + p.titulo + (i.instrucao ? '\n' + i.instrucao : '') + '\nAbra e confirme que está ciente.', url, tag: 'pers-' + p.id + '-' + i.servico });
   }
   return { enviados: n };
@@ -232,7 +232,7 @@ async function diario(site: string) {
   } catch (e) { console.warn('rompimentos', e); }
   // fachadas: áreas cuja cura termina hoje (liberadas para a próxima camada) → Engenharia
   try { enviados += await fachadasLiberadas(hoje, site, nomeObra, obra => engenhariaDe(ms, obra)); } catch (e) { console.warn('fachadas', e); }
-  // personalizações: frentes previstas com ciência faltando
+  // modificações: frentes previstas com ciência faltando
   try { enviados += await frentesEmRisco(hoje, site, nomeObra, ms); } catch (e) { console.warn('frentes', e); }
   for (const obra of [...new Set(ps.map(p => p.obra))]) {
     const da = ps.filter(p => p.obra === obra);

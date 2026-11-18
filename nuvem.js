@@ -41,7 +41,7 @@
 
   /* ---------------- perfis: o que cada um vê e edita ---------------- */
   const PERFIS = { admin: 'Administrador', engenharia: 'Engenharia', seguranca: 'Segurança', campo: 'Campo', consulta: 'Consulta', almoxarifado: 'Almoxarifado' };
-  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Personalizações'], ['ceramica', 'Cerâmicas'], ['almox', 'Almoxarifado']];
+  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Modificações'], ['ceramica', 'Cerâmicas'], ['almox', 'Almoxarifado']];
   // personalizacao: Campo vê as que afetam os seus ofícios (para dar "Estou ciente")
   // ceramica e almox: Almoxarifado recebe material e registra entregas (só essas ferramentas)
   const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox'],

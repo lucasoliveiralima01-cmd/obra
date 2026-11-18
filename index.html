@@ -239,7 +239,7 @@ const FERRAMENTAS = [
     resumo: 'Acompanhe as etapas de revestimento e os prazos de cura.',
     desc: 'Chapisco, reboco, textura e pintura desenhados sobre as fachadas (geradas do IFC da arquitetura), com tempo de cura por camada, áreas liberadas, quebras de cura e avisos.',
     icone: '<img src=\"icones/fachadas.svg\" alt=\"\">' },
-  { id: 'personalizacao', nome: 'Personalizações', curto: 'Personalizações', pagina: 'personalizacoes.html', soOnline: true,
+  { id: 'personalizacao', nome: 'Modificações', curto: 'Modificações', pagina: 'personalizacoes.html', soOnline: true,
     resumo: 'Modificações dos compradores, ciência das equipes e liberação das frentes.',
     desc: 'Modificações pedidas pelos compradores por apartamento, com os serviços afetados, o “Estou ciente” de cada equipe e a liberação das frentes de trabalho.',
     icone: '<img src=\"icones/personalizacoes.svg\" alt=\"\">' },
@@ -321,7 +321,7 @@ function meuDiaHtml() {
   // fachadas: áreas que terminam a cura hoje (liberadas para a próxima camada) e nos próximos 3 dias
   const fs = FACH.filter(x => x.hoje || x.breve);
   if (fs.length && NV.podeVer('fachada')) extras.push(`<div class="md-o"><h3>Fachadas</h3><div class="md-l">${fs.map(x => `<a class="md-c" href="fachadas.html?obra=${encodeURIComponent(x.obra)}"><span class="md-t"><b>${esc(nomeObra(x.obra))}</b><small>${[x.hoje ? '<b class="bom">' + x.hoje + ' liberada' + (x.hoje > 1 ? 's' : '') + ' hoje</b>' + (x.prox ? ' para ' + esc(x.prox) : '') : '', x.breve ? x.breve + ' libera' + (x.breve > 1 ? 'm' : '') + ' em até 3 dias' : ''].filter(Boolean).join(' · ')}</small></span><span class="md-ch" aria-hidden="true">›</span></a>`).join('')}</div></div>`);
-  // personalizações: frentes que começam em até 7 dias com ciência faltando (Engenharia) e as que esperam o meu "Estou ciente" (Campo)
+  // modificações: frentes que começam em até 7 dias com ciência faltando (Engenharia) e as que esperam o meu "Estou ciente" (Campo)
   if (NV.podeVer('personalizacao')) {
     const lim = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
     const cards = [];
@@ -331,7 +331,7 @@ function meuDiaHtml() {
     const meus = NV.oficios || [];
     for (const p of PERSZ.filter(p => persFaltas(p).some(i => NV.perfil === 'campo' ? meus.includes(i.oficio) : false)))
       cards.push(`<a class="md-c" href="personalizacoes.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span class="md-t"><b>Apto ${esc(p.unidade)} · ${esc(p.titulo)}</b><small>${esc(nomeObra(p.obra))} · ${esc(p.pavimento)} · <b class="ruim">confirme que está ciente</b></small></span><span class="md-ch" aria-hidden="true">›</span></a>`);
-    if (cards.length) extras.unshift(`<div class="md-o"><h3>Personalizações</h3><div class="md-l">${cards.slice(0, 8).join('')}</div></div>`);
+    if (cards.length) extras.unshift(`<div class="md-o"><h3>Modificações</h3><div class="md-l">${cards.slice(0, 8).join('')}</div></div>`);
   }
   if (!listas.length && !extras.length) return '';
   if (!listas.some(l => l.id === mdAba && (l.id === '' || l.arr.length))) mdAba = '';
@@ -390,7 +390,7 @@ async function carregarResumo() {
       else if (p.status === 'avaliacao') r.pend.aval++;
       else if (p.status === 'corrigida') r.pend.corrigidas++; else r.pend.fechadas++; }
   } catch (e) {}
-  // personalizações: faltas de ciência (de todos, para a Engenharia; as dos meus ofícios, para Campo) e frentes previstas
+  // modificações: faltas de ciência (de todos, para a Engenharia; as dos meus ofícios, para Campo) e frentes previstas
   PERSZ = []; FRENTESZ = [];
   if (NV.podeVer('personalizacao')) try {
     const [lp, lf] = await Promise.all([sb.from('personalizacoes').select('id,obra,numero,pavimento,unidade,titulo,status,itens,pers_ciencias(servico)').in('status', ['solicitada', 'aprovada', 'executada']),
@@ -429,14 +429,14 @@ function resumoDe(id, fid) {
     return [p.abertas ? p.abertas + ' aberta' + (p.abertas > 1 ? 's' : '') : 'Nenhuma aberta', p.venc ? `<b class="ruim">${p.abertas === 1 ? 'em atraso' : (p.venc === 1 ? 'uma delas' : p.venc + ' delas') + ' em atraso'}</b>` : '', p.corrigidas ? p.corrigidas + ' para aprovar' : '', p.aval ? p.aval + ' em avaliação' : ''].filter(Boolean).join(' · '); }
   if (fid === 'concretagem') { const c = r.conc; return c ? c.n + ' concretage' + (c.n > 1 ? 'ns' : 'm') + (c.ultima ? ' · Última em ' + fmtD(c.ultima) : '') : 'Nenhuma concretagem'; }
   if (fid === 'fachada') { const c = r.fach; return c ? c.n + ' área' + (c.n > 1 ? 's' : '') + ' aplicada' + (c.n > 1 ? 's' : '') + (c.ultima ? ' · Última aplicação em ' + fmtD(c.ultima) : '') : 'Nenhuma aplicação'; }
-  if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma personalização'; }
+  if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma modificação'; }
   if (fid === 'ceramica') { const k = r.cer; return k && k.pallets ? Math.floor(k.cx) + ' caixa' + (Math.floor(k.cx) === 1 ? '' : 's') + ' em estoque · ' + k.pallets + ' pallet' + (k.pallets > 1 ? 's' : '') : 'Nenhum pallet em estoque'; }
   if (fid === 'almox') { const k = r.alm; return k && k.materiais ? k.materiais + ' materia' + (k.materiais > 1 ? 'is' : 'l') + (k.abaixo ? ` · <b class="ruim">${k.abaixo} abaixo do mínimo</b>` : '') : 'Nenhum material'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · Revisão R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }
 // selo no ícone (como notificação de app): pendências abertas, em vermelho se alguma venceu
-// serviços de uma personalização aprovada que ainda não têm o "Estou ciente"
+// serviços de uma modificação aprovada que ainda não têm o "Estou ciente"
 const persFaltas = p => p.status === 'aprovada' ? (p.itens || []).filter(i => !(p.pers_ciencias || []).some(c => c.servico === i.servico)) : [];
 function seloDe(id, fid) {
   const r = RESUMO[id] || {};
@@ -447,7 +447,7 @@ function seloDe(id, fid) {
 const fotoHtml = o => o.foto && o.foto.asset ? `<img alt="" data-foto="${esc(o.foto.asset)}" style="${fotoEstilo(o.foto)}" hidden>` : `<span>${esc(iniciais(o.nome))}</span>`;
 const pintarFotos = box => box.querySelectorAll('img[data-foto]').forEach(img => NV.blobUrl(img.dataset.foto).then(u => { img.src = u; img.hidden = false; }).catch(() => {}));
 // engrenagem da obra: abre a lista Renomear / Foto / Modelo / Excluir
-const ENGR = '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M10.3 2.8h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
+const ENGR = '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M10.09 4.54 L10.37 2.23 L13.63 2.23 L13.91 4.54 A7.7 7.7 0 0 1 15.92 5.37 L17.76 3.95 L20.05 6.24 L18.63 8.08 A7.7 7.7 0 0 1 19.46 10.09 L21.77 10.37 L21.77 13.63 L19.46 13.91 A7.7 7.7 0 0 1 18.63 15.92 L20.05 17.76 L17.76 20.05 L15.92 18.63 A7.7 7.7 0 0 1 13.91 19.46 L13.63 21.77 L10.37 21.77 L10.09 19.46 A7.7 7.7 0 0 1 8.08 18.63 L6.24 20.05 L3.95 17.76 L5.37 15.92 A7.7 7.7 0 0 1 4.54 13.91 L2.23 13.63 L2.23 10.37 L4.54 10.09 A7.7 7.7 0 0 1 5.37 8.08 L3.95 6.24 L6.24 3.95 L8.08 5.37 A7.7 7.7 0 0 1 10.09 4.54Z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
 const menuObra = (o, naObra) => (podeEditar() || naObra) ? `<div class="engr"><button type="button" class="engr-b" data-engr aria-haspopup="menu" aria-expanded="false" aria-label="Opções da obra ${esc(o.nome)}" title="Opções da obra">${ENGR}</button>
   <div class="engr-m" role="menu" hidden>${podeEditar() ? `<button type="button" role="menuitem" data-ren="${esc(o.id)}">Renomear</button><button type="button" role="menuitem" data-fot="${esc(o.id)}">${o.foto && o.foto.asset ? 'Trocar foto' : 'Foto'}</button>` : ''}<button type="button" role="menuitem" data-mod="${esc(o.id)}">Modelo IFC</button>${podeEditar() ? `<button type="button" role="menuitem" class="ruim" data-del="${esc(o.id)}">Excluir</button>` : ''}</div></div>` : '';
 function fecharMenus(exceto) { document.querySelectorAll('.engr-m').forEach(m => { if (m === exceto) return; m.hidden = true; const b = m.previousElementSibling; if (b) b.setAttribute('aria-expanded', 'false'); }); }

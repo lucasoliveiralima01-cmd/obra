@@ -12,13 +12,13 @@
   const instalado = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const FERR = [
-    { id: 'risco', nome: 'Riscos', pag: 'risco.html' },
-    { id: 'concretagem', nome: 'Concretagens', pag: 'concretagem.html' },
-    { id: 'fachada', nome: 'Fachadas', pag: 'fachadas.html' },
-    { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html' },
-    { id: 'personalizacao', nome: 'Personalizações', pag: 'personalizacoes.html' },
-    { id: 'ceramica', nome: 'Cerâmicas', pag: 'ceramicas.html' },
-    { id: 'almox', nome: 'Almoxarifado', pag: 'almoxarifado.html' }
+    { id: 'risco', nome: 'Riscos', pag: 'risco.html', ic: 'risco' },
+    { id: 'concretagem', nome: 'Concretagens', pag: 'concretagem.html', ic: 'concretagem' },
+    { id: 'fachada', nome: 'Fachadas', pag: 'fachadas.html', ic: 'fachadas' },
+    { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html', ic: 'pendencias' },
+    { id: 'personalizacao', nome: 'Modificações', pag: 'personalizacoes.html', ic: 'personalizacoes' },
+    { id: 'ceramica', nome: 'Cerâmicas', pag: 'ceramicas.html', ic: 'ceramicas' },
+    { id: 'almox', nome: 'Almoxarifado', pag: 'almoxarifado.html', ic: 'almoxarifado' }
   ];
 
   /* ---------------- tema ---------------- */
@@ -66,12 +66,15 @@
   .mo-tema{display:flex;gap:4px;padding:2px 6px 4px}
   .mo-tema button{flex:1;background:var(--bg,#eef2f5);border:1px solid var(--line,#d3dce3);border-radius:7px;padding:6px 4px;font:600 .8rem var(--f-body,sans-serif);color:var(--muted,#5a6b78);cursor:pointer}
   .mo-tema button[aria-pressed="true"]{background:var(--accent,#074669);border-color:var(--accent,#074669);color:var(--accent-ink,#fff)}
-  .mo-abas{display:inline-flex;gap:2px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:2px;flex-wrap:wrap}
-  .mo-abas a{color:#d4e4ee;text-decoration:none;font:600 .8rem var(--f-body,sans-serif);padding:4px 10px;border-radius:6px;white-space:nowrap}
-  .mo-abas a:hover{background:rgba(255,255,255,.15);color:#fff}
-  .mo-abas a[aria-current="page"]{background:#fff;color:#22425c}
-  #obraNome.mo-trocar{cursor:pointer;background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.35);padding:0;color:#d4e4ee;font:inherit;font-size:.82rem;text-align:left}
-  #obraNome.mo-trocar::after{content:" ▾";opacity:.8}
+  /* troca de ferramenta: uma fileira de ícones pequenos (o nome aparece ao parar o mouse em cima) */
+  .mo-abas{display:inline-flex;gap:4px;align-items:center}
+  .mo-abas a{display:block;padding:3px;border-radius:10px;border:2px solid transparent;line-height:0;opacity:.72;transition:opacity .15s,transform .15s}
+  .mo-abas a img{width:34px;height:34px;display:block}
+  .mo-abas a:hover,.mo-abas a:focus-visible{opacity:1}
+  .mo-abas a[aria-current="page"]{opacity:1;border-color:#fff;background:rgba(255,255,255,.14)}
+  .mo-abas a:active{transform:scale(.92)}
+  #obraNome.mo-trocar{cursor:pointer;background:none;border:0;padding:0;color:#d4e4ee;font:inherit;font-size:.82rem;text-align:left}
+  #obraNome.mo-trocar::after{content:"";display:inline-block;width:.38em;height:.38em;margin:0 0 .2em .45em;border:solid currentColor;border-width:0 1.8px 1.8px 0;transform:rotate(45deg);opacity:.8}
   #obraNome.mo-trocar:hover{color:#fff}
   .mo-obras{display:grid;gap:2px;max-height:52dvh;overflow:auto}
   .mo-obras a{display:flex;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:7px;color:var(--ink,#14222e);text-decoration:none;font:600 .92rem var(--f-body,sans-serif)}
@@ -89,7 +92,11 @@
   .mo-trilha .hbtn[hidden]{display:none}
   .mo-trilha .hbtn.pendchip{background:var(--warn-soft,#fbecd2);color:var(--warn,#b86e00);border-color:var(--warn,#b86e00)}
   .mo-trilha .hbtn.alerta{background:var(--bad-soft,#f8e0dc);color:var(--bad,#c23b2f);border-color:var(--bad,#c23b2f)}
-  @media (max-width:640px){.mo-abas{width:100%;justify-content:space-between;order:3}.mo-abas a{flex:1;text-align:center;padding:6px 4px}
+  #moVersao{position:fixed;z-index:70;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;
+    background:#22425c;color:#fff;border-radius:12px;padding:8px 8px 8px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);font:600 .88rem var(--f-body,sans-serif);max-width:calc(100vw - 24px)}
+  #moVersao button{background:#fff;color:#22425c;border:0;border-radius:8px;padding:7px 12px;font:700 .85rem var(--f-body,sans-serif);cursor:pointer}
+  #moVersao button.x{background:none;color:#d4e4ee;padding:4px 8px;font-size:1.2rem;line-height:1}
+  @media (max-width:640px){.mo-abas{width:100%;justify-content:center;gap:6px;order:3}
     .brand .hctl{width:auto;margin-left:auto;order:2}
     .brand .ttl{width:auto;flex:1 1 0;min-width:0}
     .brand #bQuem{display:none}
@@ -128,7 +135,7 @@
     if (document.getElementById('bMais')) return;
     const h = document.querySelector('.hctl'); if (!h) return;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn mo-btn'; b.id = 'bMais';
-    b.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M10.3 2.8h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M10.09 4.54 L10.37 2.23 L13.63 2.23 L13.91 4.54 A7.7 7.7 0 0 1 15.92 5.37 L17.76 3.95 L20.05 6.24 L18.63 8.08 A7.7 7.7 0 0 1 19.46 10.09 L21.77 10.37 L21.77 13.63 L19.46 13.91 A7.7 7.7 0 0 1 18.63 15.92 L20.05 17.76 L17.76 20.05 L15.92 18.63 A7.7 7.7 0 0 1 13.91 19.46 L13.63 21.77 L10.37 21.77 L10.09 19.46 A7.7 7.7 0 0 1 8.08 18.63 L6.24 20.05 L3.95 17.76 L5.37 15.92 A7.7 7.7 0 0 1 4.54 13.91 L2.23 13.63 L2.23 10.37 L4.54 10.09 A7.7 7.7 0 0 1 5.37 8.08 L3.95 6.24 L6.24 3.95 L8.08 5.37 A7.7 7.7 0 0 1 10.09 4.54Z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
     b.title = 'Configurações'; b.setAttribute('aria-label', 'Configurações'); b.setAttribute('aria-haspopup', 'menu');
     b.onclick = ev => {
       ev.stopPropagation(); if (aberto && aberto.dataset.menu) { fechar(); return; }
@@ -188,7 +195,7 @@
     const ttl = document.querySelector('.brand .ttl');
     if (ttl && visiveis.length > 1 && !document.querySelector('.mo-abas')) {
       const n = document.createElement('nav'); n.className = 'mo-abas'; n.setAttribute('aria-label', 'Ferramentas desta obra');
-      n.innerHTML = visiveis.map(f => `<a href="${f.pag}?obra=${encodeURIComponent(id)}" ${f.id === atual ? 'aria-current="page"' : ''}>${esc(f.nome)}</a>`).join('');
+      n.innerHTML = visiveis.map(f => `<a href="${f.pag}?obra=${encodeURIComponent(id)}" title="${esc(f.nome)}" aria-label="${esc(f.nome)}" ${f.id === atual ? 'aria-current="page"' : ''}><img src="icones/${f.ic}.svg" alt="" width="34" height="34"></a>`).join('');
       ttl.after(n);
     }
     // nome da obra vira o seletor de obra; o que ele fazia antes vai para o menu
@@ -229,6 +236,18 @@
   }
   window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); pedido = ev; botaoInstalar(); });
   window.addEventListener('appinstalled', () => { pedido = null; const b = document.getElementById('bInstalar'); if (b) b.remove(); });
+
+  /* ---------------- versão nova publicada ---------------- */
+  // as páginas abrem com a cópia guardada no aparelho (rápido); quando o site muda, avisa aqui
+  function avisoVersao() {
+    if (document.getElementById('moVersao')) return;
+    const d = document.createElement('div'); d.id = 'moVersao'; d.setAttribute('role', 'status');
+    d.innerHTML = '<span>Há uma versão nova do app.</span><button type="button">Atualizar</button><button type="button" aria-label="Fechar" class="x">×</button>';
+    d.querySelector('button').onclick = () => location.reload();
+    d.querySelector('.x').onclick = () => d.remove();
+    document.body.appendChild(d);
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.tipo === 'versao-nova') avisoVersao(); });
 
   window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema, pinca };
   if ('serviceWorker' in navigator) window.AppObra.registro = navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw', e); return null; });
