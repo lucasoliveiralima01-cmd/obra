@@ -197,7 +197,7 @@ main>*,#tabBody>*{min-width:0}
 .avw .ac{display:flex;flex-wrap:wrap;gap:6px}
 .avw p{margin:0;font-size:.88rem} .avw b{font-weight:700}
 .toast .tb{background:none;border:0;color:inherit;font-weight:700;text-decoration:underline;margin-left:10px;padding:0}
-.at .mk.ini{background:var(--accent-soft);color:var(--accent)} .at .mk.fim{background:var(--ok-soft);color:var(--ok)} .at .mk.pcp{background:var(--warn-soft);color:var(--warn)} .at .mk.atr{background:var(--bad-soft);color:var(--bad)}
+.at .mk.ini{background:var(--accent-soft);color:var(--accent)} .at .mk.fim{background:var(--ok-soft);color:var(--ok)} .at .mk.pcp{background:var(--bg);color:var(--muted);border:1px solid var(--line)} .at .mk.and{background:var(--warn-soft);color:var(--warn)} .at .mk.atr{background:var(--bad-soft);color:var(--bad)}
 .at b{font-weight:600;overflow-wrap:break-word;hyphens:auto}
 .lst{display:grid;gap:6px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
@@ -216,6 +216,9 @@ details.box.atr{border-left:4px solid var(--bad)}
 details.box.atr>summary b{color:var(--bad)}
 .at small{grid-column:2/-1;color:var(--muted);font-size:.8rem;overflow-wrap:anywhere}
 .at .tg{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.at.c-ini{border-left-color:var(--accent)} .at.c-and{border-left-color:var(--warn)} .at.c-fim{border-left-color:var(--ok)}
+.secao>h3 .pt{width:10px;height:10px;border-radius:50%;display:inline-block;align-self:center}
+.pt.ini{background:var(--accent)} .pt.and{background:var(--warn)} .pt.fim{background:var(--ok)} .pt.atr{background:var(--bad)}
 .at.atr{border-left-color:var(--bad)} .at.err{border-left-color:var(--bad)} .at.at2{border-left-color:var(--warn)} .at.ok{border-left-color:var(--ok)}
 .flags{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px}
 .fl{font:600 .72rem var(--f-body);padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--muted)}
@@ -370,7 +373,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && NV
 
 /* ---------------- situação de uma atividade (sempre em relação a hoje) ---------------- */
 function situacao(a) {
-  const h = hoje(), si = segunda(h), sf = somaDias(si, 5), ini = a.inicio, fim = a.termino;
+  const h = hoje(), si = segunda(h), sf = somaDias(si, 4), ini = a.inicio, fim = a.termino;
   if (a.concluida) return ['conc', 'Concluída'];
   if (!ini && !fim) return ['nd', 'Sem data'];
   if (fim && fim < h) return ['atr', 'Atrasada'];
@@ -498,7 +501,8 @@ function render() {
 }
 const grupoUtil = a => { const g = norm(a.grupo).split(/[ /]/)[0]; return a.grupo && !norm(a.atividade).includes(g) ? a.grupo.length > 26 ? a.grupo.slice(0, 24) + '…' : a.grupo : ''; };
 const linhaAtv = (a, mk, extra) => { const [k] = situacao(a); const av = avisosDe(a.chave);
-  return `<button type="button" class="at ${k === 'atr' ? 'atr' : av.some(x => x.nivel === 'erro') ? 'err' : a.concluida ? 'ok' : ''}" data-a="${esc(a.id)}">${mk || '<span></span>'}<b>${esc(rotAtv(a))}</b><span class="tg">${esc(a.equipe || '')}</span>
+  const cor = /mk ini/.test(mk || '') ? 'c-ini' : /mk fim/.test(mk || '') ? 'c-fim' : /mk and/.test(mk || '') ? 'c-and' : '';
+  return `<button type="button" class="at ${k === 'atr' ? 'atr' : cor || (av.some(x => x.nivel === 'erro') ? 'err' : a.concluida ? 'ok' : '')}" data-a="${esc(a.id)}">${mk || '<span></span>'}<b>${esc(rotAtv(a))}</b><span class="tg">${esc(a.equipe || '')}</span>
     <small>${[grupoUtil(a), datas(a), extra].filter(Boolean).map(esc).join(' · ')}</small>${flagsHtml(a)}</button>`; };
 // linha com o botão ✓ (marcar como concluída) para a Engenharia
 const linhaCk = (a, mk, extra) => edita() && !a.concluida ? `<div class="atw">${linhaAtv(a, mk, extra)}<button type="button" class="ck" data-ck="${esc(a.id)}" title="Marcar como concluída" aria-label="Marcar ${esc(rotAtv(a))} como concluída">✓</button></div>` : linhaAtv(a, mk, extra);
@@ -513,46 +517,58 @@ async function concluir(id, sim) {
 const ligarCliques = el => { el.querySelectorAll('[data-ck]').forEach(b => b.onclick = ev => { ev.stopPropagation(); b.disabled = true; concluir(b.dataset.ck, true); }); el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => fichaAtv(b.dataset.a)); el.querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp)); };
 
 /* ---------------- Semana: a semana toda ou um dia + o que preparar ---------------- */
-let DIA = null;   // null = semana toda; 0..5 = segunda..sábado
+let DIA = null;   // null = semana toda; 0..4 = segunda..sexta (só os dias úteis)
+const UTEIS = [0, 1, 2, 3, 4];
+// dias úteis (segunda a sexta) entre duas datas: de a (exclusivo) até b (inclusivo)
+function diasUteis(a, b) { let n = 0, d = a; while (d < b) { d = somaDias(d, 1); const w = dt(d).getDay(); if (w >= 1 && w <= 5) n++; } return n; }
 function renderSemana() {
-  const si = SEM, sf = somaDias(si, 5), h = hoje(), prox = somaDias(si, 7), proxF = somaDias(si, 12);
+  const si = SEM, sf = somaDias(si, 4), sd = somaDias(si, 6), h = hoje(), prox = somaDias(si, 7), proxF = somaDias(si, 11);
   const at = ATV.filter(a => a.ativa && !a.concluida);
   const pcpSem = PCP.filter(i => i.v && i.v.referencia === si);
   const pcpV = pcpSem.length ? pcpSem[0].v : null;
   if (DIA == null && si === segunda(h) && h <= sf && !renderSemana.escolheu) DIA = difDias(si, h);
-  const noDia = d => ({ ini: at.filter(a => a.inicio === d), fim: at.filter(a => a.termino === d && a.inicio !== d) });
-  const cont = k => { const d = somaDias(si, k), x = noDia(d); return x.ini.length + x.fim.length; };
+  const ini0 = a => a.inicio || a.termino, fim0 = a => a.termino || a.inicio;
+  const atrasada = a => situacao(a)[0] === 'atr';
+  // num dia: começa, termina e em execução (começou antes e termina depois)
+  const noDia = d => ({ ini: at.filter(a => a.inicio === d), fim: at.filter(a => a.termino === d && a.inicio !== d),
+    and: at.filter(a => ini0(a) && ini0(a) < d && fim0(a) > d) });
+  // atrasada aparece em vermelho no lugar dela (começa, em execução ou termina)
+  const mk = (a, cls, txt) => atrasada(a) ? '<span class="mk atr">atrasada</span>' : '<span class="mk ' + cls + '">' + txt + '</span>';
+  const cont = k => { const x = noDia(somaDias(si, k)); return x.ini.length + x.fim.length; };
   const blocoPCP = its => { const grp = new Map(); its.forEach(i => { const g = i.frente + (i.empresa && i.empresa !== i.frente ? ' · ' + i.empresa : ''); if (!grp.has(g)) grp.set(g, []); grp.get(g).push(i); });
     return [...grp.entries()].map(([g, L2]) => `<details class="box"><summary>${esc(g)} <small>${plural(L2.length, 'item', 'itens')}</small></summary><div class="lst">${L2.map(pcpHtml).join('')}</div></details>`).join(''); };
+  const sec = (cls, tit, L2, linha, vazio, sub) => `<section class="secao"><h3><span class="pt ${cls}"></span>${tit} <small>${L2.length}${sub ? ' · ' + sub : ''}</small></h3>${L2.length ? `<div class="lst">${L2.map(linha).join('')}</div>` : `<span class="vz">${vazio}</span>`}</section>`;
+  const dd = d => { const k = difDias(si, d); return (k >= 0 && k <= 6 ? ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][k] + ' ' : '') + fmtDs(d); };
   let corpo;
   if (DIA == null) {
-    const ini = at.filter(a => a.inicio && a.inicio >= si && a.inicio <= sf).sort((a, b) => a.inicio.localeCompare(b.inicio));
-    const fim = at.filter(a => a.termino && a.termino >= si && a.termino <= sf && !(a.inicio && a.inicio >= si)).sort((a, b) => a.termino.localeCompare(b.termino));
-    corpo = `<section class="secao"><h3>Começam nesta semana <small>${ini.length}</small></h3>${ini.length ? `<div class="lst">${ini.map(a => linhaAtv(a, '<span class="mk ini">' + DSEM[difDias(si, a.inicio)].slice(0, 3) + ' ' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa nesta semana.</span>'}</section>
-      <section class="secao"><h3>Terminam nesta semana <small>${fim.length}</small></h3>${fim.length ? `<div class="lst">${fim.map(a => linhaCk(a, '<span class="mk fim">' + DSEM[difDias(si, a.termino)].slice(0, 3) + ' ' + fmtDs(a.termino) + '</span>')).join('')}</div>` : '<span class="vz">Nada termina nesta semana.</span>'}</section>
-      ${pcpSem.length ? `<section class="secao"><h3>PCP da semana <small>${plural(pcpSem.length, 'item', 'itens')} por equipe</small></h3>${blocoPCP(pcpSem)}</section>` : ''}`;
+    const ini = at.filter(a => a.inicio && a.inicio >= si && a.inicio <= sd).sort((a, b) => a.inicio.localeCompare(b.inicio));
+    const fim = at.filter(a => a.termino && a.termino >= si && a.termino <= sd && !(a.inicio && a.inicio >= si)).sort((a, b) => a.termino.localeCompare(b.termino));
+    const and = at.filter(a => ini0(a) && ini0(a) < si && fim0(a) > sd).sort((a, b) => fim0(a).localeCompare(fim0(b)));
+    corpo = sec('ini', 'Começam nesta semana', ini, a => (atrasada(a) ? linhaCk : linhaAtv)(a, mk(a, 'ini', dd(a.inicio))), 'Nada começa nesta semana.')
+      + sec('and', 'Em execução a semana toda', and, a => linhaCk(a, mk(a, 'and', 'até ' + fmtDs(fim0(a)))), 'Nada em execução a semana toda.')
+      + sec('fim', 'Terminam nesta semana', fim, a => linhaCk(a, mk(a, 'fim', dd(a.termino))), 'Nada termina nesta semana.')
+      + (pcpSem.length ? `<section class="secao"><h3>PCP da semana <small>${plural(pcpSem.length, 'item', 'itens')} por equipe</small></h3>${blocoPCP(pcpSem)}</section>` : '');
   } else {
     const d = somaDias(si, DIA), x = noDia(d), pc = pcpSem.filter(i => (i.dias || []).includes(DIA));
-    corpo = `<section class="secao"><h3>${DSEM[DIA]}, ${fmtD(d)}${d === h ? ' <small>hoje</small>' : ''}</h3>
-      ${x.ini.length ? `<div class="lst">${x.ini.map(a => linhaAtv(a, '<span class="mk ini">começa</span>')).join('')}</div>` : ''}
-      ${x.fim.length ? `<div class="lst">${x.fim.map(a => linhaCk(a, '<span class="mk fim">termina</span>')).join('')}</div>` : ''}
-      ${!x.ini.length && !x.fim.length ? '<span class="vz">Nenhuma atividade do médio prazo começa ou termina neste dia.</span>' : ''}</section>
-      ${pc.length ? `<section class="secao"><h3>No PCP <small>${plural(pc.length, 'item', 'itens')} marcados para ${DSEM[DIA].toLowerCase()}</small></h3>${blocoPCP(pc)}</section>` : pcpV ? '<span class="vz">Nada do PCP marcado para este dia.</span>' : ''}`;
+    corpo = `<section class="secao"><h3>${DSEM[DIA]}, ${fmtD(d)}${d === h ? ' <small>hoje</small>' : ''}</h3></section>`
+      + sec('ini', 'Começam', x.ini, a => (atrasada(a) ? linhaCk : linhaAtv)(a, mk(a, 'ini', 'começa')), 'Nada começa neste dia.')
+      + sec('and', 'Em execução', x.and, a => linhaCk(a, mk(a, 'and', 'até ' + fmtDs(fim0(a)))), 'Nada em execução neste dia.')
+      + sec('fim', 'Terminam', x.fim, a => linhaCk(a, mk(a, 'fim', 'termina')), 'Nada termina neste dia.')
+      + (pc.length ? `<section class="secao"><h3>No PCP <small>${plural(pc.length, 'item', 'itens')} marcados para ${DSEM[DIA].toLowerCase()}</small></h3>${blocoPCP(pc)}</section>` : pcpV ? '<span class="vz">Nada do PCP marcado para este dia.</span>' : '');
   }
-  // preparar: começa na semana seguinte (com o que trava); atrasadas; em andamento
+  // preparar: começa na semana seguinte (segunda a sexta); atrasadas (em dias úteis)
   const prep = at.filter(a => a.inicio && a.inicio >= prox && a.inicio <= proxF).sort((a, b) => a.inicio.localeCompare(b.inicio));
-  const atr = si <= h && h <= sf ? at.filter(a => situacao(a)[0] === 'atr').sort((a, b) => String(a.termino).localeCompare(String(b.termino))) : [];
-  const andam = at.filter(a => { const i0 = a.inicio || a.termino, f0 = a.termino || a.inicio; return i0 && f0 && i0 < si && f0 > sf; });
+  const atr = si <= h && h <= sd ? at.filter(atrasada).sort((a, b) => String(a.termino).localeCompare(String(b.termino))) : [];
   const travadas = prep.filter(a => bandeiras(a).some(f => f[0] === 'bad'));
   $('tabBody').innerHTML = `<div class="semnav"><button class="btn ghost sm" id="sAnt" type="button" aria-label="Semana anterior">‹</button><h2>${fmtDs(si)} a ${fmtD(sf)}</h2>${si !== segunda(h) ? '<button class="btn ghost sm" id="sHoje" type="button">Hoje</button>' : ''}<button class="btn ghost sm" id="sProx" type="button" aria-label="Semana seguinte">›</button></div>
-    <div class="chips" role="group" aria-label="Dia"><button type="button" class="chip" data-dia="" aria-pressed="${DIA == null}">Semana</button>${[0, 1, 2, 3, 4, 5].map(k => { const d = somaDias(si, k), n = cont(k);
+    <div class="chips" role="group" aria-label="Dia"><button type="button" class="chip" data-dia="" aria-pressed="${DIA == null}">Semana</button>${UTEIS.map(k => { const d = somaDias(si, k), n = cont(k);
       return `<button type="button" class="chip${d === h ? ' hj' : ''}" data-dia="${k}" aria-pressed="${DIA === k}">${DSEM[k].slice(0, 3)} ${d.slice(8)}${n ? `<span class="n">${n}</span>` : ''}</button>`; }).join('')}</div>
-    ${atr.length ? `<details class="box atr"><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas${edita() ? '. Toque em ✓ no que já foi feito' : ''}</small></summary><div class="lst">${atr.map(a => linhaCk(a, '<span class="mk atr">' + difDias(a.termino, h) + 'd atraso</span>')).join('')}</div></details>` : ''}
+    <div class="leg"><span><span class="pt ini" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent)"></span> começa</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--warn)"></span> em execução</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ok)"></span> termina</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--bad)"></span> atrasada</span></div>
+    ${atr.length ? `<details class="box atr"><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas${edita() ? '. Toque em ✓ no que já foi feito' : ''}</small></summary><div class="lst">${atr.map(a => { const n = diasUteis(a.termino, h); return linhaCk(a, '<span class="mk atr">' + n + (n === 1 ? ' dia útil' : ' dias úteis') + '</span>'); }).join('')}</div></details>` : ''}
     ${corpo}
     <details class="box"${travadas.length ? ' open' : ''}><summary>Preparar para a semana seguinte <small>${plural(prep.length, 'começa', 'começam')} de ${fmtDs(prox)} a ${fmtDs(proxF)}${travadas.length ? ' · ' + travadas.length + ' com pendência' : ''}</small></summary>
       ${prep.length ? `<div class="lst">${prep.map(a => linhaAtv(a, '<span class="mk ini">' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa na semana seguinte.</span>'}</details>
-    ${andam.length ? `<details class="box"><summary>Em andamento a semana toda <small>${andam.length}</small></summary><div class="lst">${andam.map(a => linhaCk(a, '<span class="mk fim">até ' + fmtDs(a.termino) + '</span>')).join('')}</div></details>` : ''}
-    <p class="muted" style="margin:0">${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
+    <p class="muted" style="margin:0">Dias úteis de segunda a sexta. ${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
   $('sAnt').onclick = () => { SEM = somaDias(SEM, -7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
   $('sProx').onclick = () => { SEM = somaDias(SEM, 7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
   if ($('sHoje')) $('sHoje').onclick = () => { SEM = segunda(hoje()); DIA = null; renderSemana.escolheu = false; renderSemana(); };
