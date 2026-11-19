@@ -253,7 +253,7 @@ const FERRAMENTAS = [
     icone: '<img src=\"icones/almoxarifado.svg\" alt=\"\">' },
   { id: 'planejamento', nome: 'Planejamento', curto: 'Planejamento', pagina: 'planejamento.html', soOnline: true,
     resumo: 'Médio prazo e PCP: o que fazer em cada semana e dia.',
-    desc: 'Médio prazo e PCP lidos do PDF do Painel Pavei: o que começa e termina em cada dia, o que preparar para a semana seguinte, erros no planejamento, histórico de reprogramações e as frentes de trabalho ligadas às modificações.',
+    desc: 'Médio prazo e PCP lidos do PDF: o que começa e termina em cada dia, o que preparar para a semana seguinte, erros no planejamento, histórico de reprogramações e as frentes de trabalho ligadas às modificações.',
     icone: '<img src=\"icones/planejamento.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
@@ -441,7 +441,7 @@ function resumoDe(id, fid) {
   if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma modificação'; }
   if (fid === 'ceramica') { const k = r.cer; return k && k.pallets ? Math.floor(k.cx) + ' caixa' + (Math.floor(k.cx) === 1 ? '' : 's') + ' em estoque · ' + k.pallets + ' pallet' + (k.pallets > 1 ? 's' : '') : 'Nenhum pallet em estoque'; }
   if (fid === 'almox') { const k = r.alm; return k && k.materiais ? k.materiais + ' materia' + (k.materiais > 1 ? 'is' : 'l') + (k.abaixo ? ` · <b class="ruim">${k.abaixo} abaixo do mínimo</b>` : '') : 'Nenhum material'; }
-  if (fid === 'planejamento') { const k = r.plan; return k && k.ativas ? [k.semana ? k.semana + ' começa' + (k.semana > 1 ? 'm' : '') + ' nesta semana' : 'Nada começa nesta semana', k.atrasadas ? `<b class="ruim">${k.atrasadas} atrasada${k.atrasadas > 1 ? 's' : ''}</b>` : '', k.erros ? `<b class="ruim">${k.erros} erro${k.erros > 1 ? 's' : ''} no planejamento</b>` : ''].filter(Boolean).join(' · ') : 'Nenhum planejamento importado'; }
+  if (fid === 'planejamento') { const k = r.plan; return k && k.ativas ? [k.semana ? k.semana + ' começa' + (k.semana > 1 ? 'm' : '') + ' nesta semana' : 'Nada começa nesta semana', k.atrasadas ? `<b class="ruim">${k.atrasadas} atrasada${k.atrasadas > 1 ? 's' : ''}</b>` : ''].filter(Boolean).join(' · ') : 'Nenhum planejamento importado'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · Revisão R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }

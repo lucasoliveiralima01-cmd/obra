@@ -184,11 +184,21 @@ main>*,#tabBody>*{min-width:0}
 .dia>h4 small{font:600 .74rem var(--f-body);color:var(--accent)}
 .dia .sub{font:600 .7rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .vz{font-size:.84rem;color:var(--muted)}
-.at{display:grid;grid-template-columns:auto 1fr auto;gap:1px 8px;align-items:start;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:6px 9px;color:inherit;font-size:.84rem;line-height:1.25}
+.at{display:grid;grid-template-columns:5.6rem minmax(0,1fr) auto;gap:1px 8px;align-items:start;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:6px 9px;color:inherit;font-size:.84rem;line-height:1.25}
 .at:hover{border-color:var(--accent)}
-.at .mk{font:700 .72rem var(--f-body);padding:1px 6px;border-radius:6px;align-self:center;white-space:nowrap}
+.at .mk{font:700 .72rem var(--f-body);padding:2px 6px;border-radius:6px;align-self:start;white-space:nowrap;text-align:center;justify-self:stretch}
+.at>.sit{align-self:start;justify-self:stretch;text-align:center;padding:2px 3px;white-space:normal;font-size:.7rem}
+@media (max-width:640px){.at .tg{grid-column:2/-1;grid-row:3;white-space:normal}}
+.atw{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:stretch}
+.ck{border:1px solid var(--ok);background:var(--ok-soft);color:var(--ok);border-radius:8px;min-width:40px;font:700 1.1rem var(--f-body);padding:0 8px}
+.ck:hover{background:var(--ok);color:#fff}
+.avw{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:9px;padding:9px 11px}
+.avw.erro{border-left-color:var(--bad)} .avw.ajuste,.avw.ok{border-left-color:var(--accent)}
+.avw .ac{display:flex;flex-wrap:wrap;gap:6px}
+.avw p{margin:0;font-size:.88rem} .avw b{font-weight:700}
+.toast .tb{background:none;border:0;color:inherit;font-weight:700;text-decoration:underline;margin-left:10px;padding:0}
 .at .mk.ini{background:var(--accent-soft);color:var(--accent)} .at .mk.fim{background:var(--ok-soft);color:var(--ok)} .at .mk.pcp{background:var(--warn-soft);color:var(--warn)} .at .mk.atr{background:var(--bad-soft);color:var(--bad)}
-.at b{font-weight:600;overflow-wrap:anywhere}
+.at b{font-weight:600;overflow-wrap:break-word;hyphens:auto}
 .lst{display:grid;gap:6px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .chips .chip{flex:none}
@@ -278,7 +288,7 @@ details.box.atr>summary b{color:var(--bad)}
 <script>
 /* =====================================================================
    Planejamento da obra
-   - Médio prazo e PCP (plano semanal) vêm do PDF do Painel Pavei: a Engenharia
+   - Médio prazo e PCP (plano semanal) vêm do PDF do planejamento: a Engenharia
      anexa cada versão nova, revisa o que o sistema não reconheceu e importa.
    - Semana: o que começa, termina e está no PCP em cada dia, o que preparar
      para a semana seguinte e o que está atrasado.
@@ -294,7 +304,7 @@ details.box.atr>summary b{color:var(--bad)}
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+function toast(t, ms, acao) { const el = $('toast'); el.textContent = t; if (acao) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tb'; b.textContent = acao[0]; b.onclick = () => { el.hidden = true; acao[1](); }; el.appendChild(b); } el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
 const pad = n => String(n).padStart(2, '0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const hoje = () => iso(new Date());
@@ -315,7 +325,7 @@ const plural = (n, s, p) => n + ' ' + (n === 1 ? s : (p || s + 's'));
 
 let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
 let L = { servico: [] }, CFG = { pavimentos: [] };
-let VERS = [], ATV = [], HIST = null, PCP = [], MAPA = { servico: {}, local: {} }, FRENTES = [], PERS = [];
+let VERS = [], ATV = [], HIST = null, PCP = [], MAPA = { servico: {}, local: {}, aviso: {} }, FRENTES = [], PERS = [];
 let TAB = 'semana', SEM = segunda(hoje()), COLS_EXTRA = [];
 const F = { q: '', grupo: '', pav: '', sit: '' };
 
@@ -342,7 +352,7 @@ async function carregar() {
   L = LO.efetivas(LO.deTabela(lp.data || []), c.listas || null);
   CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO };
   OBRA_NOME = lo.nome; VERS = lv.data || []; ATV = la.data || [];
-  MAPA = { servico: {}, local: {} }; (lm.data || []).forEach(m => { MAPA[m.tipo][m.origem] = m.destino; });
+  MAPA = { servico: {}, local: {}, aviso: {} }; (lm.data || []).forEach(m => { if (MAPA[m.tipo]) MAPA[m.tipo][m.origem] = m.destino; });
   // PCP: a versão mais nova de cada semana (as 8 últimas semanas)
   const semanas = new Map(); VERS.filter(v => v.tipo === 'pcp').forEach(v => { if (!semanas.has(v.referencia)) semanas.set(v.referencia, v); });
   const ids = [...semanas.values()].slice(0, 8).map(v => v.id);
@@ -353,7 +363,7 @@ async function carregar() {
   ]);
   PCP = (lpc.data || []).map(i => Object.assign(i, { v: VERS.find(v => v.id === i.versao) }));
   FRENTES = lfr.error ? [] : (lfr.data || []); PERS = lpe.error ? [] : (lpe.data || []);
-  HIST = null;
+  HIST = null; AV_CACHE = null;
 }
 async function recarregar() { try { await carregar(); render(); } catch (e) { toast('Não foi possível atualizar: ' + (e.message || e)); } }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && NV && $('ovl').hidden) recarregar(); });
@@ -366,8 +376,8 @@ function situacao(a) {
   if (fim && fim < h) return ['atr', 'Atrasada'];
   const i0 = ini || fim, f0 = fim || ini;
   if (i0 <= h && f0 >= h) return ['and', 'Em andamento'];
-  if (i0 <= sf && f0 >= si) return ['sem', 'Nesta semana'];
-  if (i0 <= somaDias(h, 21)) return ['prox', 'Próximas 3 semanas'];
+  if (i0 <= sf && f0 >= si) return ['sem', 'Esta semana'];
+  if (i0 <= somaDias(h, 21)) return ['prox', 'Próximas'];
   return ['mais', 'Mais adiante'];
 }
 const rotAtv = a => a.atividade + (a.local ? ' · ' + a.local : '');
@@ -421,7 +431,18 @@ function verificar(linhas, ref) {
   if (ref) for (const r of linhas) for (const c of ['inicio', 'termino']) if (r[c] && difDias(ref, r[c]) > 400 && !A.some(x => x.chave === r.chave && x.tipo === 'ano')) add('atencao', r, 'Data muito distante: ' + fmtD(r[c]) + '.', 'longe');
   return A;
 }
-const avisosAtuais = () => { const v = ultimaMP(); return v ? (v.avisos || []) : []; };
+// avisos calculados sobre as atividades como estão agora (depois de correções e conclusões no app),
+// tirando os que a Engenharia já conferiu ("está certo")
+const chaveAviso = x => (x.chave || '') + '|' + x.txt;
+let AV_CACHE = null;
+function avisosAtuais(todos) {
+  if (!AV_CACHE) { const v = ultimaMP(); const at = ATV.filter(a => a.ativa);
+    const L2 = verificar(at, v ? v.referencia : null);
+    at.filter(a => a.ajuste).forEach(a => L2.push({ nivel: 'ajuste', tipo: 'ajuste', chave: a.chave, grupo: a.grupo, item: rotAtv(a), txt: a.ajuste + ' → ' + datas(a) }));
+    AV_CACHE = L2; }
+  return todos ? AV_CACHE : AV_CACHE.filter(x => x.nivel === 'ajuste' || !MAPA.aviso[chaveAviso(x)]);
+}
+const conferidos = () => (AV_CACHE || avisosAtuais(true)) && AV_CACHE.filter(x => x.nivel !== 'ajuste' && MAPA.aviso[chaveAviso(x)]);
 const avisosDe = chave => avisosAtuais().filter(x => x.chave === chave);
 
 /* ---------------- ligações: serviço, frentes, modificações, PCP ---------------- */
@@ -471,7 +492,7 @@ function render() {
     <div id="tabBody" style="display:grid;gap:14px"></div>`;
   m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
   if ($('bImp')) $('bImp').onclick = () => $('arqPdf').click();
-  if (!VERS.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhum planejamento importado</h3><p class="muted" style="margin:0">${edita() ? 'Anexe o PDF do <b>médio prazo</b> (e, se quiser, o do <b>PCP</b> da semana) gerado pelo Painel Pavei. O sistema lê as atividades e as datas, aponta os erros e liga cada atividade às frentes e às modificações.' : 'Quando a Engenharia importar o médio prazo, ele aparece aqui.'}</p>${edita() ? '<button class="btn" type="button" id="bImp0">⇪ Importar PDF</button>' : ''}</div>`;
+  if (!VERS.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhum planejamento importado</h3><p class="muted" style="margin:0">${edita() ? 'Anexe o PDF do <b>médio prazo</b> (e, se quiser, o do <b>PCP</b> da semana). O sistema lê as atividades e as datas, aponta os erros e liga cada atividade às frentes e às modificações.' : 'Quando a Engenharia importar o médio prazo, ele aparece aqui.'}</p>${edita() ? '<button class="btn" type="button" id="bImp0">⇪ Importar PDF</button>' : ''}</div>`;
     if ($('bImp0')) $('bImp0').onclick = () => $('arqPdf').click(); }
   else ({ semana: renderSemana, mp: renderMP, frentes: renderFrentes, revisar: renderRevisar, hist: renderHist }[TAB] || renderSemana)();
 }
@@ -479,7 +500,17 @@ const grupoUtil = a => { const g = norm(a.grupo).split(/[ /]/)[0]; return a.grup
 const linhaAtv = (a, mk, extra) => { const [k] = situacao(a); const av = avisosDe(a.chave);
   return `<button type="button" class="at ${k === 'atr' ? 'atr' : av.some(x => x.nivel === 'erro') ? 'err' : a.concluida ? 'ok' : ''}" data-a="${esc(a.id)}">${mk || '<span></span>'}<b>${esc(rotAtv(a))}</b><span class="tg">${esc(a.equipe || '')}</span>
     <small>${[grupoUtil(a), datas(a), extra].filter(Boolean).map(esc).join(' · ')}</small>${flagsHtml(a)}</button>`; };
-const ligarCliques = el => { el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => fichaAtv(b.dataset.a)); el.querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp)); };
+// linha com o botão ✓ (marcar como concluída) para a Engenharia
+const linhaCk = (a, mk, extra) => edita() && !a.concluida ? `<div class="atw">${linhaAtv(a, mk, extra)}<button type="button" class="ck" data-ck="${esc(a.id)}" title="Marcar como concluída" aria-label="Marcar ${esc(rotAtv(a))} como concluída">✓</button></div>` : linhaAtv(a, mk, extra);
+async function concluir(id, sim) {
+  const a = ATV.find(x => x.id === id); if (!a) return;
+  const { error } = await sb.rpc('plan_concluir', { p_id: id, p_concluida: sim });
+  if (error) { toast('Não foi possível: ' + erroMsg(error)); return; }
+  a.concluida = sim; a.concluida_app = sim; AV_CACHE = null;
+  if ($('ovl').hidden) render(); else { closeSheet(); render(); }
+  toast(sim ? 'Concluída: ' + rotAtv(a) : 'Reaberta: ' + rotAtv(a), 6000, sim ? ['Desfazer', () => concluir(id, false)] : null);
+}
+const ligarCliques = el => { el.querySelectorAll('[data-ck]').forEach(b => b.onclick = ev => { ev.stopPropagation(); b.disabled = true; concluir(b.dataset.ck, true); }); el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => fichaAtv(b.dataset.a)); el.querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp)); };
 
 /* ---------------- Semana: a semana toda ou um dia + o que preparar ---------------- */
 let DIA = null;   // null = semana toda; 0..5 = segunda..sábado
@@ -498,13 +529,13 @@ function renderSemana() {
     const ini = at.filter(a => a.inicio && a.inicio >= si && a.inicio <= sf).sort((a, b) => a.inicio.localeCompare(b.inicio));
     const fim = at.filter(a => a.termino && a.termino >= si && a.termino <= sf && !(a.inicio && a.inicio >= si)).sort((a, b) => a.termino.localeCompare(b.termino));
     corpo = `<section class="secao"><h3>Começam nesta semana <small>${ini.length}</small></h3>${ini.length ? `<div class="lst">${ini.map(a => linhaAtv(a, '<span class="mk ini">' + DSEM[difDias(si, a.inicio)].slice(0, 3) + ' ' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa nesta semana.</span>'}</section>
-      <section class="secao"><h3>Terminam nesta semana <small>${fim.length}</small></h3>${fim.length ? `<div class="lst">${fim.map(a => linhaAtv(a, '<span class="mk fim">' + DSEM[difDias(si, a.termino)].slice(0, 3) + ' ' + fmtDs(a.termino) + '</span>')).join('')}</div>` : '<span class="vz">Nada termina nesta semana.</span>'}</section>
+      <section class="secao"><h3>Terminam nesta semana <small>${fim.length}</small></h3>${fim.length ? `<div class="lst">${fim.map(a => linhaCk(a, '<span class="mk fim">' + DSEM[difDias(si, a.termino)].slice(0, 3) + ' ' + fmtDs(a.termino) + '</span>')).join('')}</div>` : '<span class="vz">Nada termina nesta semana.</span>'}</section>
       ${pcpSem.length ? `<section class="secao"><h3>PCP da semana <small>${plural(pcpSem.length, 'item', 'itens')} por equipe</small></h3>${blocoPCP(pcpSem)}</section>` : ''}`;
   } else {
     const d = somaDias(si, DIA), x = noDia(d), pc = pcpSem.filter(i => (i.dias || []).includes(DIA));
     corpo = `<section class="secao"><h3>${DSEM[DIA]}, ${fmtD(d)}${d === h ? ' <small>hoje</small>' : ''}</h3>
       ${x.ini.length ? `<div class="lst">${x.ini.map(a => linhaAtv(a, '<span class="mk ini">começa</span>')).join('')}</div>` : ''}
-      ${x.fim.length ? `<div class="lst">${x.fim.map(a => linhaAtv(a, '<span class="mk fim">termina</span>')).join('')}</div>` : ''}
+      ${x.fim.length ? `<div class="lst">${x.fim.map(a => linhaCk(a, '<span class="mk fim">termina</span>')).join('')}</div>` : ''}
       ${!x.ini.length && !x.fim.length ? '<span class="vz">Nenhuma atividade do médio prazo começa ou termina neste dia.</span>' : ''}</section>
       ${pc.length ? `<section class="secao"><h3>No PCP <small>${plural(pc.length, 'item', 'itens')} marcados para ${DSEM[DIA].toLowerCase()}</small></h3>${blocoPCP(pc)}</section>` : pcpV ? '<span class="vz">Nada do PCP marcado para este dia.</span>' : ''}`;
   }
@@ -516,11 +547,11 @@ function renderSemana() {
   $('tabBody').innerHTML = `<div class="semnav"><button class="btn ghost sm" id="sAnt" type="button" aria-label="Semana anterior">‹</button><h2>${fmtDs(si)} a ${fmtD(sf)}</h2>${si !== segunda(h) ? '<button class="btn ghost sm" id="sHoje" type="button">Hoje</button>' : ''}<button class="btn ghost sm" id="sProx" type="button" aria-label="Semana seguinte">›</button></div>
     <div class="chips" role="group" aria-label="Dia"><button type="button" class="chip" data-dia="" aria-pressed="${DIA == null}">Semana</button>${[0, 1, 2, 3, 4, 5].map(k => { const d = somaDias(si, k), n = cont(k);
       return `<button type="button" class="chip${d === h ? ' hj' : ''}" data-dia="${k}" aria-pressed="${DIA === k}">${DSEM[k].slice(0, 3)} ${d.slice(8)}${n ? `<span class="n">${n}</span>` : ''}</button>`; }).join('')}</div>
-    ${atr.length ? `<details class="box atr"><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas no médio prazo</small></summary><div class="lst">${atr.map(a => linhaAtv(a, '<span class="mk atr">' + difDias(a.termino, h) + 'd</span>')).join('')}</div></details>` : ''}
+    ${atr.length ? `<details class="box atr"><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas${edita() ? '. Toque em ✓ no que já foi feito' : ''}</small></summary><div class="lst">${atr.map(a => linhaCk(a, '<span class="mk atr">' + difDias(a.termino, h) + 'd atraso</span>')).join('')}</div></details>` : ''}
     ${corpo}
     <details class="box"${travadas.length ? ' open' : ''}><summary>Preparar para a semana seguinte <small>${plural(prep.length, 'começa', 'começam')} de ${fmtDs(prox)} a ${fmtDs(proxF)}${travadas.length ? ' · ' + travadas.length + ' com pendência' : ''}</small></summary>
       ${prep.length ? `<div class="lst">${prep.map(a => linhaAtv(a, '<span class="mk ini">' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa na semana seguinte.</span>'}</details>
-    ${andam.length ? `<details class="box"><summary>Em andamento a semana toda <small>${andam.length}</small></summary><div class="lst">${andam.map(a => linhaAtv(a)).join('')}</div></details>` : ''}
+    ${andam.length ? `<details class="box"><summary>Em andamento a semana toda <small>${andam.length}</small></summary><div class="lst">${andam.map(a => linhaCk(a, '<span class="mk fim">até ' + fmtDs(a.termino) + '</span>')).join('')}</div></details>` : ''}
     <p class="muted" style="margin:0">${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
   $('sAnt').onclick = () => { SEM = somaDias(SEM, -7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
   $('sProx').onclick = () => { SEM = somaDias(SEM, 7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
@@ -539,7 +570,7 @@ function renderMP() {
   const v = ultimaMP(), notas = v ? (v.notas || []) : [];
   const at = ATV.filter(a => a.ativa);
   const grupos = [...new Set(at.map(a => a.grupo))];
-  const SITS = [['', 'Todas as situações'], ['atr', 'Atrasadas'], ['and', 'Em andamento'], ['sem', 'Nesta semana'], ['prox', 'Próximas 3 semanas'], ['mais', 'Mais adiante'], ['nd', 'Sem data'], ['conc', 'Concluídas'], ['err', 'Com erro ou atenção'], ['rep', 'Reprogramadas']];
+  const SITS = [['', 'Todas as situações'], ['atr', 'Atrasadas'], ['and', 'Em andamento'], ['sem', 'Esta semana'], ['prox', 'Próximas 3 semanas'], ['mais', 'Mais adiante'], ['nd', 'Sem data'], ['conc', 'Concluídas'], ['err', 'Com erro ou atenção'], ['rep', 'Reprogramadas']];
   const q = norm(F.q);
   const vis = at.filter(a => (!F.grupo || a.grupo === F.grupo) && (!F.pav || (a.pavimentos || []).includes(F.pav))
     && (!F.sit || (F.sit === 'err' ? avisosDe(a.chave).length : F.sit === 'rep' ? a.n_mudancas > 0 : situacao(a)[0] === F.sit))
@@ -627,20 +658,55 @@ function fichaFrente(sv, pav) {
 }
 
 /* ---------------- Revisar: erros e pontos de atenção ---------------- */
-function avisoHtml(x) {
+function avisoHtml(x, conf) {
   const a = x.chave && ATV.find(y => y.chave === x.chave);
-  return `<button type="button" class="av ${x.nivel}" ${a ? `data-a="${esc(a.id)}"` : ''}><span class="ic">${x.nivel === 'erro' ? '!' : x.nivel === 'ajuste' ? '✎' : '?'}</span><span><b>${esc(x.item || x.grupo || '')}</b><br>${esc(x.txt)}</span>${x.grupo ? `<small>${esc(x.grupo)}</small>` : ''}</button>`;
+  const k = encodeURIComponent(chaveAviso(x));
+  return `<div class="avw ${conf ? 'ok' : x.nivel}"><p><b>${esc(x.item || x.grupo || '')}</b>${a && grupoUtil(a) ? ` <span class="muted">· ${esc(grupoUtil(a))}</span>` : ''}</p><p>${esc(x.txt)}</p>
+    <div class="ac">${a ? `<button class="btn sm ghost" type="button" data-a="${esc(a.id)}">Abrir</button>` : ''}
+      ${edita() && a && x.nivel !== 'ajuste' && !conf ? `<button class="btn sm" type="button" data-cor="${esc(a.id)}">Corrigir datas</button><button class="btn sm ghost" type="button" data-okav="${k}">Está certo</button>` : ''}
+      ${edita() && conf ? `<button class="btn sm ghost" type="button" data-desav="${k}">Voltar a avisar</button>` : ''}</div></div>`;
+}
+function ligarAvisos(el) {
+  ligarCliques(el);
+  el.querySelectorAll('[data-cor]').forEach(b => b.onclick = () => corrigirDatas(b.dataset.cor));
+  el.querySelectorAll('[data-okav]').forEach(b => b.onclick = () => marcarAviso(decodeURIComponent(b.dataset.okav), true));
+  el.querySelectorAll('[data-desav]').forEach(b => b.onclick = () => marcarAviso(decodeURIComponent(b.dataset.desav), false));
+}
+async function marcarAviso(k, ok) {
+  const r = ok ? await sb.from('plan_mapa').upsert({ obra: OBRA, tipo: 'aviso', origem: k, destino: true, atualizado_em: new Date().toISOString() }, { onConflict: 'obra,tipo,origem' })
+    : await sb.from('plan_mapa').delete().eq('obra', OBRA).eq('tipo', 'aviso').eq('origem', k);
+  if (r.error) { toast('Não foi possível: ' + erroMsg(r.error)); return; }
+  if (ok) MAPA.aviso[k] = true; else delete MAPA.aviso[k];
+  render(); toast(ok ? 'Aviso marcado como conferido.' : 'O aviso volta a aparecer.', 5000, ok ? ['Desfazer', () => marcarAviso(k, false)] : null);
+}
+function corrigirDatas(id) {
+  const a = ATV.find(x => x.id === id); if (!a) return; const av = avisosAtuais(true).filter(x => x.chave === a.chave && x.nivel !== 'ajuste');
+  const sugs = av.filter(x => x.tipo === 'ano').map(x => ({ c: /^Início/.test(x.txt) ? 'cIni' : 'cFim', alt: (x.txt.match(/seria (\d{2}\/\d{2}\/\d{4})/) || [])[1] })).filter(x => x.alt);
+  openSheet('Corrigir datas', `<div style="display:grid;gap:12px"><p style="margin:0"><b>${esc(rotAtv(a))}</b><br><span class="muted">${esc(a.grupo || '')}</span></p>
+    ${av.map(x => `<div class="nota" style="background:var(--bad-soft);border-color:var(--bad);color:var(--ink)">${esc(x.txt)}</div>`).join('')}
+    <div class="fld"><label for="cIni">Início</label><input type="date" id="cIni" value="${esc(a.inicio || '')}"></div>
+    <div class="fld"><label for="cFim">Término</label><input type="date" id="cFim" value="${esc(a.termino || '')}"></div>
+    <p class="muted" style="margin:0">A correção fica guardada: enquanto o PDF trouxer a mesma data errada, ela continua valendo. Se o PDF mudar a data, vale a do PDF.${a.correcao ? ` No PDF: ${fmtD(a.correcao.pdf_inicio)} → ${fmtD(a.correcao.pdf_termino)}.` : ''}</p></div>`,
+    '<span class="msg" id="cMsg"></span><button class="btn ghost" type="button" id="cC">Cancelar</button><button class="btn" type="button" id="cOk">Salvar</button>', true);
+  sugs.forEach(x => { const [d, m, y] = x.alt.split('/'); $(x.c).value = y + '-' + m + '-' + d; });   // ano trocado: já sugere a data provável
+  $('cC').onclick = () => closeSheet();
+  $('cOk').onclick = async () => { const ini = $('cIni').value || null, fim = $('cFim').value || null;
+    if (ini && fim && fim < ini) { $('cMsg').className = 'msg err'; $('cMsg').textContent = 'O término não pode ser antes do início.'; return; }
+    const { error } = await sb.rpc('plan_corrigir', { p_id: a.id, p_inicio: ini, p_termino: fim });
+    if (error) { $('cMsg').className = 'msg err'; $('cMsg').textContent = erroMsg(error); return; }
+    closeSheet(); toast('Datas corrigidas.'); await recarregar(); };
 }
 function renderRevisar() {
-  const av = avisosAtuais(), v = ultimaMP();
+  const av = avisosAtuais(), v = ultimaMP(), cf = conferidos();
   const E = av.filter(x => x.nivel === 'erro'), A = av.filter(x => x.nivel === 'atencao'), J = av.filter(x => x.nivel === 'ajuste');
   const sem = ATV.filter(a => a.ativa && !a.concluida && !a.inicio && !a.termino);
-  $('tabBody').innerHTML = `${!v ? '<div class="vazio"><h3>Sem médio prazo</h3></div>' : `<p class="muted" style="margin:0">Conferência automática do médio prazo de ${fmtD(v.referencia)}. Corrija no Painel Pavei; na próxima importação os avisos resolvidos somem.</p>`}
-    <section class="secao"><h3>Erros <small>${E.length ? 'datas que não fazem sentido' : 'nenhum'}</small></h3>${E.map(avisoHtml).join('')}</section>
-    <section class="secao"><h3>Para conferir <small>${A.length ? 'pode estar certo, mas vale olhar' : 'nada'}</small></h3>${A.map(avisoHtml).join('')}</section>
-    ${J.length ? `<section class="secao"><h3>Corrigido à mão na importação <small>vale até a próxima versão</small></h3>${J.map(avisoHtml).join('')}</section>` : ''}
-    ${sem.length ? `<section class="secao"><h3>Sem data <small>${plural(sem.length, 'atividade')} sem início nem término</small></h3>${sem.map(a => linhaAtv(a)).join('')}</section>` : ''}`;
-  ligarCliques($('tabBody'));
+  $('tabBody').innerHTML = `${!v ? '<div class="vazio"><h3>Sem médio prazo</h3></div>' : `<p class="muted" style="margin:0">Conferência automática do médio prazo de ${fmtD(v.referencia)}. ${edita() ? 'Corrija as datas aqui ou marque “Está certo” quando o aviso não for um problema.' : ''}</p>`}
+    <section class="secao"><h3>Erros <small>${E.length ? 'datas que não fazem sentido' : 'nenhum'}</small></h3>${E.map(x => avisoHtml(x)).join('')}</section>
+    <section class="secao"><h3>Para conferir <small>${A.length ? 'pode estar certo, mas vale olhar' : 'nada'}</small></h3>${A.map(x => avisoHtml(x)).join('')}</section>
+    ${J.length ? `<details class="box"><summary>Corrigido à mão <small>${J.length}</small></summary><div class="lst">${J.map(x => avisoHtml(x)).join('')}</div></details>` : ''}
+    ${cf.length ? `<details class="box"><summary>Conferidos (“está certo”) <small>${cf.length}</small></summary><div class="lst">${cf.map(x => avisoHtml(x, true)).join('')}</div></details>` : ''}
+    ${sem.length ? `<details class="box"><summary>Sem data <small>${plural(sem.length, 'atividade')} sem início nem término</small></summary><div class="lst">${sem.map(a => linhaCk(a)).join('')}</div></details>` : ''}`;
+  ligarAvisos($('tabBody'));
 }
 
 /* ---------------- Histórico (versões) ---------------- */
@@ -657,14 +723,18 @@ async function abrirPDF(caminho) {
 function fichaVersao(id) {
   const v = VERS.find(x => x.id === id); if (!v) return; const r = v.resumo || {};
   const lista = (t, L2, f) => L2 && L2.length ? `<h4 style="margin:0;font:700 1rem var(--f-disp)">${t} (${L2.length})</h4><div class="hist">${L2.map(f).join('')}</div>` : '';
-  openSheet(v.tipo === 'mp' ? 'Médio prazo de ' + fmtD(v.referencia) : 'PCP de ' + fmtDs(v.referencia) + ' a ' + fmtD(v.proxima), `<dl class="kv"><dt>Importado</dt><dd>${fmtDH(v.criado_em)} por ${esc(nomeDe(v.criado_por))}</dd><dt>Título</dt><dd>${esc(v.titulo || '—')}</dd>
+  openSheet(v.tipo === 'mp' ? 'Médio prazo de ' + fmtD(v.referencia) : 'PCP de ' + fmtDs(v.referencia) + ' a ' + fmtD(v.proxima), `<dl class="kv"><dt>Importado</dt><dd>${fmtDH(v.criado_em)} por ${esc(nomeDe(v.criado_por))}</dd>
       ${v.tipo === 'mp' ? `<dt>Próxima reunião</dt><dd>${fmtD(v.proxima)}</dd>` : ''}<dt>Linhas</dt><dd>${v.n_linhas}</dd></dl>
     ${lista('Datas que mudaram', r.mudou, x => `<div class="mud"><b>${esc(x.item)}</b><br><span class="d">${esc(x.de)} → ${esc(x.para)}</span></div>`)}
     ${lista('Novas', r.novas, x => `<div>${esc(x)}</div>`)}
     ${lista('Saíram do planejamento', r.sairam, x => `<div>${esc(x)}</div>`)}
     ${v.tipo === 'mp' && (v.gerais || []).length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Avisos gerais da reunião</summary><p style="white-space:pre-wrap;font-size:.86rem">${esc(v.gerais.join('\n'))}</p></details>` : ''}`,
-    v.arquivo ? '<button class="btn ghost" type="button" id="vPdf">Abrir o PDF</button>' : '');
+    (v.arquivo ? '<button class="btn ghost" type="button" id="vPdf">Abrir o PDF</button>' : '') + (edita() ? (v.tipo === 'pcp' ? '<button class="btn danger" type="button" id="vDel">Excluir este PCP</button>' : v === ultimaMP() ? '<button class="btn danger" type="button" id="vDes">Desfazer esta importação</button>' : '') : ''));
   if ($('vPdf')) $('vPdf').onclick = () => abrirPDF(v.arquivo);
+  if ($('vDel')) $('vDel').onclick = async () => { if (!confirm('Excluir o PCP da semana de ' + fmtDs(v.referencia) + '?')) return;
+    const { error } = await sb.rpc('plan_excluir_pcp', { p_id: v.id }); if (error) { toast('Não foi possível: ' + erroMsg(error)); return; }
+    if (v.arquivo) sb.storage.from('arquivos').remove([v.arquivo]).catch(() => {}); closeSheet(); toast('PCP excluído.'); await recarregar(); };
+  if ($('vDes')) $('vDes').onclick = () => desfazerImportacao();
 }
 
 /* ---------------- ficha de uma atividade (com histórico) ---------------- */
@@ -676,12 +746,17 @@ async function fichaAtv(id) {
   openSheet(a.atividade, `<div style="display:grid;gap:12px">
     <p class="fi-loc" style="margin:0;font-weight:600;color:var(--accent)">${esc(a.grupo || '')}${a.local ? ' · ' + esc(a.local) : ''}</p>
     <dl class="kv"><dt>Situação</dt><dd><span class="sit sit-${k}">${t}</span></dd><dt>Início</dt><dd>${fmtD(a.inicio)}</dd><dt>Término</dt><dd>${fmtD(a.termino)}</dd><dt>Equipe</dt><dd>${esc(a.equipe || '—')}</dd>
-      <dt>Serviço</dt><dd>${esc(a.servico || 'não ligado')}</dd><dt>Pavimentos</dt><dd>${esc((a.pavimentos || []).join(', ') || 'geral')}</dd>${a.ajuste ? `<dt>Ajuste</dt><dd>${esc(a.ajuste)}</dd>` : ''}</dl>
-    ${av.length ? av.map(avisoHtml).join('') : ''}
+      <dt>Serviço</dt><dd>${esc(a.servico || 'não ligado')}</dd><dt>Pavimentos</dt><dd>${esc((a.pavimentos || []).join(', ') || 'geral')}</dd>${a.concluida_app ? `<dt>Concluída</dt><dd>no app${a.concluida_em ? ' em ' + fmtDH(a.concluida_em) : ''}${a.concluida_por ? ' por ' + esc(nomeDe(a.concluida_por)) : ''}</dd>` : ''}${a.ajuste ? `<dt>Ajuste</dt><dd>${esc(a.ajuste)}</dd>` : ''}</dl>
+    ${av.length ? av.map(x => avisoHtml(x)).join('') : ''}
     ${frentes.length ? `<h4 style="margin:0;font:700 1rem var(--f-disp)">Frentes e modificações</h4>${frentes.map(x => `<button type="button" class="at" data-fr='${esc(JSON.stringify([a.servico, x.p]))}'><span></span><b>${esc(a.servico)} · ${esc(x.p)}</b><span class="tg">${x.fr && x.fr.liberada_em ? 'liberada' : ''}</span><small>${x.ps.length ? nPers(x.ps.length) + (x.fa.length ? ' · falta ciência em ' + x.fa.length : ' · ciência ok') : 'sem modificações'}</small></button>`).join('')}` : ''}
     ${pcp.length ? `<h4 style="margin:0;font:700 1rem var(--f-disp)">No PCP</h4>${pcp.map(pcpHtml).join('')}` : ''}
     ${ns.length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Cuidados de ${esc(a.grupo)} (${ns.length})</summary><div class="notas" style="margin-top:6px">${ns.map(n => `<div class="nota">${esc(n.texto)}</div>`).join('')}</div></details>` : ''}
-    <h4 style="margin:0;font:700 1rem var(--f-disp)">Histórico ${a.n_mudancas ? `<span class="fl info">reprogramada ${a.n_mudancas}×</span>` : ''}</h4><div id="aHist" class="muted">Carregando…</div></div>`);
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Histórico ${a.n_mudancas ? `<span class="fl info">reprogramada ${a.n_mudancas}×</span>` : ''}</h4><div id="aHist" class="muted">Carregando…</div></div>`,
+    edita() ? `<button class="btn ghost" type="button" id="aCor">Corrigir datas</button>${a.concluida ? `<button class="btn ghost" type="button" id="aReab">Reabrir</button>` : `<button class="btn ok" type="button" id="aConc">✓ Concluída</button>`}` : '');
+  ligarAvisos($('ovlB'));
+  if ($('aCor')) $('aCor').onclick = () => corrigirDatas(a.id);
+  if ($('aConc')) $('aConc').onclick = () => concluir(a.id, true);
+  if ($('aReab')) $('aReab').onclick = () => concluir(a.id, false);
   $('ovlB').querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
   $('ovlB').querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp));
   const { data, error } = await sb.from('plan_hist').select('*').eq('atividade', a.id).order('id');
@@ -723,7 +798,7 @@ $('arqPdf').onchange = async e => {
     const t = PP.tipo(pags);
     if (t === 'mp') revisarMP(PP.lerMP(pags), f.name);
     else if (t === 'pcp') revisarPCP(PP.lerPCP(pags), f.name);
-    else { toast('Este PDF não parece ser o médio prazo nem o PCP do Painel Pavei.', 6000); return; }
+    else { toast('Este PDF não parece ser um médio prazo nem um PCP.', 6000); return; }
     $('toast').hidden = true;
   } catch (err) { console.error(err); toast('Não foi possível ler o PDF: ' + (err.message || err), 8000); }
 };
@@ -743,7 +818,11 @@ function revisarMP(R, nomeArq) {
   const vistos = new Map(); const linhas = [];
   for (const g of R.grupos) for (const r of g.linhas) {
     let ch = norm(g.nome) + '|' + norm(r.atividade) + '|' + norm(r.local); const n = (vistos.get(ch) || 0) + 1; vistos.set(ch, n); if (n > 1) ch += '#' + n;
-    linhas.push(Object.assign({}, r, { grupo: g.nome, chave: ch, ignorar: /^\(SEM DESCRICAO\)$/.test(norm(r.atividade)) || !r.atividade }));
+    const lin = Object.assign({}, r, { grupo: g.nome, chave: ch, pdf_inicio: r.inicio, pdf_termino: r.termino, ignorar: /^\(SEM DESCRICAO\)$/.test(norm(r.atividade)) || !r.atividade });
+    // data corrigida no app: continua valendo enquanto o PDF trouxer a mesma data errada
+    const ex = ATV.find(a => a.chave === ch), c = ex && ex.correcao;
+    if (c && (c.pdf_inicio || null) === (r.inicio || null) && (c.pdf_termino || null) === (r.termino || null)) { lin.inicio = c.inicio || null; lin.termino = c.termino || null; lin.ajuste = ex.ajuste; lin.correcao = c; }
+    linhas.push(lin);
   }
   // locais → pavimentos (o que a Engenharia já ligou vale; senão, pelas regras)
   const locais = new Map();
@@ -766,7 +845,7 @@ function aplicarLinha(ST, r) {
 function desenharRevisao(ST) {
   const { linhas, locais, servs, R } = ST;
   const usar = linhas.filter(r => !r.ignorar); usar.forEach(r => aplicarLinha(ST, r));
-  const avisos = verificar(usar, R.reuniao);
+  const avisos = verificar(usar, R.reuniao).filter(x => !MAPA.aviso[chaveAviso(x)]);
   const atuais = new Map(ATV.filter(a => a.ativa).map(a => [a.chave, a]));
   const novas = usar.filter(r => !atuais.has(r.chave)), mud = usar.filter(r => { const a = atuais.get(r.chave); return a && (a.inicio !== r.inicio || a.termino !== r.termino); });
   const sairam = [...atuais.values()].filter(a => !usar.some(r => r.chave === a.chave));
@@ -777,10 +856,10 @@ function desenharRevisao(ST) {
   const pavChips = (k, sel) => `<span class="pvs">${pavNomes().map(p => `<label><input type="checkbox" data-lp="${esc(k)}" value="${esc(p)}" ${sel.includes(p) ? 'checked' : ''}>${esc(p)}</label>`).join('')}</span>`;
   const rolar = $('ovlB').scrollTop;
   openSheet('Importar médio prazo', `<div class="rev">
-    <p style="margin:0"><b>${esc(R.titulo || 'Médio prazo')}</b><br><span class="muted">Reunião de ${fmtD(R.reuniao)}${R.proxima ? ' · próxima ' + fmtD(R.proxima) : ''} · ${esc(ST.nomeArq)}</span></p>
+    <p style="margin:0"><b>Planejamento de médio prazo</b><br><span class="muted">Reunião de ${fmtD(R.reuniao)}${R.proxima ? ' · próxima ' + fmtD(R.proxima) : ''} · ${esc(ST.nomeArq)}</span></p>
     <div class="resumo"><span><b>${usar.length}</b>atividades</span><span><b>${novas.length}</b>novas</span><span><b>${mud.length}</b>com data mudada</span><span><b>${sairam.length}</b>saem</span><span><b>${avisos.filter(a => a.nivel === 'erro').length}</b>erros</span><span><b>${R.grupos.reduce((s, g) => s + g.notas.length, 0)}</b>cuidados</span></div>
     ${R.problemas.length ? `<div class="alerta info"><span class="ic">?</span><span><b>${plural(R.problemas.length, 'linha')} do PDF não ${R.problemas.length > 1 ? 'entraram' : 'entrou'} em nenhuma tabela</b><small>${R.problemas.slice(0, 5).map(p => esc(p.txt || p.motivo)).join(' · ')}</small></span></div>` : ''}
-    ${comErro.length ? `<h4 style="margin:4px 0 0">1. Erros no planejamento (${comErro.length})</h4><p class="muted" style="margin:0">Corrija a data aqui (vale só para esta importação; corrija também no Painel) ou ignore a linha.</p>
+    ${comErro.length ? `<h4 style="margin:4px 0 0">1. Erros no planejamento (${comErro.length})</h4><p class="muted" style="margin:0">Corrija a data aqui (fica lembrada enquanto o PDF trouxer a mesma data errada) ou ignore a linha.</p>
       ${comErro.map(r => { const i = linhas.indexOf(r); const as = avisos.filter(a => a.chave === r.chave && a.nivel === 'erro');
         return `<div class="ln err"><b>${esc(r.grupo)} · ${esc(r.atividade || '(sem descrição)')}${r.local ? ' · ' + esc(r.local) : ''}</b><span class="muted">${as.map(a => esc(a.txt)).join(' ') || 'Linha ignorada.'}</span>
           <div class="row"><label class="muted">Início <input type="date" data-li="${i}" data-c="inicio" value="${esc(r.inicio || '')}"></label><label class="muted">Término <input type="date" data-li="${i}" data-c="termino" value="${esc(r.termino || '')}"></label>
@@ -799,7 +878,8 @@ function desenharRevisao(ST) {
   </div>`, '<span class="msg" id="rMsg"></span><button class="btn ghost" type="button" id="rC">Cancelar</button><button class="btn" type="button" id="rOk">Importar</button>', true);
   $('ovlB').scrollTop = rolar;
   const B = $('ovlB');
-  B.querySelectorAll('[data-li]').forEach(x => x.onchange = () => { const r = linhas[+x.dataset.li]; r[x.dataset.c] = x.value || null; r.ajuste = 'Data corrigida na importação (PDF: ' + (r.inicioTxt || '—') + ' → ' + (r.terminoTxt || '—') + ')'; desenharRevisao(ST); });
+  B.querySelectorAll('[data-li]').forEach(x => x.onchange = () => { const r = linhas[+x.dataset.li]; r[x.dataset.c] = x.value || null; r.ajuste = 'Datas corrigidas na importação (no PDF: ' + (r.inicioTxt || '—') + ' → ' + (r.terminoTxt || '—') + ')';
+    r.correcao = { pdf_inicio: r.pdf_inicio || null, pdf_termino: r.pdf_termino || null, inicio: r.inicio || null, termino: r.termino || null }; desenharRevisao(ST); });
   B.querySelectorAll('[data-ign]').forEach(x => x.onchange = () => { linhas[+x.dataset.ign].ignorar = x.checked; desenharRevisao(ST); });
   B.querySelectorAll('[data-sv]').forEach(x => x.onchange = () => { const s = servs.get(x.dataset.sv); s.sv = x.value; s.mexeu = true; s.salvo = false; });
   B.querySelectorAll('[data-lp]').forEach(x => x.onchange = () => { const k = x.dataset.lp; const sel = [...B.querySelectorAll('[data-lp="' + CSS.escape(k) + '"]:checked')].map(c => c.value);
@@ -813,7 +893,7 @@ async function importarMP(ST, avisos, d) {
   // locais ainda sem decisão: viram "geral"
   ST.locais.forEach(l => { if (!l.v) { l.v = { pavs: [], geral: true }; l.mexeu = true; } });
   const usar = ST.linhas.filter(r => !r.ignorar); usar.forEach(r => aplicarLinha(ST, r));
-  avisos = verificar(usar, ST.R.reuniao);
+  avisos = verificar(usar, ST.R.reuniao).filter(x => !MAPA.aviso[chaveAviso(x)]);
   usar.filter(r => r.ajuste).forEach(r => avisos.push({ nivel: 'ajuste', tipo: 'ajuste', chave: r.chave, grupo: r.grupo, item: r.atividade + (r.local ? ' · ' + r.local : ''), txt: r.ajuste + ' → ' + datas(r) }));
   ST.linhas.filter(r => r.ignorar && r.atividade).forEach(r => avisos.push({ nivel: 'ajuste', tipo: 'ignorada', chave: null, grupo: r.grupo, item: r.atividade, txt: 'Linha ignorada na importação.' }));
   try {
@@ -830,7 +910,7 @@ async function importarMP(ST, avisos, d) {
       mudou: d.mud.map(r => ({ item: r.atividade + (r.local ? ' · ' + r.local : ''), de: datas(d.atuais.get(r.chave)), para: datas(r) })) };
     const notas = ST.R.grupos.flatMap(g => g.notas.map(n => ({ grupo: g.nome, texto: n.texto })));
     const linhas = usar.map(r => ({ chave: r.chave, grupo: r.grupo, atividade: r.atividade, local: r.local, equipe: r.equipe, servico: r.servico || '', pavimentos: r.pavimentos || [],
-      inicio: r.inicio || null, termino: r.termino || null, concluida: !!r.concluida, ajuste: r.ajuste || '' }));
+      inicio: r.inicio || null, termino: r.termino || null, concluida: !!r.concluida, ajuste: r.ajuste || '', correcao: r.correcao || null }));
     const { error } = await sb.rpc('plan_importar_mp', { p_obra: OBRA, p_versao: { titulo: ST.R.titulo, referencia: ST.R.reuniao, proxima: ST.R.proxima, arquivo, resumo, avisos, notas, gerais: ST.R.gerais }, p_linhas: linhas });
     if (error) throw error;
     closeSheet(); toast('Médio prazo importado: ' + plural(linhas.length, 'atividade') + (avisos.filter(a => a.nivel === 'erro').length ? ' · ' + avisos.filter(a => a.nivel === 'erro').length + ' erros para revisar' : '') + '.', 6000);
@@ -844,7 +924,7 @@ function revisarPCP(R, nomeArq) {
   const lig = itens.map(i => ligacaoPCP(Object.assign({ v, ligado: 'auto' }, i)));
   const ja = VERS.find(x => x.tipo === 'pcp' && x.referencia === R.semana.ini);
   openSheet('Importar PCP', `<div class="rev">
-    <p style="margin:0"><b>${esc(R.titulo || 'Plano semanal')}</b><br><span class="muted">Semana de ${fmtDs(R.semana.ini)} a ${fmtD(R.semana.fim)} · ${esc(nomeArq)}</span></p>
+    <p style="margin:0"><b>Plano semanal (PCP)</b><br><span class="muted">Semana de ${fmtDs(R.semana.ini)} a ${fmtD(R.semana.fim)} · ${esc(nomeArq)}</span></p>
     ${ja ? `<div class="alerta info"><span class="ic">!</span><span><b>Já existe um PCP desta semana</b><small>Importado em ${fmtDH(ja.criado_em)}. O novo passa a valer; o anterior fica no histórico.</small></span></div>` : ''}
     <div class="resumo"><span><b>${R.frentes.length}</b>frentes</span><span><b>${itens.length}</b>itens</span><span><b>${lig.filter(Boolean).length}</b>ligados ao médio prazo</span></div>
     ${R.frentes.filter(f => f.itens.length).map(f => `<div class="pcpf"><b>${esc(f.nome)}${f.empresa ? ' · ' + esc(f.empresa) : ''}${f.pessoas ? ' — ' + esc(f.pessoas) : ''}</b>
@@ -861,6 +941,62 @@ function revisarPCP(R, nomeArq) {
       if (error) throw error;
       closeSheet(); toast('PCP importado: ' + plural(itens.length, 'item', 'itens') + '.'); SEM = R.semana.ini; TAB = 'semana'; await recarregar();
     } catch (e) { b.disabled = false; $('rMsg').className = 'msg err'; $('rMsg').textContent = 'Não foi possível importar: ' + erroMsg(e); } };
+}
+
+/* ======================= manutenção (Engenharia) ======================= */
+async function desfazerImportacao() {
+  const v = ultimaMP(); if (!v) { toast('Não há médio prazo importado.'); return; }
+  const ant = VERS.filter(x => x.tipo === 'mp')[1];
+  if (!confirm('Desfazer a importação do médio prazo de ' + fmtD(v.referencia) + '?\n\n' + (ant ? 'As atividades voltam ao que eram no médio prazo de ' + fmtD(ant.referencia) + '.' : 'Era a única versão: as atividades do planejamento somem.') + ' As conclusões marcadas no app continuam.')) return;
+  const { error } = await sb.rpc('plan_desfazer_mp', { p_obra: OBRA }); if (error) { toast('Não foi possível: ' + erroMsg(error)); return; }
+  if (v.arquivo) sb.storage.from('arquivos').remove([v.arquivo]).catch(() => {});
+  closeSheet(); toast('Importação desfeita.'); await recarregar();
+}
+function zerar() {
+  openSheet('Zerar o planejamento', `<div style="display:grid;gap:12px">
+    <p style="margin:0">Apaga <b>todas as versões</b> importadas (médio prazo e PCP), as atividades, o histórico, as conclusões e as correções feitas no app, e os PDFs guardados desta obra.</p>
+    <p class="muted" style="margin:0">As modificações e as frentes de trabalho (inclusive as liberações) continuam.</p>
+    <label class="chk"><input type="checkbox" id="zLig"> Apagar também as ligações salvas (atividade → serviço, local → pavimentos)</label>
+    <div class="fld"><label for="zConf">Para confirmar, escreva ZERAR</label><input id="zConf" autocomplete="off"></div></div>`,
+    '<span class="msg" id="zMsg"></span><button class="btn ghost" type="button" id="zC">Cancelar</button><button class="btn danger" type="button" id="zOk">Zerar</button>', true);
+  $('zC').onclick = () => closeSheet();
+  $('zOk').onclick = async () => {
+    if ($('zConf').value.trim().toUpperCase() !== 'ZERAR') { $('zMsg').className = 'msg err'; $('zMsg').textContent = 'Escreva ZERAR para confirmar.'; return; }
+    $('zOk').disabled = true;
+    const arqs = VERS.map(v => v.arquivo).filter(Boolean);
+    const { error } = await sb.rpc('plan_zerar', { p_obra: OBRA, p_ligacoes: $('zLig').checked });
+    if (error) { $('zOk').disabled = false; $('zMsg').className = 'msg err'; $('zMsg').textContent = erroMsg(error); return; }
+    if (arqs.length) sb.storage.from('arquivos').remove(arqs).catch(() => {});
+    closeSheet(); TAB = 'semana'; toast('Planejamento zerado.'); await recarregar();
+  };
+}
+// ligações salvas: atividade → serviço e local → pavimentos (trocar vale já para as atividades importadas)
+function ligacoes() {
+  const at = ATV.filter(a => a.ativa);
+  const grupos = new Map(); at.forEach(a => { const k = chaveAtv(a.grupo, a.atividade); if (!grupos.has(k)) grupos.set(k, { grupo: a.grupo, atividade: a.atividade, ids: [], sv: a.servico || '' }); grupos.get(k).ids.push(a.id); });
+  const locs = new Map(); at.forEach(a => { const k = norm(a.local); if (!locs.has(k)) locs.set(k, { local: a.local, ids: [], pavs: a.pavimentos || [] }); locs.get(k).ids.push(a.id); });
+  const opSv = cur => '<option value="">— não ligar —</option>' + ativos('servico').concat(cur && !ativos('servico').includes(cur) ? [cur] : []).map(s => `<option ${s === cur ? 'selected' : ''}>${esc(s)}</option>`).join('');
+  const F2 = { q: '' };
+  const desenhar = () => { const q = norm(F2.q);
+    $('ligL').innerHTML = `<h4 style="margin:0">Atividades → serviço</h4>${[...grupos.entries()].filter(([, x]) => !q || norm(x.grupo + ' ' + x.atividade + ' ' + x.sv).includes(q)).sort((a, b) => (a[1].grupo + a[1].atividade).localeCompare(b[1].grupo + b[1].atividade))
+        .map(([k, x]) => `<div class="ln"><b>${esc(x.grupo)} · ${esc(x.atividade)}</b><span class="muted">${plural(x.ids.length, 'atividade')}</span><select data-lsv="${esc(k)}">${opSv(x.sv)}</select></div>`).join('')}
+      <h4 style="margin:8px 0 0">Locais → pavimentos</h4>${[...locs.entries()].filter(([, x]) => !q || norm(x.local).includes(q)).map(([k, x]) => `<div class="ln"><b>${esc(x.local || '(sem local)')}</b><span class="muted">${plural(x.ids.length, 'atividade')} · ${x.pavs.length ? '' : 'geral (sem pavimento)'}</span><span class="pvs">${pavNomes().map(p => `<label><input type="checkbox" data-llp="${esc(k)}" value="${esc(p)}" ${x.pavs.includes(p) ? 'checked' : ''}>${esc(p)}</label>`).join('')}</span></div>`).join('')}`;
+    $('ligL').querySelectorAll('[data-lsv]').forEach(x => x.onchange = async () => { const g = grupos.get(x.dataset.lsv); x.disabled = true;
+      const [r1, r2] = await Promise.all([sb.from('plan_mapa').upsert({ obra: OBRA, tipo: 'servico', origem: x.dataset.lsv, destino: x.value, atualizado_em: new Date().toISOString() }, { onConflict: 'obra,tipo,origem' }),
+        sb.rpc('plan_religar', { p_obra: OBRA, p_ids: g.ids, p_servico: x.value, p_pavimentos: null })]);
+      x.disabled = false; if (r1.error || r2.error) { toast('Não foi possível: ' + erroMsg(r1.error || r2.error)); return; }
+      g.sv = x.value; MAPA.servico[x.dataset.lsv] = x.value; ATV.forEach(a => { if (g.ids.includes(a.id)) a.servico = x.value || null; }); toast('Ligação salva.'); });
+    $('ligL').querySelectorAll('[data-llp]').forEach(x => x.onchange = async () => { const k = x.dataset.llp, l = locs.get(k);
+      const sel = [...$('ligL').querySelectorAll('[data-llp="' + CSS.escape(k) + '"]:checked')].map(c => c.value);
+      const [r1, r2] = await Promise.all([sb.from('plan_mapa').upsert({ obra: OBRA, tipo: 'local', origem: k, destino: { pavs: sel, geral: !sel.length }, atualizado_em: new Date().toISOString() }, { onConflict: 'obra,tipo,origem' }),
+        sb.rpc('plan_religar', { p_obra: OBRA, p_ids: l.ids, p_servico: null, p_pavimentos: sel })]);
+      if (r1.error || r2.error) { toast('Não foi possível: ' + erroMsg(r1.error || r2.error)); return; }
+      l.pavs = sel; ATV.forEach(a => { if (l.ids.includes(a.id)) a.pavimentos = sel; }); toast('Ligação salva.'); });
+  };
+  openSheet('Ligações do planejamento', `<div class="rev"><p class="muted" style="margin:0">Liga cada atividade a um serviço (para as frentes e as modificações) e cada local aos pavimentos. Vale já e nas próximas importações.</p>
+    <label class="busca"><input id="ligQ" type="search" placeholder="Buscar" aria-label="Buscar"></label><div id="ligL" class="rev"></div></div>`, '<button class="btn" type="button" id="ligOk">Pronto</button>');
+  desenhar(); $('ligQ').oninput = e => { F2.q = e.target.value; desenhar(); };
+  $('ligOk').onclick = async () => { closeSheet(); await recarregar(); };
 }
 
 /* ======================= janelas ======================= */
@@ -885,6 +1021,11 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('ovl'
   const q = new URLSearchParams(location.search);
   if (['semana', 'mp', 'frentes', 'revisar', 'hist'].includes(q.get('aba'))) TAB = q.get('aba');
   render();
+  if (edita() && window.AppObra && window.AppObra.itemMenu) {
+    window.AppObra.itemMenu('Ligações de serviços e locais…', () => { if (!ATV.length) { toast('Importe um médio prazo primeiro.'); return; } ligacoes(); });
+    window.AppObra.itemMenu('Desfazer a última importação…', desfazerImportacao);
+    window.AppObra.itemMenu('Zerar o planejamento…', zerar);
+  }
   if (q.get('aba')) history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA));
   try { sb.channel('plan-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'frentes', filter: 'obra=eq.' + OBRA }, () => { if ($('ovl').hidden) { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); } }).subscribe(); } catch (e) {}
 })();

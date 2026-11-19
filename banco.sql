@@ -4004,6 +4004,172 @@ $p23$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 24: Planejamento: concluir no app, corrigir datas, desfazer importação e zerar
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 24 then return; end if;
+  execute $p24$
+-- concluída no app (vale mesmo que o PDF seguinte ainda não traga como concluída)
+alter table public.plan_atividades add column if not exists concluida_app boolean not null default false;
+alter table public.plan_atividades add column if not exists concluida_em timestamptz;
+alter table public.plan_atividades add column if not exists concluida_por text;
+-- data corrigida no app: {pdf_inicio, pdf_termino, inicio, termino}. Volta a valer enquanto o PDF trouxer a mesma data errada
+alter table public.plan_atividades add column if not exists correcao jsonb;
+-- "está certo": aviso do planejamento que a Engenharia conferiu (origem = chave|texto do aviso)
+alter table public.plan_mapa drop constraint if exists plan_mapa_tipo_check;
+alter table public.plan_mapa add constraint plan_mapa_tipo_check check (tipo in ('servico', 'local', 'aviso'));
+
+-- importar: igual ao passo 23, respeitando o que foi concluído e corrigido no app
+create or replace function public.plan_importar_mp(p_obra text, p_versao jsonb, p_linhas jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare v uuid; l jsonb; atv public.plan_atividades; novo_ini date; novo_fim date; nid uuid; vistos uuid[] := '{}'; conc boolean;
+  quem text := lower(auth.jwt() ->> 'email');
+begin
+  if not public.plan_edita(p_obra) then raise exception 'Só a Engenharia importa o planejamento.' using errcode = '42501'; end if;
+  if jsonb_typeof(p_linhas) <> 'array' or jsonb_array_length(p_linhas) = 0 then raise exception 'O PDF não tem atividades.'; end if;
+  insert into public.plan_versoes (obra, tipo, referencia, proxima, titulo, arquivo, n_linhas, resumo, avisos, notas, gerais, criado_por)
+  values (p_obra, 'mp', nullif(p_versao ->> 'referencia', '')::date, nullif(p_versao ->> 'proxima', '')::date, p_versao ->> 'titulo', p_versao ->> 'arquivo',
+          jsonb_array_length(p_linhas), coalesce(p_versao -> 'resumo', '{}'), coalesce(p_versao -> 'avisos', '[]'), coalesce(p_versao -> 'notas', '[]'), coalesce(p_versao -> 'gerais', '[]'), quem)
+  returning id into v;
+  for l in select * from jsonb_array_elements(p_linhas) loop
+    novo_ini := nullif(l ->> 'inicio', '')::date; novo_fim := nullif(l ->> 'termino', '')::date;
+    select * into atv from public.plan_atividades where obra = p_obra and chave = l ->> 'chave';
+    if found then
+      conc := coalesce((l ->> 'concluida')::boolean, false) or atv.concluida_app;
+      update public.plan_atividades set grupo = l ->> 'grupo', atividade = l ->> 'atividade', local = l ->> 'local', equipe = l ->> 'equipe',
+        servico = nullif(l ->> 'servico', ''), pavimentos = coalesce(array(select jsonb_array_elements_text(l -> 'pavimentos')), '{}'),
+        inicio = novo_ini, termino = novo_fim, concluida = conc, ativa = true, ajuste = nullif(l ->> 'ajuste', ''), correcao = case when l ? 'correcao' then nullif(l -> 'correcao', 'null') else null end, versao = v,
+        n_mudancas = atv.n_mudancas + case when (atv.inicio is distinct from novo_ini or atv.termino is distinct from novo_fim) and atv.ativa then 1 else 0 end,
+        atualizado_em = now()
+      where id = atv.id;
+      nid := atv.id;
+    else
+      conc := coalesce((l ->> 'concluida')::boolean, false);
+      insert into public.plan_atividades (obra, chave, grupo, atividade, local, equipe, servico, pavimentos, inicio, termino, concluida, ajuste, correcao, versao)
+      values (p_obra, l ->> 'chave', l ->> 'grupo', l ->> 'atividade', l ->> 'local', l ->> 'equipe', nullif(l ->> 'servico', ''),
+              coalesce(array(select jsonb_array_elements_text(l -> 'pavimentos')), '{}'), novo_ini, novo_fim, conc, nullif(l ->> 'ajuste', ''), case when l ? 'correcao' then nullif(l -> 'correcao', 'null') else null end, v)
+      returning id into nid;
+    end if;
+    vistos := vistos || nid;
+    insert into public.plan_hist (obra, atividade, versao, inicio, termino, concluida, ativa, ajuste)
+    values (p_obra, nid, v, novo_ini, novo_fim, conc, true, nullif(l ->> 'ajuste', ''));
+  end loop;
+  insert into public.plan_hist (obra, atividade, versao, inicio, termino, concluida, ativa)
+    select obra, id, v, inicio, termino, concluida, false from public.plan_atividades where obra = p_obra and ativa and not (id = any(vistos));
+  update public.plan_atividades set ativa = false, atualizado_em = now() where obra = p_obra and ativa and not (id = any(vistos));
+  perform public.plan_frentes(p_obra);
+  return v;
+end $$;
+
+-- frentes: data prevista = 1º início planejado (ainda não concluído) de cada serviço × pavimento
+create or replace function public.plan_frentes(p_obra text) returns void
+language sql security definer set search_path = public as $$
+  insert into public.frentes (obra, servico, pavimento, previsto, atualizado_em)
+    select p_obra, a.servico, p.pav, min(coalesce(a.inicio, a.termino)), now()
+    from public.plan_atividades a cross join lateral unnest(a.pavimentos) p(pav)
+    where a.obra = p_obra and a.ativa and not a.concluida and a.servico is not null and coalesce(a.inicio, a.termino) is not null
+    group by a.servico, p.pav
+  on conflict (obra, servico, pavimento) do update set previsto = excluded.previsto, atualizado_em = now()
+    where public.frentes.liberada_em is null and public.frentes.previsto is distinct from excluded.previsto
+$$;
+revoke all on function public.plan_frentes(text) from public, anon, authenticated;
+
+-- marcar (ou desmarcar) uma atividade como concluída
+create or replace function public.plan_concluir(p_id uuid, p_concluida boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare a public.plan_atividades;
+begin
+  select * into a from public.plan_atividades where id = p_id;
+  if not found then raise exception 'Atividade não encontrada.'; end if;
+  if not public.plan_edita(a.obra) then raise exception 'Só a Engenharia altera o planejamento.' using errcode = '42501'; end if;
+  update public.plan_atividades set concluida = p_concluida, concluida_app = p_concluida,
+    concluida_em = case when p_concluida then now() end, concluida_por = case when p_concluida then lower(auth.jwt() ->> 'email') end, atualizado_em = now()
+  where id = p_id;
+  perform public.plan_frentes(a.obra);
+end $$;
+
+-- corrigir as datas de uma atividade (erro no PDF). p_inicio/p_termino null = sem data
+create or replace function public.plan_corrigir(p_id uuid, p_inicio date, p_termino date) returns void
+language plpgsql security definer set search_path = public as $$
+declare a public.plan_atividades; orig jsonb;
+begin
+  select * into a from public.plan_atividades where id = p_id;
+  if not found then raise exception 'Atividade não encontrada.'; end if;
+  if not public.plan_edita(a.obra) then raise exception 'Só a Engenharia altera o planejamento.' using errcode = '42501'; end if;
+  if p_inicio is not null and p_termino is not null and p_termino < p_inicio then raise exception 'O término não pode ser antes do início.'; end if;
+  orig := coalesce(a.correcao, jsonb_build_object('pdf_inicio', a.inicio, 'pdf_termino', a.termino));
+  update public.plan_atividades set inicio = p_inicio, termino = p_termino,
+    correcao = jsonb_build_object('pdf_inicio', orig -> 'pdf_inicio', 'pdf_termino', orig -> 'pdf_termino', 'inicio', p_inicio, 'termino', p_termino),
+    ajuste = 'Datas corrigidas no app (no PDF: ' || coalesce(to_char((orig ->> 'pdf_inicio')::date, 'DD/MM/YYYY'), '—') || ' → ' || coalesce(to_char((orig ->> 'pdf_termino')::date, 'DD/MM/YYYY'), '—') || ')',
+    atualizado_em = now()
+  where id = p_id;
+  perform public.plan_frentes(a.obra);
+end $$;
+
+-- desfazer a última importação do médio prazo: as atividades voltam ao que eram na versão anterior
+create or replace function public.plan_desfazer_mp(p_obra text) returns void
+language plpgsql security definer set search_path = public as $$
+declare v uuid; ant uuid;
+begin
+  if not public.plan_edita(p_obra) then raise exception 'Só a Engenharia altera o planejamento.' using errcode = '42501'; end if;
+  select id into v from public.plan_versoes where obra = p_obra and tipo = 'mp' order by criado_em desc limit 1;
+  if v is null then raise exception 'Não há médio prazo importado.'; end if;
+  select id into ant from public.plan_versoes where obra = p_obra and tipo = 'mp' and id <> v order by criado_em desc limit 1;
+  -- criadas nesta versão: somem
+  delete from public.plan_atividades a where a.obra = p_obra
+    and not exists (select 1 from public.plan_hist h where h.atividade = a.id and h.versao <> v);
+  -- as outras voltam ao estado da versão anterior
+  if ant is not null then
+    update public.plan_atividades a set inicio = h.inicio, termino = h.termino, ativa = h.ativa, versao = ant,
+      concluida = h.concluida or a.concluida_app, ajuste = h.ajuste,
+      n_mudancas = greatest(0, a.n_mudancas - case when (a.inicio is distinct from h.inicio or a.termino is distinct from h.termino) and h.ativa then 1 else 0 end),
+      atualizado_em = now()
+    from public.plan_hist h where h.atividade = a.id and h.versao = ant and a.obra = p_obra;
+  end if;
+  delete from public.plan_versoes where id = v;   -- o histórico desta versão vai junto
+  perform public.plan_frentes(p_obra);
+end $$;
+
+-- excluir um PCP importado
+create or replace function public.plan_excluir_pcp(p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o text;
+begin
+  select obra into o from public.plan_versoes where id = p_id and tipo = 'pcp';
+  if o is null then raise exception 'PCP não encontrado.'; end if;
+  if not public.plan_edita(o) then raise exception 'Só a Engenharia altera o planejamento.' using errcode = '42501'; end if;
+  delete from public.plan_versoes where id = p_id;
+end $$;
+
+-- zerar o planejamento da obra (as frentes e as modificações ficam; as datas previstas das frentes também)
+create or replace function public.plan_zerar(p_obra text, p_ligacoes boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.plan_edita(p_obra) then raise exception 'Só a Engenharia altera o planejamento.' using errcode = '42501'; end if;
+  delete from public.plan_versoes where obra = p_obra;
+  delete from public.plan_atividades where obra = p_obra;
+  if p_ligacoes then delete from public.plan_mapa where obra = p_obra; else delete from public.plan_mapa where obra = p_obra and tipo = 'aviso'; end if;
+end $$;
+
+-- trocar a ligação (serviço e/ou pavimentos) das atividades já importadas; null = não mexe
+create or replace function public.plan_religar(p_obra text, p_ids uuid[], p_servico text, p_pavimentos text[]) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.plan_edita(p_obra) then raise exception 'Só a Engenharia altera o planejamento.' using errcode = '42501'; end if;
+  update public.plan_atividades set servico = case when p_servico is null then servico else nullif(p_servico, '') end,
+    pavimentos = coalesce(p_pavimentos, pavimentos), atualizado_em = now()
+  where obra = p_obra and id = any(p_ids);
+  perform public.plan_frentes(p_obra);
+end $$;
+
+revoke all on function public.plan_concluir(uuid, boolean), public.plan_corrigir(uuid, date, date), public.plan_desfazer_mp(text), public.plan_excluir_pcp(uuid), public.plan_zerar(text, boolean), public.plan_religar(text, uuid[], text, text[]) from public, anon;
+grant execute on function public.plan_concluir(uuid, boolean), public.plan_corrigir(uuid, date, date), public.plan_desfazer_mp(text), public.plan_excluir_pcp(uuid), public.plan_zerar(text, boolean), public.plan_religar(text, uuid[], text, text[]) to authenticated;
+$p24$;
+  update public.banco_versao set versao = 24, atualizado_em = now();
+  raise notice 'Passo 24 aplicado: Planejamento (concluir, corrigir, desfazer e zerar)';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin

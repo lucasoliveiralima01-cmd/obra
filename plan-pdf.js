@@ -1,5 +1,5 @@
 /* =====================================================================
-   Leitura dos PDFs do planejamento (gerados pelo Painel Pavei)
+   Leitura dos PDFs do planejamento (médio prazo e PCP)
    - Médio prazo: seções (disciplinas) com Atividade · Local · Início · Término · Equipe · Situação,
      os avisos amarelos de cada seção e os Avisos gerais.
    - PCP (plano semanal): frentes (equipe · empresa), pessoas, itens e os dias marcados (2ª a Sáb).
