@@ -519,6 +519,10 @@ async function concluir(id, sim) {
   if ($('ovl').hidden) render(); else { closeSheet(); render(); }
   toast(sim ? 'Concluída: ' + rotAtv(a) : 'Reaberta: ' + rotAtv(a), 6000, sim ? ['Desfazer', () => concluir(id, false)] : null);
 }
+// listas recolhíveis lembram se estavam abertas (a tela é redesenhada depois de cada ✓)
+const ABERTOS = new Map();
+document.addEventListener('toggle', ev => { const d = ev.target; if (d && d.dataset && d.dataset.k) ABERTOS.set(d.dataset.k, d.open); }, true);
+const ab = (k, def) => ` data-k="${esc(k)}"${(ABERTOS.has(k) ? ABERTOS.get(k) : def) ? ' open' : ''}`;
 const ligarCliques = el => { el.querySelectorAll('[data-ck]').forEach(b => b.onclick = ev => { ev.stopPropagation(); b.disabled = true; concluir(b.dataset.ck, true); }); el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => fichaAtv(b.dataset.a)); el.querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp)); };
 
 /* ---------------- Semana: a semana toda ou um dia + o que preparar ---------------- */
@@ -547,7 +551,7 @@ function renderSemana() {
   const mk = (a, cls, txt) => atrasada(a) ? '<span class="mk atr">atrasada</span>' : '<span class="mk ' + cls + '">' + txt + '</span>';
   const cont = k => { const x = noDia(somaDias(si, k)); return x.ini.length + x.fim.length; };
   const blocoPCP = its => { const grp = new Map(); its.forEach(i => { const g = i.frente + (i.empresa && i.empresa !== i.frente ? ' · ' + i.empresa : ''); if (!grp.has(g)) grp.set(g, []); grp.get(g).push(i); });
-    return [...grp.entries()].map(([g, L2]) => `<details class="box"><summary>${esc(g)} <small>${plural(L2.length, 'item', 'itens')}</small></summary><div class="lst">${L2.map(pcpHtml).join('')}</div></details>`).join(''); };
+    return [...grp.entries()].map(([g, L2]) => `<details class="box"${ab('pcp:' + g)}><summary>${esc(g)} <small>${plural(L2.length, 'item', 'itens')}</small></summary><div class="lst">${L2.map(pcpHtml).join('')}</div></details>`).join(''); };
   const sec = (cls, tit, L2, linha, vazio, sub) => `<section class="secao"><h3><span class="pt ${cls}"></span>${tit} <small>${L2.length}${sub ? ' · ' + sub : ''}</small></h3>${L2.length ? `<div class="lst">${L2.map(linha).join('')}</div>` : `<span class="vz">${vazio}</span>`}</section>`;
   const dd = d => { const k = difDias(si, d); return (k >= 0 && k <= 4 ? ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'][k] + ' ' : '') + fmtDs(d); };
   let corpo;
@@ -575,9 +579,9 @@ function renderSemana() {
     <div class="chips" role="group" aria-label="Dia"><button type="button" class="chip" data-dia="" aria-pressed="${DIA == null}">Semana</button>${UTEIS.map(k => { const d = somaDias(si, k), n = cont(k);
       return `<button type="button" class="chip${d === h ? ' hj' : ''}" data-dia="${k}" aria-pressed="${DIA === k}">${DSEM[k].slice(0, 3)} ${d.slice(8)}${n ? `<span class="n">${n}</span>` : ''}</button>`; }).join('')}</div>
     <div class="leg"><span><span class="pt ini" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent)"></span> começa</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--warn)"></span> em execução</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ok)"></span> termina</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--bad)"></span> atrasada</span></div>
-    ${atr.length ? `<details class="box atr"><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas${edita() ? '. Toque em ✓ no que já foi feito' : ''}</small></summary><div class="lst">${atr.map(a => { const n = diasUteis(a.termino, h); return linhaCk(a, '<span class="mk atr">' + n + (n === 1 ? ' dia útil' : ' dias úteis') + '</span>'); }).join('')}</div></details>` : ''}
+    ${atr.length ? `<details class="box atr"${ab('atr')}><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas${edita() ? '. Toque em ✓ no que já foi feito' : ''}</small></summary><div class="lst">${atr.map(a => { const n = diasUteis(a.termino, h); return linhaCk(a, '<span class="mk atr">' + n + (n === 1 ? ' dia útil' : ' dias úteis') + '</span>'); }).join('')}</div></details>` : ''}
     ${corpo}
-    <details class="box"${travadas.length ? ' open' : ''}><summary>Preparar para a semana seguinte <small>${plural(prep.length, 'começa', 'começam')} de ${fmtDs(prox)} a ${fmtDs(proxF)}${travadas.length ? ' · ' + travadas.length + ' com pendência' : ''}</small></summary>
+    <details class="box"${ab('prep', travadas.length > 0)}><summary>Preparar para a semana seguinte <small>${plural(prep.length, 'começa', 'começam')} de ${fmtDs(prox)} a ${fmtDs(proxF)}${travadas.length ? ' · ' + travadas.length + ' com pendência' : ''}</small></summary>
       ${prep.length ? `<div class="lst">${prep.map(a => linhaAtv(a, '<span class="mk ini">' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa na semana seguinte.</span>'}</details>
     <p class="muted" style="margin:0">Dias úteis de segunda a sexta: o período do médio prazo vale só nesses dias (término no sábado conta como sexta). ${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
   $('sAnt').onclick = () => { SEM = somaDias(SEM, -7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
@@ -730,9 +734,9 @@ function renderRevisar() {
   $('tabBody').innerHTML = `${!v ? '<div class="vazio"><h3>Sem médio prazo</h3></div>' : `<p class="muted" style="margin:0">Conferência automática do médio prazo de ${fmtD(v.referencia)}. ${edita() ? 'Corrija as datas aqui ou marque “Está certo” quando o aviso não for um problema.' : ''}</p>`}
     <section class="secao"><h3>Erros <small>${E.length ? 'datas que não fazem sentido' : 'nenhum'}</small></h3>${E.map(x => avisoHtml(x)).join('')}</section>
     <section class="secao"><h3>Para conferir <small>${A.length ? 'pode estar certo, mas vale olhar' : 'nada'}</small></h3>${A.map(x => avisoHtml(x)).join('')}</section>
-    ${J.length ? `<details class="box"><summary>Corrigido à mão <small>${J.length}</small></summary><div class="lst">${J.map(x => avisoHtml(x)).join('')}</div></details>` : ''}
-    ${cf.length ? `<details class="box"><summary>Conferidos (“está certo”) <small>${cf.length}</small></summary><div class="lst">${cf.map(x => avisoHtml(x, true)).join('')}</div></details>` : ''}
-    ${sem.length ? `<details class="box"><summary>Sem data <small>${plural(sem.length, 'atividade')} sem início nem término</small></summary><div class="lst">${sem.map(a => linhaCk(a)).join('')}</div></details>` : ''}`;
+    ${J.length ? `<details class="box"${ab('rev:corr')}><summary>Corrigido à mão <small>${J.length}</small></summary><div class="lst">${J.map(x => avisoHtml(x)).join('')}</div></details>` : ''}
+    ${cf.length ? `<details class="box"${ab('rev:conf')}><summary>Conferidos (“está certo”) <small>${cf.length}</small></summary><div class="lst">${cf.map(x => avisoHtml(x, true)).join('')}</div></details>` : ''}
+    ${sem.length ? `<details class="box"${ab('rev:sem')}><summary>Sem data <small>${plural(sem.length, 'atividade')} sem início nem término</small></summary><div class="lst">${sem.map(a => linhaCk(a)).join('')}</div></details>` : ''}`;
   ligarAvisos($('tabBody'));
 }
 
