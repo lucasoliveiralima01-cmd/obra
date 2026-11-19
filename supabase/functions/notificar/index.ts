@@ -196,7 +196,7 @@ async function frentesEmRisco(hoje: string, site: string, nomeObra: (id: string)
     if (!faltam.length) continue;
     const quando = f.previsto < hoje ? 'devia ter começado em ' + f.previsto.split('-').reverse().join('/') : 'começa em ' + f.previsto.split('-').reverse().join('/');
     const aviso = { title: f.servico + ' · ' + f.pavimento + ' ' + quando, body: nomeObra(f.obra) + ': falta a ciência da equipe em ' + faltam.map(p => 'apto ' + p.unidade).join(', '),
-      url: site + 'personalizacoes.html?obra=' + encodeURIComponent(f.obra) + '&aba=frentes', tag: 'frente-' + f.obra + '-' + f.servico + '-' + f.pavimento };
+      url: site + 'planejamento.html?obra=' + encodeURIComponent(f.obra) + '&aba=frentes', tag: 'frente-' + f.obra + '-' + f.servico + '-' + f.pavimento };
     const oficios = new Set<string>(); faltam.forEach(p => ((p.itens || []) as Item[]).forEach(i => { if (i.servico === f.servico && i.oficio) oficios.add(i.oficio); }));
     const para = new Set(engenhariaDe(ms, f.obra)); for (const o of oficios) campoDe(ms, o, f.obra).forEach(e => para.add(e));
     n += await enviar([...para], aviso);

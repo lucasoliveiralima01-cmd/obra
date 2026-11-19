@@ -41,12 +41,12 @@
 
   /* ---------------- perfis: o que cada um vê e edita ---------------- */
   const PERFIS = { admin: 'Administrador', engenharia: 'Engenharia', seguranca: 'Segurança', campo: 'Campo', consulta: 'Consulta', almoxarifado: 'Almoxarifado' };
-  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Modificações'], ['ceramica', 'Cerâmicas'], ['almox', 'Almoxarifado']];
+  const FERR_NOMES = [['risco', 'Mapa de Risco'], ['concretagem', 'Mapa de Concretagem'], ['fachada', 'Mapa de Fachadas'], ['pendencias', 'Pendências'], ['personalizacao', 'Modificações'], ['ceramica', 'Cerâmicas'], ['almox', 'Almoxarifado'], ['planejamento', 'Planejamento']];
   // personalizacao: Campo vê as que afetam os seus ofícios (para dar "Estou ciente")
   // ceramica e almox: Almoxarifado recebe material e registra entregas (só essas ferramentas)
-  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox'],
-    seguranca: ['risco', 'pendencias'], campo: ['pendencias', 'personalizacao'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox'], almoxarifado: ['ceramica', 'almox'] };
-  const EDITA = { admin: ['risco', 'concretagem', 'fachada', 'personalizacao', 'ceramica', 'almox'], engenharia: ['risco', 'concretagem', 'fachada', 'personalizacao', 'ceramica', 'almox'], seguranca: ['risco'], campo: [], consulta: [], almoxarifado: ['ceramica', 'almox'] };
+  const VE = { admin: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox', 'planejamento'], engenharia: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox', 'planejamento'],
+    seguranca: ['risco', 'pendencias', 'planejamento'], campo: ['pendencias', 'personalizacao', 'planejamento'], consulta: ['risco', 'concretagem', 'fachada', 'pendencias', 'personalizacao', 'ceramica', 'almox', 'planejamento'], almoxarifado: ['ceramica', 'almox', 'planejamento'] };
+  const EDITA = { admin: ['risco', 'concretagem', 'fachada', 'personalizacao', 'ceramica', 'almox', 'planejamento'], engenharia: ['risco', 'concretagem', 'fachada', 'personalizacao', 'ceramica', 'almox', 'planejamento'], seguranca: ['risco'], campo: [], consulta: [], almoxarifado: ['ceramica', 'almox'] };
   const podeVer = f => (VE[perfil] || []).includes(f);
   const podeEditar = f => (EDITA[perfil] || []).includes(f);
   const temObra = id => obrasLib === null || obrasLib.includes(id);

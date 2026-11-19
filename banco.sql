@@ -3745,6 +3745,265 @@ $p22$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 23: Planejamento (médio prazo e PCP lidos do PDF, histórico, ligação com as frentes)
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 23 then return; end if;
+  execute $p23$
+-- ---------------------------------------------------------------------
+-- 1. Quem vê (todos os perfis com acesso à obra) e quem importa (Administrador e Engenharia)
+-- ---------------------------------------------------------------------
+create or replace function public.plan_ve(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and public.perfil_atual() is not null
+$$;
+create or replace function public.plan_edita(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia'), false)
+$$;
+grant execute on function public.plan_ve(text), public.plan_edita(text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 2. Tabelas
+-- ---------------------------------------------------------------------
+-- cada PDF importado (médio prazo ou PCP) vira uma versão; o PDF fica guardado
+create table if not exists public.plan_versoes (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  tipo        text not null check (tipo in ('mp', 'pcp')),
+  referencia  date,            -- médio prazo: data da reunião; PCP: 1º dia da semana
+  proxima     date,            -- médio prazo: próxima reunião; PCP: último dia da semana
+  titulo      text,
+  arquivo     text,            -- planejamento/<obra>/<id>.pdf
+  n_linhas    int not null default 0,
+  resumo      jsonb not null default '{}',   -- o que mudou em relação à versão anterior
+  avisos      jsonb not null default '[]',   -- erros e pontos de atenção encontrados no planejamento
+  notas       jsonb not null default '[]',   -- avisos amarelos de cada disciplina [{grupo, texto}]
+  gerais      jsonb not null default '[]',   -- avisos gerais (texto)
+  criado_em   timestamptz not null default now(),
+  criado_por  text
+);
+create index if not exists plan_versoes_obra on public.plan_versoes (obra, tipo, criado_em desc);
+
+-- atividade do médio prazo. A "chave" (disciplina + atividade + local) liga a mesma atividade entre versões.
+create table if not exists public.plan_atividades (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  chave       text not null,
+  grupo       text,
+  atividade   text not null,
+  local       text,
+  equipe      text,
+  servico     text,                          -- serviço das Listas (liga às frentes e às modificações)
+  pavimentos  text[] not null default '{}',  -- pavimentos da obra que o "local" representa
+  inicio      date,
+  termino     date,
+  concluida   boolean not null default false,
+  ativa       boolean not null default true, -- false: saiu do planejamento
+  ajuste      text,                          -- correção feita à mão na importação
+  versao      uuid references public.plan_versoes(id) on delete set null,
+  n_mudancas  int not null default 0,        -- quantas vezes as datas mudaram (reprogramações)
+  criado_em   timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
+create unique index if not exists plan_atividades_chave on public.plan_atividades (obra, chave);
+
+-- histórico: como cada atividade estava em cada versão
+create table if not exists public.plan_hist (
+  id          bigserial primary key,
+  obra        text not null references public.obras(id) on delete cascade,
+  atividade   uuid not null references public.plan_atividades(id) on delete cascade,
+  versao      uuid not null references public.plan_versoes(id) on delete cascade,
+  inicio      date,
+  termino     date,
+  concluida   boolean not null default false,
+  ativa       boolean not null default true,
+  ajuste      text
+);
+create index if not exists plan_hist_atividade on public.plan_hist (atividade);
+create index if not exists plan_hist_obra on public.plan_hist (obra);
+
+-- o que a Engenharia já ligou à mão: atividade → serviço, local → pavimentos (vale para as próximas versões)
+create table if not exists public.plan_mapa (
+  obra        text not null references public.obras(id) on delete cascade,
+  tipo        text not null check (tipo in ('servico', 'local')),
+  origem      text not null,
+  destino     jsonb,
+  atualizado_em timestamptz not null default now(),
+  primary key (obra, tipo, origem)
+);
+
+-- itens do PCP (plano semanal)
+create table if not exists public.plan_pcp (
+  id          uuid primary key default gen_random_uuid(),
+  obra        text not null references public.obras(id) on delete cascade,
+  versao      uuid not null references public.plan_versoes(id) on delete cascade,
+  ordem       int not null default 0,
+  frente      text,
+  empresa     text,
+  pessoas     text,
+  item        int,
+  texto       text not null,
+  dias        smallint[] not null default '{}',   -- 0 = 2ª … 5 = sábado
+  ok          text,
+  motivo      text,
+  atividade   uuid references public.plan_atividades(id) on delete set null,  -- ligação feita à mão
+  ligado      text not null default 'auto' check (ligado in ('auto', 'manual', 'nenhum'))
+);
+create index if not exists plan_pcp_versao on public.plan_pcp (versao);
+
+alter table public.plan_versoes enable row level security;
+alter table public.plan_atividades enable row level security;
+alter table public.plan_hist enable row level security;
+alter table public.plan_mapa enable row level security;
+alter table public.plan_pcp enable row level security;
+
+drop policy if exists "ve plan_versoes" on public.plan_versoes;
+drop policy if exists "ve plan_atividades" on public.plan_atividades;
+drop policy if exists "ve plan_hist" on public.plan_hist;
+drop policy if exists "ve plan_mapa" on public.plan_mapa;
+drop policy if exists "grava plan_mapa" on public.plan_mapa;
+drop policy if exists "ve plan_pcp" on public.plan_pcp;
+drop policy if exists "liga plan_pcp" on public.plan_pcp;
+create policy "ve plan_versoes" on public.plan_versoes for select to authenticated using (public.plan_ve(obra));
+create policy "ve plan_atividades" on public.plan_atividades for select to authenticated using (public.plan_ve(obra));
+create policy "ve plan_hist" on public.plan_hist for select to authenticated using (public.plan_ve(obra));
+create policy "ve plan_mapa" on public.plan_mapa for select to authenticated using (public.plan_ve(obra));
+create policy "grava plan_mapa" on public.plan_mapa for all to authenticated using (public.plan_edita(obra)) with check (public.plan_edita(obra));
+create policy "ve plan_pcp" on public.plan_pcp for select to authenticated using (public.plan_ve(obra));
+create policy "liga plan_pcp" on public.plan_pcp for update to authenticated using (public.plan_edita(obra)) with check (public.plan_edita(obra));
+-- versões e atividades só mudam pela importação (funções abaixo)
+
+-- ---------------------------------------------------------------------
+-- 3. Importar o médio prazo (tudo ou nada)
+--    p_versao: {titulo, referencia, proxima, arquivo, resumo, avisos, notas, gerais}
+--    p_linhas: [{chave, grupo, atividade, local, equipe, servico, pavimentos[], inicio, termino, concluida, ajuste}]
+--    Atividade que já existia: atualiza e conta reprogramação se a data mudou. A que sumiu: fica inativa.
+--    As frentes (serviço × pavimento) recebem a data prevista do planejamento.
+-- ---------------------------------------------------------------------
+create or replace function public.plan_importar_mp(p_obra text, p_versao jsonb, p_linhas jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare v uuid; l jsonb; atv public.plan_atividades; novo_ini date; novo_fim date; nid uuid; vistos uuid[] := '{}';
+  quem text := lower(auth.jwt() ->> 'email');
+begin
+  if not public.plan_edita(p_obra) then raise exception 'Só a Engenharia importa o planejamento.' using errcode = '42501'; end if;
+  if jsonb_typeof(p_linhas) <> 'array' or jsonb_array_length(p_linhas) = 0 then raise exception 'O PDF não tem atividades.'; end if;
+  insert into public.plan_versoes (obra, tipo, referencia, proxima, titulo, arquivo, n_linhas, resumo, avisos, notas, gerais, criado_por)
+  values (p_obra, 'mp', nullif(p_versao ->> 'referencia', '')::date, nullif(p_versao ->> 'proxima', '')::date, p_versao ->> 'titulo', p_versao ->> 'arquivo',
+          jsonb_array_length(p_linhas), coalesce(p_versao -> 'resumo', '{}'), coalesce(p_versao -> 'avisos', '[]'), coalesce(p_versao -> 'notas', '[]'), coalesce(p_versao -> 'gerais', '[]'), quem)
+  returning id into v;
+  for l in select * from jsonb_array_elements(p_linhas) loop
+    novo_ini := nullif(l ->> 'inicio', '')::date; novo_fim := nullif(l ->> 'termino', '')::date;
+    select * into atv from public.plan_atividades where obra = p_obra and chave = l ->> 'chave';
+    if found then
+      update public.plan_atividades set grupo = l ->> 'grupo', atividade = l ->> 'atividade', local = l ->> 'local', equipe = l ->> 'equipe',
+        servico = nullif(l ->> 'servico', ''), pavimentos = coalesce(array(select jsonb_array_elements_text(l -> 'pavimentos')), '{}'),
+        inicio = novo_ini, termino = novo_fim, concluida = coalesce((l ->> 'concluida')::boolean, false), ativa = true, ajuste = nullif(l ->> 'ajuste', ''), versao = v,
+        n_mudancas = atv.n_mudancas + case when (atv.inicio is distinct from novo_ini or atv.termino is distinct from novo_fim) and atv.ativa then 1 else 0 end,
+        atualizado_em = now()
+      where id = atv.id;
+      nid := atv.id;
+    else
+      insert into public.plan_atividades (obra, chave, grupo, atividade, local, equipe, servico, pavimentos, inicio, termino, concluida, ajuste, versao)
+      values (p_obra, l ->> 'chave', l ->> 'grupo', l ->> 'atividade', l ->> 'local', l ->> 'equipe', nullif(l ->> 'servico', ''),
+              coalesce(array(select jsonb_array_elements_text(l -> 'pavimentos')), '{}'), novo_ini, novo_fim, coalesce((l ->> 'concluida')::boolean, false), nullif(l ->> 'ajuste', ''), v)
+      returning id into nid;
+    end if;
+    vistos := vistos || nid;
+    insert into public.plan_hist (obra, atividade, versao, inicio, termino, concluida, ativa, ajuste)
+    values (p_obra, nid, v, novo_ini, novo_fim, coalesce((l ->> 'concluida')::boolean, false), true, nullif(l ->> 'ajuste', ''));
+  end loop;
+  -- as que saíram do planejamento
+  insert into public.plan_hist (obra, atividade, versao, inicio, termino, concluida, ativa)
+    select obra, id, v, inicio, termino, concluida, false from public.plan_atividades where obra = p_obra and ativa and not (id = any(vistos));
+  update public.plan_atividades set ativa = false, atualizado_em = now() where obra = p_obra and ativa and not (id = any(vistos));
+  -- frentes: data prevista = 1º início planejado (ainda não concluído) de cada serviço × pavimento
+  insert into public.frentes (obra, servico, pavimento, previsto, atualizado_em)
+    select p_obra, a.servico, p.pav, min(coalesce(a.inicio, a.termino)), now()
+    from public.plan_atividades a cross join lateral unnest(a.pavimentos) p(pav)
+    where a.obra = p_obra and a.ativa and not a.concluida and a.servico is not null and coalesce(a.inicio, a.termino) is not null
+    group by a.servico, p.pav
+  on conflict (obra, servico, pavimento) do update set previsto = excluded.previsto, atualizado_em = now()
+    where public.frentes.liberada_em is null and public.frentes.previsto is distinct from excluded.previsto;
+  return v;
+end $$;
+revoke all on function public.plan_importar_mp(text, jsonb, jsonb) from public, anon;
+grant execute on function public.plan_importar_mp(text, jsonb, jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 4. Importar o PCP (uma versão por PDF; vale a mais nova de cada semana)
+--    p_itens: [{ordem, frente, empresa, pessoas, item, texto, dias[], ok, motivo}]
+-- ---------------------------------------------------------------------
+create or replace function public.plan_importar_pcp(p_obra text, p_versao jsonb, p_itens jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare v uuid; quem text := lower(auth.jwt() ->> 'email');
+begin
+  if not public.plan_edita(p_obra) then raise exception 'Só a Engenharia importa o planejamento.' using errcode = '42501'; end if;
+  if nullif(p_versao ->> 'referencia', '') is null then raise exception 'Falta a semana do PCP.'; end if;
+  insert into public.plan_versoes (obra, tipo, referencia, proxima, titulo, arquivo, n_linhas, resumo, criado_por)
+  values (p_obra, 'pcp', (p_versao ->> 'referencia')::date, nullif(p_versao ->> 'proxima', '')::date, p_versao ->> 'titulo', p_versao ->> 'arquivo',
+          jsonb_array_length(coalesce(p_itens, '[]')), coalesce(p_versao -> 'resumo', '{}'), quem)
+  returning id into v;
+  insert into public.plan_pcp (obra, versao, ordem, frente, empresa, pessoas, item, texto, dias, ok, motivo)
+    select p_obra, v, coalesce((i ->> 'ordem')::int, 0), i ->> 'frente', i ->> 'empresa', i ->> 'pessoas', (i ->> 'item')::int, i ->> 'texto',
+           coalesce(array(select jsonb_array_elements_text(i -> 'dias'))::smallint[], '{}'), nullif(i ->> 'ok', ''), nullif(i ->> 'motivo', '')
+    from jsonb_array_elements(coalesce(p_itens, '[]')) i where coalesce(i ->> 'texto', '') <> '';
+  return v;
+end $$;
+revoke all on function public.plan_importar_pcp(text, jsonb, jsonb) from public, anon;
+grant execute on function public.plan_importar_pcp(text, jsonb, jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 5. Resumo para a página inicial (por obra)
+-- ---------------------------------------------------------------------
+create or replace function public.plan_resumo() returns table (obra text, ativas int, atrasadas int, semana int, erros int)
+language sql stable security invoker set search_path = public as $$
+  select a.obra, count(*)::int,
+    count(*) filter (where not a.concluida and a.termino < current_date)::int,
+    count(*) filter (where not a.concluida and a.inicio between date_trunc('week', current_date)::date and date_trunc('week', current_date)::date + 5)::int,
+    coalesce((select count(*)::int from jsonb_array_elements(v.avisos) x where x ->> 'nivel' = 'erro'), 0)
+  from public.plan_atividades a
+  left join lateral (select avisos from public.plan_versoes where obra = a.obra and tipo = 'mp' order by criado_em desc limit 1) v on true
+  where a.ativa
+  group by a.obra, v.avisos
+$$;
+grant execute on function public.plan_resumo() to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6. Arquivos: planejamento/<obra>/… (o PDF de cada versão)
+-- ---------------------------------------------------------------------
+create or replace function public.arquivo_ok(p_nome text, p_editar boolean) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when split_part(p_nome, '/', 1) in ('risco', 'concretagem', 'fachada')
+      then public.painel_ok(split_part(p_nome, '/', 1) || ':' || split_part(p_nome, '/', 2), p_editar)
+    when split_part(p_nome, '/', 1) = 'obras'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'seguranca') or (not p_editar and public.perfil_atual() is not null), false)
+    when p_nome like 'pendencias/%/plantas/%'
+      then public.obra_ok(split_part(p_nome, '/', 2))
+           and (not p_editar or public.ferramenta_ok('risco', true))
+    when split_part(p_nome, '/', 1) = 'pendencias'
+      then public.pend_visivel_id(split_part(p_nome, '/', 3))
+           and (not p_editar or coalesce(public.perfil_atual() <> 'consulta', false))
+    when split_part(p_nome, '/', 1) = 'personalizacoes'
+      then case when p_editar then public.pers_edita(split_part(p_nome, '/', 2))
+                else public.pers_edita(split_part(p_nome, '/', 2)) or public.pers_visivel_id(split_part(p_nome, '/', 3)) end
+    when split_part(p_nome, '/', 1) = 'ceramicas'
+      then case when p_editar then public.cer_estoque(split_part(p_nome, '/', 2)) else public.cer_ve(split_part(p_nome, '/', 2)) end
+    when split_part(p_nome, '/', 1) = 'almoxarifado'
+      then case when p_editar then public.alm_estoque(split_part(p_nome, '/', 2)) else public.alm_ve(split_part(p_nome, '/', 2)) end
+    when split_part(p_nome, '/', 1) = 'planejamento'
+      then case when p_editar then public.plan_edita(split_part(p_nome, '/', 2)) else public.plan_ve(split_part(p_nome, '/', 2)) end
+    else false end
+$$;
+
+$p23$;
+  update public.banco_versao set versao = 23, atualizado_em = now();
+  raise notice 'Passo 23 aplicado: Planejamento (médio prazo e PCP)';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin

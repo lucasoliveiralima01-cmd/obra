@@ -193,8 +193,9 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
      serviços ela afeta (com a instrução para a equipe de cada ofício).
    - Aprovada, a equipe de cada ofício dá "Estou ciente" (ou a Engenharia
      registra que avisou pessoalmente).
-   - Frentes de trabalho (serviço × pavimento): data prevista para avisar
-     antes, e a liberação só sai com todas as ciências (ou com justificativa).
+   - Frentes de trabalho (serviço × pavimento): ficam no Planejamento (a data
+     prevista vem do médio prazo); o aviso de frente com ciência faltando e a
+     liberação continuam abrindo aqui também.
    As regras de quem vê e quem pode o quê ficam no banco (banco.sql, passo 17).
    ===================================================================== */
 (function () {
@@ -221,7 +222,7 @@ const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', '
 
 let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
 let L = { servico: [], disciplina: [], comodo: [] }, CFG = { pavimentos: [] };
-let PERS = [], FRENTES = [], TAB = 'lista', COLS_EXTRA = [];
+let PERS = [], FRENTES = [], TAB = 'lista';
 const F = { q: '', pav: '', sit: 'ativas', falta: false };
 
 /* ---------------- quem pode o quê (o banco confere de novo) ---------------- */
@@ -265,11 +266,6 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && NV
 const frenteDe = (sv, pav) => FRENTES.find(f => f.servico === sv && f.pavimento === pav) || null;
 const persDaFrente = (sv, pav) => PERS.filter(p => p.pavimento === pav && ['aprovada', 'executada', 'conferida', 'solicitada'].includes(p.status) && (p.itens || []).some(i => i.servico === sv));
 const faltasFrente = (sv, pav) => persDaFrente(sv, pav).filter(p => p.status === 'aprovada' && !ciencia(p, sv));
-// serviços que aparecem nas modificações ou nas frentes (as colunas da tabela)
-function servicosUsados() {
-  const s = new Set(); PERS.forEach(p => p.status !== 'cancelada' && (p.itens || []).forEach(i => i.servico && s.add(i.servico))); FRENTES.forEach(f => s.add(f.servico)); COLS_EXTRA.forEach(x => s.add(x));
-  const ord = ativos('servico'); return [...s].sort((a, b) => (ord.indexOf(a) < 0 ? 999 : ord.indexOf(a)) - (ord.indexOf(b) < 0 ? 999 : ord.indexOf(b)) || a.localeCompare(b));
-}
 // frentes que começam em breve (ou já deviam ter começado) e ainda têm ciência faltando
 function frentesEmRisco() {
   const lim = somaDias(hoje(), AVISO_DIAS), r = [];
@@ -282,15 +278,15 @@ function render() {
   const m = $('main'), risco = frentesEmRisco(), minhas = PERS.filter(minhaFalta);
   const nAtivas = PERS.filter(p => ['solicitada', 'aprovada', 'executada'].includes(p.status)).length;
   m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Modificações</span></nav>
-    <div class="tabs"><div class="seg"><button type="button" class="tab" data-tab="lista" aria-pressed="${TAB === 'lista'}">Modificações<b>${nAtivas}</b></button><button type="button" class="tab" data-tab="frentes" aria-pressed="${TAB === 'frentes'}">Frentes de trabalho</button></div></div>
+    <div class="tabs"><div class="seg"><button type="button" class="tab" data-tab="lista" aria-pressed="true">Modificações<b>${nAtivas}</b></button><a class="tab" href="planejamento.html?obra=${encodeURIComponent(OBRA)}&aba=frentes" style="text-decoration:none" title="As frentes de trabalho ficam no Planejamento">Frentes de trabalho ↗</a></div></div>
     ${risco.length || minhas.length ? `<div class="alertas">${risco.slice(0, 6).map(({ f, fa }) => `<button type="button" class="alerta" data-fr='${esc(JSON.stringify([f.servico, f.pavimento]))}'><span class="ic">!</span><span><b>${esc(f.servico)} · ${esc(f.pavimento)}</b> ${f.previsto < hoje() ? 'devia ter começado em' : 'começa em'} ${fmtD(f.previsto)} e falta a ciência da equipe em ${nPers(fa.length)}<small>${fa.map(p => 'Apto ' + esc(p.unidade) + ': ' + esc(p.titulo)).join(' · ')}</small></span></button>`).join('')}
       ${minhas.length && !edita() ? `<button type="button" class="alerta info" data-minhas><span class="ic">✓</span><span><b>${nPers(minhas.length)} ${minhas.length > 1 ? 'aguardam' : 'aguarda'} o seu “Estou ciente”</b><small>Leia o que muda em cada apartamento antes de montar.</small></span></button>` : ''}</div>` : ''}
     <div id="tabBody"></div>`;
   m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
   m.querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
   if (m.querySelector('[data-minhas]')) m.querySelector('[data-minhas]').onclick = () => { TAB = 'lista'; F.falta = true; F.sit = 'ativas'; render(); };
-  if (TAB === 'frentes') renderFrentes(); else renderLista();
-  $('fab').hidden = !edita() || TAB !== 'lista';
+  renderLista();
+  $('fab').hidden = !edita();
 }
 
 function filtrar() {
@@ -328,31 +324,6 @@ function renderLista() {
   $('fFalta').onclick = () => { F.falta = !F.falta; renderLista(); };
   if ($('bNova2')) $('bNova2').onclick = () => formPers(null);
   b.querySelectorAll('[data-p]').forEach(x => x.onclick = () => ficha(x.dataset.p));
-}
-
-function renderFrentes() {
-  const svs = servicosUsados(), pavs = CFG.pavimentos.map(x => x.nome).concat([...new Set(PERS.map(p => p.pavimento))].filter(n => !CFG.pavimentos.some(x => x.nome === n)));
-  const resto = ativos('servico').filter(s => !svs.includes(s));
-  if (!svs.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhuma frente ainda</h3><p class="muted" style="margin:0">As colunas aparecem com os serviços das modificações. ${edita() ? 'Você também pode acrescentar um serviço para já marcar as datas previstas.' : ''}</p>${edita() && resto.length ? `<select class="fsel" id="fAdd"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
-    if ($('fAdd')) $('fAdd').onchange = e => { if (e.target.value) { COLS_EXTRA.push(e.target.value); renderFrentes(); } }; return; }
-  const cel = (sv, pav) => {
-    const fr = frenteDe(sv, pav), ps = persDaFrente(sv, pav), fa = faltasFrente(sv, pav);
-    let s;
-    if (fr && fr.liberada_em) s = `<span class="s s-lib">Liberada${fr.justificativa ? ' ⚠' : ''}</span><span class="d">${fmtDs(fr.liberada_em)}</span>`;
-    else if (fa.length) s = `<span class="s s-falta">Falta ${fa.length} ciência${fa.length > 1 ? 's' : ''}</span>`;
-    else if (ps.some(p => p.status !== 'solicitada')) s = `<span class="s s-pronta">Pronta para liberar</span>`;
-    else if (ps.length) s = `<span class="s s-sol">Aguardando aprovação</span>`;
-    else s = `<span class="s s-nada">—</span>`;
-    const prev = fr && fr.previsto && !fr.liberada_em ? `<span class="d">prev. ${fmtDs(fr.previsto)}</span>` : '';
-    return `<button type="button" class="fc" data-fr='${esc(JSON.stringify([sv, pav]))}'>${s}${prev}${ps.length ? `<span class="d">${ps.length} personaliz.</span>` : ''}</button>`;
-  };
-  $('tabBody').innerHTML = `<p class="muted" style="margin:0">Cada célula é um serviço num pavimento. Marque a <b>data prevista</b> para receber o aviso com antecedência, e <b>libere a frente</b> antes de a equipe começar: a liberação só sai com o “Estou ciente” de todas as modificações daquele trecho.</p>
-    <div class="fr-wrap"><table class="fr"><thead><tr><th>Pavimento</th>${svs.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
-    <tbody>${pavs.map(pav => `<tr><td>${esc(pav)}</td>${svs.map(sv => `<td>${cel(sv, pav)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
-    <div class="leg"><span><span class="s s-lib" style="padding:1px 7px;border-radius:10px">Liberada</span> pode começar</span><span><span class="s s-falta" style="padding:1px 7px;border-radius:10px">Falta ciência</span> equipe ainda não confirmou</span><span><span class="s s-pronta" style="padding:1px 7px;border-radius:10px">Pronta</span> tudo confirmado, falta liberar</span><span>⚠ liberada com justificativa</span>
-      ${edita() && resto.length ? `<select class="fsel" id="fAdd" style="margin-left:auto"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
-  $('tabBody').querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
-  if ($('fAdd')) $('fAdd').onchange = e => { if (e.target.value) { COLS_EXTRA.push(e.target.value); renderFrentes(); } };
 }
 
 /* ======================= janelas ======================= */
@@ -533,7 +504,7 @@ function fichaFrente(sv, pav) {
   $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Modificações';
   $('fab').onclick = () => formPers(null);
   const q = new URLSearchParams(location.search);
-  if (q.get('aba') === 'frentes') TAB = 'frentes';
+  if (q.get('aba') === 'frentes') { location.replace('planejamento.html?obra=' + encodeURIComponent(OBRA) + '&aba=frentes'); return; }   // as frentes foram para o Planejamento
   render();
   if (q.get('p')) { if (PERS.some(x => x.id === q.get('p'))) ficha(q.get('p')); history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA)); }
   try { sb.channel('pers-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'personalizacoes', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); })

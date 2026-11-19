@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="description" content="Planejamento da obra: médio prazo e PCP lidos do PDF, o que fazer em cada semana e dia, erros no planejamento, histórico e frentes de trabalho.">
+<meta name="theme-color" content="#22425c">
+<title>Planejamento</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icones/planejamento.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
+<style>
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
+/* faixa da marca */
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px))}
+.logo{display:block;color:inherit}
+.logo img{height:40px;width:40px;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
+.ttl .obra{font-size:.82rem;color:#d4e4ee}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+
+main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
+.crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:8px}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 18px;font:700 .92rem var(--f-body);color:var(--ink)}
+.tab:hover{border-color:var(--accent)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab b{font-family:var(--f-body);margin-left:4px;opacity:.85}
+.muted{color:var(--muted);font-size:.88rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:.82rem}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px}
+.lnk:hover{text-decoration:underline}
+
+/* avisos no topo */
+.alertas{display:grid;gap:8px}
+.alerta{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r);padding:10px 12px;color:var(--ink)}
+.alerta.info{background:var(--warn-soft);border-color:var(--warn)}
+.alerta .ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--bad);color:#fff;font:700 .9rem var(--f-body)}
+.alerta.info .ic{background:var(--warn)}
+.alerta b{font-weight:700}
+.alerta small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+
+/* filtros */
+.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.busca{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
+.fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);min-height:40px;max-width:100%}
+.fsel.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip{background:none;border:1px solid var(--line);border-radius:16px;padding:6px 11px;font:500 .84rem var(--f-body);color:var(--ink);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+
+/* lista */
+.grupo{display:grid;gap:8px}
+.grupo>h2{margin:4px 0 0;font:700 1rem var(--f-disp);color:var(--muted);letter-spacing:.02em}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.card{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;width:100%;color:inherit;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card.falta{border-left-color:var(--bad)} .card.ok{border-left-color:var(--ok)} .card.sol{border-left-color:var(--warn)}
+.c-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.c-loc{font-size:.8rem;color:var(--muted)}
+.c-tit{font:700 1rem/1.25 var(--f-body);overflow-wrap:anywhere}
+.st{flex:none;font:600 .74rem var(--f-body);padding:2px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st-solicitada{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.st-aprovada{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.st-executada,.st-conferida{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.st-cancelada{text-decoration:line-through}
+.svs{display:flex;flex-wrap:wrap;gap:5px}
+.sv{font:600 .76rem var(--f-body);padding:2px 8px;border-radius:12px;border:1px solid var(--line);color:var(--muted)}
+.sv.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.sv.falta{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
+.vazio h3{margin:0;font:700 1.15rem var(--f-disp)}
+
+/* frentes */
+.fr-wrap{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.fr{border-collapse:separate;border-spacing:0;width:100%;font-size:.86rem}
+table.fr th,table.fr td{padding:6px;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);text-align:center;vertical-align:middle}
+table.fr th{font:700 .8rem var(--f-disp);color:var(--muted);background:var(--panel);position:sticky;top:0}
+table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600;min-width:120px;z-index:1}
+.fc{display:grid;gap:2px;justify-items:center;width:100%;min-width:104px;background:none;border:1px solid transparent;border-radius:7px;padding:6px 4px;color:inherit}
+.fc:hover{border-color:var(--accent);background:var(--accent-soft)}
+.fc .s{font:600 .76rem var(--f-body);padding:1px 7px;border-radius:10px}
+.fc .d{font-size:.74rem;color:var(--muted)}
+.s-lib{background:var(--ok-soft);color:var(--ok)} .s-sol{background:var(--warn-soft);color:var(--warn)} .s-falta{background:var(--bad-soft);color:var(--bad)} .s-pronta{background:var(--accent-soft);color:var(--accent)} .s-nada{color:var(--muted)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+
+/* botão flutuante */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+
+/* janelas */
+.overlay{position:fixed;inset:0;background:rgba(6,20,30,.5);display:grid;place-items:center;padding:12px;z-index:20}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(760px,100%);max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.sheet>header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.sheet>header h3{margin:0;font:700 1.2rem var(--f-disp);flex:1}
+.sheet>header .x{background:none;border:1px solid var(--line);border-radius:8px;min-width:36px;height:36px;font-size:1.2rem;line-height:1;color:var(--ink)}
+.sheet .body{overflow:auto;padding:14px 16px;display:grid;gap:14px;align-content:start}
+.sheet>footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.sheet>footer:not(:has(.btn)){display:none}
+.fld{display:grid;gap:5px}
+.fld>label,.fld>.l{font:600 .72rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.req{color:var(--bad)}
+.fld input:not([type=file]):not([type=checkbox]),.fld select,.fld textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+.fld textarea{min-height:64px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font:600 .86rem var(--f-body);color:var(--ink);min-height:36px}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
+.msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.itens{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:8px}
+.item textarea{grid-column:1/-1;min-height:46px}
+.item select,.item textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 9px;width:100%;min-width:0}
+.arqs{display:flex;flex-wrap:wrap;gap:8px}
+.arq{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:.72rem;color:var(--muted);text-align:center;padding:4px}
+.arq img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.arq .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;line-height:22px;padding:0}
+.addarq{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:8px;padding:9px 13px;font:600 .9rem var(--f-body);color:var(--ink);cursor:pointer}
+.addarq input{display:none}
+/* ficha */
+.fi-tit{margin:0;font:700 1.4rem/1.2 var(--f-disp);overflow-wrap:anywhere}
+.fi-loc{margin:0;font:600 .98rem var(--f-body);color:var(--accent)}
+.fi-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.86rem;color:var(--muted)}
+.fi-desc{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fi h4{margin:0;font:700 1.02rem var(--f-disp)}
+.svc{display:grid;gap:6px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:10px 12px}
+.svc.ok{border-left-color:var(--ok)} .svc.falta{border-left-color:var(--bad)}
+.svc .h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between}
+.svc .h b{font:700 .98rem var(--f-body)}
+.svc .ins{margin:0;font-weight:600;white-space:pre-wrap}
+.svc .ci{font-size:.84rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.svc .ci.ok{color:var(--ok)} .svc .ci.falta{color:var(--bad)}
+.viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.viewer .vx:hover{background:rgba(20,30,40,.92)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
+.viewer img{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);object-fit:contain}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+@media (max-width:640px){
+  .brand::after{display:none}
+  .ttl{border-left:0;padding-left:0}
+  .hctl{width:auto;margin-left:auto;order:2}
+  #bQuem{display:none}
+  .lista{grid-template-columns:1fr}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;width:100%}
+  .tabs{display:grid}
+  .overlay{padding:0;place-items:end stretch}
+  .sheet{border-radius:14px 14px 0 0;max-height:94dvh;width:100%}
+  .item{grid-template-columns:1fr auto}
+  .item select:nth-of-type(2){grid-column:1/2}
+}
+/* planejamento */
+main>*,#tabBody>*{min-width:0}
+.filtros .fsel{min-width:0;flex:1 1 150px;text-overflow:ellipsis}
+.topo{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.topo .muted{flex:1 1 240px}
+.tabs .seg{flex-wrap:wrap}
+.tab.erro b{color:var(--bad)} .tab[aria-pressed="true"].erro b{color:#fff}
+.semnav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.semnav h2{margin:0;font:700 1.15rem var(--f-disp);flex:1;min-width:180px}
+.semnav .btn{min-width:40px}
+.secao{display:grid;gap:8px}
+.secao>h3{margin:4px 0 0;font:700 1rem var(--f-disp);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.secao>h3 small{font:500 .82rem var(--f-body);color:var(--muted)}
+.dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.dia{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:8px;align-content:start}
+.dia.hoje{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.dia>h4{margin:0;font:700 .98rem var(--f-disp);display:flex;justify-content:space-between;gap:8px}
+.dia>h4 small{font:600 .74rem var(--f-body);color:var(--accent)}
+.dia .sub{font:600 .7rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.vz{font-size:.84rem;color:var(--muted)}
+.at{display:grid;grid-template-columns:auto 1fr auto;gap:1px 8px;align-items:start;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:6px 9px;color:inherit;font-size:.84rem;line-height:1.25}
+.at:hover{border-color:var(--accent)}
+.at .mk{font:700 .72rem var(--f-body);padding:1px 6px;border-radius:6px;align-self:center;white-space:nowrap}
+.at .mk.ini{background:var(--accent-soft);color:var(--accent)} .at .mk.fim{background:var(--ok-soft);color:var(--ok)} .at .mk.pcp{background:var(--warn-soft);color:var(--warn)} .at .mk.atr{background:var(--bad-soft);color:var(--bad)}
+.at b{font-weight:600;overflow-wrap:anywhere}
+.lst{display:grid;gap:6px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips .chip{flex:none}
+.chip .n{font-weight:700;margin-left:4px;color:var(--accent)}
+.chip[aria-pressed="true"] .n{color:inherit}
+.chip.hj{border-color:var(--accent)}
+details.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px}
+details.box>summary{cursor:pointer;font:700 .95rem var(--f-disp);display:flex;gap:8px;align-items:center;list-style:none}
+details.box>summary::-webkit-details-marker{display:none}
+details.box>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.box[open]>summary::before{transform:rotate(90deg)}
+details.box>summary small{font:500 .8rem var(--f-body);color:var(--muted)}
+details.box>.lst{margin-top:8px}
+details.box.atr{border-left:4px solid var(--bad)}
+details.box.atr>summary b{color:var(--bad)}
+.at small{grid-column:2/-1;color:var(--muted);font-size:.8rem;overflow-wrap:anywhere}
+.at .tg{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.at.atr{border-left-color:var(--bad)} .at.err{border-left-color:var(--bad)} .at.at2{border-left-color:var(--warn)} .at.ok{border-left-color:var(--ok)}
+.flags{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px}
+.fl{font:600 .72rem var(--f-body);padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--muted)}
+.fl.bad{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)} .fl.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)} .fl.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)} .fl.info{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.notas{display:grid;gap:5px}
+.nota{background:#fff6d6;border:1px solid #f0d77a;color:#5a4500;border-radius:7px;padding:6px 9px;font:600 .8rem var(--f-body)}
+:root[data-theme="dark"] .nota{background:#3a3214;border-color:#7a6620;color:#f3e3a3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nota{background:#3a3214;border-color:#7a6620;color:#f3e3a3}}
+.gr{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:8px}
+.gr>h3{margin:0;font:700 1rem var(--f-disp);display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.gr>h3 small{font:500 .8rem var(--f-body);color:var(--muted)}
+.gr details summary{cursor:pointer;font:600 .82rem var(--f-body);color:var(--warn)}
+.sit{font:600 .72rem var(--f-body);padding:1px 7px;border-radius:6px;white-space:nowrap}
+.sit-atr{background:var(--bad-soft);color:var(--bad)} .sit-sem{background:var(--warn-soft);color:var(--warn)} .sit-prox{background:var(--accent-soft);color:var(--accent)} .sit-mais,.sit-nd{color:var(--muted);border:1px solid var(--line)} .sit-conc{background:var(--ok-soft);color:var(--ok)}
+.sit-and{background:var(--warn-soft);color:var(--warn)}
+.av{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:start;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:9px;padding:9px 11px;text-align:left;width:100%;color:inherit}
+.av.erro{border-left-color:var(--bad)} .av.ajuste{border-left-color:var(--accent)}
+.av .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 .78rem var(--f-body);color:#fff;background:var(--warn)}
+.av.erro .ic{background:var(--bad)} .av.ajuste .ic{background:var(--accent)}
+.av small{grid-column:2;color:var(--muted);font-size:.8rem}
+.hist{display:grid;gap:6px;border-left:2px solid var(--line);padding-left:12px;margin-left:4px}
+.hist div{font-size:.86rem;position:relative}
+.hist div::before{content:"";position:absolute;left:-17px;top:6px;width:8px;height:8px;border-radius:50%;background:var(--line)}
+.hist div.mud::before{background:var(--warn)}
+.hist .d{color:var(--muted);font-size:.8rem}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:.9rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;overflow-wrap:anywhere}
+.ver{display:grid;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px;text-align:left;width:100%;color:inherit}
+.ver:hover{border-color:var(--accent)}
+.ver .h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;justify-content:space-between}
+.rev{display:grid;gap:8px}
+.rev .ln{display:grid;grid-template-columns:1fr;gap:6px;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.rev .ln.err{border-left:4px solid var(--bad)} .rev .ln.atn{border-left:4px solid var(--warn)}
+.rev .ln .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rev .ln input[type=date]{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+.rev .ln select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 8px;max-width:100%;min-width:0}
+.pvs{display:flex;flex-wrap:wrap;gap:4px}
+.pvs label{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:3px 9px;font-size:.8rem}
+.pvs input{margin:0}
+.resumo{display:flex;flex-wrap:wrap;gap:6px}
+.resumo span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:600 .86rem var(--f-body)}
+.resumo b{font-size:1.05rem;margin-right:4px}
+.pcpf{display:grid;gap:4px}
+.pcpf>b{font:700 .82rem var(--f-body);color:var(--muted)}
+.diasx{display:inline-flex;gap:2px}
+.diasx i{font-style:normal;font:600 .66rem var(--f-mono);width:20px;text-align:center;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.diasx i.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (max-width:640px){.dias{grid-template-columns:1fr}.seg{grid-auto-flow:row;grid-template-columns:repeat(3,1fr)}.tab{padding:9px 6px;font-size:.84rem}}
+</style>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/planejamento.svg" alt="" width="40" height="40"></a>
+  <div class="ttl"><h1>Planejamento</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="hctl"></div>
+</div></header>
+
+<main id="main"><p class="muted">Carregando…</p></main>
+<input type="file" id="arqPdf" accept="application/pdf,.pdf" hidden>
+
+<div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script>window.NUVEM_FERRAMENTA = 'planejamento';</script>
+<script src="nuvem.js"></script>
+<script src="listas-comum.js"></script>
+<script src="plan-pdf.js"></script>
+<script>
+/* =====================================================================
+   Planejamento da obra
+   - Médio prazo e PCP (plano semanal) vêm do PDF do Painel Pavei: a Engenharia
+     anexa cada versão nova, revisa o que o sistema não reconheceu e importa.
+   - Semana: o que começa, termina e está no PCP em cada dia, o que preparar
+     para a semana seguinte e o que está atrasado.
+   - Médio prazo: todas as atividades, com situação, avisos de cada disciplina,
+     histórico de datas (reprogramações) e ligação com serviço e pavimento.
+   - Frentes de trabalho (serviço × pavimento): a data prevista vem do
+     planejamento; a liberação depende do "Estou ciente" das Modificações.
+   - Revisar: erros encontrados no planejamento (datas trocadas, ano errado,
+     fora da sequência, ordem entre serviços).
+   Quem vê e quem importa: banco.sql, passo 23.
+   ===================================================================== */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const pad = n => String(n).padStart(2, '0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const hoje = () => iso(new Date());
+const dt = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const somaDias = (s, n) => { const x = dt(s); x.setDate(x.getDate() + n); return iso(x); };
+const difDias = (a, b) => Math.round((dt(b) - dt(a)) / 864e5);
+const segunda = s => { const x = dt(s); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return iso(x); };
+const fmtD = s => { if (!s) return '—'; const [y, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
+const fmtDs = s => { if (!s) return ''; const [, m, d] = String(s).slice(0, 10).split('-'); return d + '/' + m; };
+const fmtDH = s => { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const DSEM = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const LO = window.ListasObra, PP = window.PlanoPDF, norm = PP.norm;
+const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', 'Pavimento 05', 'Pavimento 06', 'Cobertura'].map(n => ({ nome: n, unidades: [] }));
+const AVISO_DIAS = 7;
+const nPers = n => n + ' modifica' + (n > 1 ? 'ções' : 'ção');
+const plural = (n, s, p) => n + ' ' + (n === 1 ? s : (p || s + 's'));
+
+let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
+let L = { servico: [] }, CFG = { pavimentos: [] };
+let VERS = [], ATV = [], HIST = null, PCP = [], MAPA = { servico: {}, local: {} }, FRENTES = [], PERS = [];
+let TAB = 'semana', SEM = segunda(hoje()), COLS_EXTRA = [];
+const F = { q: '', grupo: '', pav: '', sit: '' };
+
+const edita = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
+const ativos = t => LO.ativos(L[t] || []).map(x => x.valor);
+const pavNomes = () => CFG.pavimentos.map(x => x.nome);
+const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || 'alguém').split('@')[0];
+const erroMsg = e => String((e && (e.message || e.error_description)) || e).replace(/^.*?:\s*(?=Falta|Só|Você|O PDF)/, '');
+const ultimaMP = () => VERS.find(v => v.tipo === 'mp') || null;
+
+/* ---------------- dados ---------------- */
+async function carregar() {
+  const [lp, lc, lo, lv, la, lm] = await Promise.all([
+    sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
+    sb.from('pend_config').select('pavimentos,listas').eq('obra', OBRA).maybeSingle(),
+    NV.obras.obter(OBRA),
+    sb.from('plan_versoes').select('*').eq('obra', OBRA).order('criado_em', { ascending: false }),
+    sb.from('plan_atividades').select('*').eq('obra', OBRA),
+    sb.from('plan_mapa').select('*').eq('obra', OBRA)
+  ]);
+  if (lv.error) { const e = new Error(lv.error.message); e.banco = /plan_|relation|schema cache/i.test(lv.error.message || ''); throw e; }
+  if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
+  const c = (lc && lc.data) || {};
+  L = LO.efetivas(LO.deTabela(lp.data || []), c.listas || null);
+  CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO };
+  OBRA_NOME = lo.nome; VERS = lv.data || []; ATV = la.data || [];
+  MAPA = { servico: {}, local: {} }; (lm.data || []).forEach(m => { MAPA[m.tipo][m.origem] = m.destino; });
+  // PCP: a versão mais nova de cada semana (as 8 últimas semanas)
+  const semanas = new Map(); VERS.filter(v => v.tipo === 'pcp').forEach(v => { if (!semanas.has(v.referencia)) semanas.set(v.referencia, v); });
+  const ids = [...semanas.values()].slice(0, 8).map(v => v.id);
+  const [lpc, lfr, lpe] = await Promise.all([
+    ids.length ? sb.from('plan_pcp').select('*').in('versao', ids).order('ordem') : Promise.resolve({ data: [] }),
+    sb.from('frentes').select('*').eq('obra', OBRA),
+    sb.from('personalizacoes').select('*, pers_ciencias(*)').eq('obra', OBRA)
+  ]);
+  PCP = (lpc.data || []).map(i => Object.assign(i, { v: VERS.find(v => v.id === i.versao) }));
+  FRENTES = lfr.error ? [] : (lfr.data || []); PERS = lpe.error ? [] : (lpe.data || []);
+  HIST = null;
+}
+async function recarregar() { try { await carregar(); render(); } catch (e) { toast('Não foi possível atualizar: ' + (e.message || e)); } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && NV && $('ovl').hidden) recarregar(); });
+
+/* ---------------- situação de uma atividade (sempre em relação a hoje) ---------------- */
+function situacao(a) {
+  const h = hoje(), si = segunda(h), sf = somaDias(si, 5), ini = a.inicio, fim = a.termino;
+  if (a.concluida) return ['conc', 'Concluída'];
+  if (!ini && !fim) return ['nd', 'Sem data'];
+  if (fim && fim < h) return ['atr', 'Atrasada'];
+  const i0 = ini || fim, f0 = fim || ini;
+  if (i0 <= h && f0 >= h) return ['and', 'Em andamento'];
+  if (i0 <= sf && f0 >= si) return ['sem', 'Nesta semana'];
+  if (i0 <= somaDias(h, 21)) return ['prox', 'Próximas 3 semanas'];
+  return ['mais', 'Mais adiante'];
+}
+const rotAtv = a => a.atividade + (a.local ? ' · ' + a.local : '');
+const datas = a => a.inicio && a.termino ? fmtDs(a.inicio) + ' → ' + fmtDs(a.termino) : a.termino ? 'até ' + fmtDs(a.termino) : a.inicio ? 'de ' + fmtDs(a.inicio) : 'sem data';
+
+/* ---------------- erros e pontos de atenção do planejamento ---------------- */
+// regras de ordem entre serviços no mesmo pavimento (antes → depois). estrita: o seguinte não pode começar antes de o anterior terminar
+const ORDEM = [
+  [/DRYWALL ESTRUTURA/, /DRYWALL PLAQUEAMENTO/, false], [/DRYWALL PLAQUEAMENTO/, /DRYWALL FITAMENTO/, false],
+  [/HIDRAULICA DRYWALL/, /DRYWALL PLAQUEAMENTO/, false], [/ELETRICA DRYWALL/, /DRYWALL PLAQUEAMENTO/, false],
+  [/DRYWALL FITAMENTO/, /^PINTURA$/, false], [/IMPERMEABILIZACAO E MURETA BOX/, /^CERAMICA$/, true],
+  [/PREPARACAO PARA IMPERMEABILIZACAO/, /IMPERMEABILIZACAO COM MANTA/, true], [/IMPERMEABILIZACAO COM MANTA/, /PROTECAO MECANICA|CONTRAPISO SOBRE IMPERMEABILIZACAO/, true]
+];
+const chLocal = r => (r.pavimentos && r.pavimentos.length ? r.pavimentos.join('+') : norm(r.local).replace(/[º°]/g, '').replace(/^(\d+)$/, n => String(+n)));
+function verificar(linhas, ref) {
+  const A = []; const nome = r => r.atividade + (r.local ? ' · ' + r.local : '');
+  const add = (nivel, r, txt, tipo) => A.push({ nivel, tipo, chave: r ? r.chave : null, grupo: r ? r.grupo : '', item: r ? nome(r) : '', txt });
+  for (const r of linhas) {
+    if (!r.atividade || /^\(SEM DESCRICAO\)$/.test(norm(r.atividade))) add('erro', r, 'Linha sem descrição' + (r.terminoTxt || r.inicioTxt ? ' (data "' + (r.inicioTxt || r.terminoTxt) + '")' : '') + '.', 'vazia');
+    if (r.inicioTxt && !r.inicio) add('erro', r, 'Início "' + r.inicioTxt + '" não é uma data.', 'data');
+    if (r.terminoTxt && !r.termino) add('erro', r, 'Término "' + r.terminoTxt + '" não é uma data.', 'data');
+    if (r.inicio && r.termino && r.termino < r.inicio) add('erro', r, 'Termina (' + fmtD(r.termino) + ') antes de começar (' + fmtD(r.inicio) + ').', 'inverso');
+  }
+  // mesma atividade em vários pavimentos: ano trocado e fora da sequência
+  const porAtv = new Map(); linhas.forEach(r => { if (!r.atividade) return; const k = norm(r.grupo) + '|' + norm(r.atividade); if (!porAtv.has(k)) porAtv.set(k, []); porAtv.get(k).push(r); });
+  for (const G of porAtv.values()) {
+    const ds = G.map(r => r.inicio || r.termino).filter(Boolean).sort(); if (ds.length < 3) continue;
+    const med = ds[ds.length >> 1];
+    for (const r of G) for (const c of ['inicio', 'termino']) { const d = r[c]; if (!d) continue;
+      const off = Math.abs(difDias(med, d)); if (off < 240) continue;
+      const y = +d.slice(0, 4), alt = [y - 1, y + 1].map(n => n + d.slice(4)).find(x => Math.abs(difDias(med, x)) < 120);
+      if (alt) add('erro', r, (c === 'inicio' ? 'Início' : 'Término') + ' ' + fmtD(d) + ': provável ano errado (as outras ficam perto de ' + fmtD(med) + '; seria ' + fmtD(alt) + '?).', 'ano'); }
+    if (G.length >= 4) {
+      const v = G.filter(r => r.inicio && !A.some(x => x.chave === r.chave && x.tipo === 'ano'));
+      let sobe = 0; for (let i = 1; i < v.length; i++) if (v[i].inicio >= v[i - 1].inicio) sobe++;
+      if (v.length >= 4 && sobe / (v.length - 1) >= 0.6) for (let i = 1; i < v.length; i++) if (difDias(v[i].inicio, v[i - 1].inicio) > 14)
+        add('atencao', v[i], 'Fora da sequência: começa em ' + fmtD(v[i].inicio) + ', antes de ' + v[i - 1].local + ' (' + fmtD(v[i - 1].inicio) + '), que vem antes na lista.', 'seq');
+    }
+  }
+  // ordem entre serviços no mesmo pavimento
+  for (const [pa, pb, estrita] of ORDEM) {
+    const As = linhas.filter(r => pa.test(norm(r.atividade)) && !r.concluida), Bs = linhas.filter(r => pb.test(norm(r.atividade)) && !r.concluida);
+    for (const b of Bs) { const a = As.find(x => chLocal(x) === chLocal(b)); if (!a || !b.inicio) continue;
+      const aIni = a.inicio; if (!aIni) continue;
+      if (b.inicio < aIni) add('erro', b, 'Começa (' + fmtD(b.inicio) + ') antes de "' + a.atividade + '" no mesmo local (' + fmtD(aIni) + ').', 'ordem');
+      else if (estrita && a.termino && b.inicio <= a.termino) add('atencao', b, 'Começa (' + fmtD(b.inicio) + ') antes de terminar "' + a.atividade + '" (' + fmtD(a.termino) + ').', 'ordem'); }
+  }
+  // repetida (mesma atividade e local duas vezes)
+  const ch = new Map(); linhas.forEach(r => { const k = norm(r.grupo) + '|' + norm(r.atividade) + '|' + norm(r.local); ch.set(k, (ch.get(k) || 0) + 1); });
+  for (const [k, n] of ch) if (n > 1) { const r = linhas.find(x => norm(x.grupo) + '|' + norm(x.atividade) + '|' + norm(x.local) === k); add('atencao', r, 'Aparece ' + n + ' vezes no planejamento.', 'dup'); }
+  if (ref) for (const r of linhas) for (const c of ['inicio', 'termino']) if (r[c] && difDias(ref, r[c]) > 400 && !A.some(x => x.chave === r.chave && x.tipo === 'ano')) add('atencao', r, 'Data muito distante: ' + fmtD(r[c]) + '.', 'longe');
+  return A;
+}
+const avisosAtuais = () => { const v = ultimaMP(); return v ? (v.avisos || []) : []; };
+const avisosDe = chave => avisosAtuais().filter(x => x.chave === chave);
+
+/* ---------------- ligações: serviço, frentes, modificações, PCP ---------------- */
+const frenteDe = (sv, pav) => FRENTES.find(f => f.servico === sv && f.pavimento === pav) || null;
+const ciencia = (p, sv) => (p.pers_ciencias || []).find(c => c.servico === sv);
+const persDaFrente = (sv, pav) => PERS.filter(p => p.pavimento === pav && ['aprovada', 'executada', 'conferida', 'solicitada'].includes(p.status) && (p.itens || []).some(i => i.servico === sv));
+const faltasFrente = (sv, pav) => persDaFrente(sv, pav).filter(p => p.status === 'aprovada' && !ciencia(p, sv));
+const atvsDaFrente = (sv, pav) => ATV.filter(a => a.ativa && a.servico === sv && (a.pavimentos || []).includes(pav)).sort((a, b) => String(a.inicio || a.termino || '9').localeCompare(String(b.inicio || b.termino || '9')));
+// o que trava ou pede atenção numa atividade (para "o que preparar")
+function bandeiras(a) {
+  const f = [];
+  if (a.servico) for (const pav of a.pavimentos || []) { const fa = faltasFrente(a.servico, pav), fr = frenteDe(a.servico, pav);
+    if (fa.length) f.push(['bad', pav + ': falta ciência em ' + nPers(fa.length)]);
+    else if (persDaFrente(a.servico, pav).length && !(fr && fr.liberada_em)) f.push(['warn', pav + ': frente a liberar']);
+    else if (fr && fr.liberada_em) f.push(['ok', pav + ': frente liberada']); }
+  const av = avisosDe(a.chave); if (av.some(x => x.nivel === 'erro')) f.push(['bad', 'erro no planejamento']); else if (av.length) f.push(['warn', 'conferir datas']);
+  if (a.n_mudancas) f.push(['info', 'reprogramada ' + a.n_mudancas + '×']);
+  if (!a.equipe) f.push(['warn', 'sem equipe']);
+  return f;
+}
+const flagsHtml = a => { const f = bandeiras(a); return f.length ? `<span class="flags">${f.map(([k, t]) => `<span class="fl ${k}">${esc(t)}</span>`).join('')}</span>` : ''; };
+// item do PCP → atividade do médio prazo (ligação feita à mão ou sugerida pelo texto, pavimento e semana)
+const STOP = new Set(['PARA', 'COM', 'DOS', 'DAS', 'NOS', 'NAS', 'NOS', 'PAVIMENTO', 'ANDAR', 'PAV', 'APTO', 'TODOS', 'TODAS', 'DIAS', 'DIA', 'LADO', 'FACHADA', 'GERAL', 'PAVEI', 'EQUIPE', 'QUE', 'POR', 'SEM', 'AOS', 'UMA', 'TETO', 'PAREDE', 'PAREDES']);
+const tokens = s => new Set(norm(s).replace(/[^A-Z0-9 ]/g, ' ').split(' ').filter(w => w.length >= 3 && !/^\d/.test(w) && !STOP.has(w)).map(w => w.replace(/(COES|CAO|MENTO|S)$/, '')));
+function ligacaoPCP(it) {
+  if (it.ligado === 'nenhum') return null;
+  if (it.ligado === 'manual' && it.atividade) { const a = ATV.find(x => x.id === it.atividade); return a ? { a, auto: false } : null; }
+  const v = it.v || {}; const ini = v.referencia, fim = v.proxima || (ini && somaDias(ini, 5));
+  const pvs = PP.pavimentosNoTexto(it.texto, pavNomes()); const tk = tokens(it.texto + ' ' + it.frente);
+  let best = null, bs = 1.5;
+  for (const a of ATV) { if (!a.ativa || a.concluida) continue;
+    const ai = a.inicio || a.termino, af = a.termino || a.inicio; if (ini && ai && (ai > fim || af < ini)) continue;
+    const ta = tokens(a.atividade + ' ' + a.grupo); let s = 0; tk.forEach(w => { if (ta.has(w)) s++; });
+    if (pvs.length) { if (!(a.pavimentos || []).some(p => pvs.includes(p))) continue; s += 1.5; }
+    if (s > bs) { bs = s; best = a; } }
+  return best ? { a: best, auto: true } : null;
+}
+
+/* ======================= telas ======================= */
+function render() {
+  const m = $('main'), av = avisosAtuais(), nErr = av.filter(x => x.nivel === 'erro').length, nAt = av.filter(x => x.nivel === 'atencao').length;
+  const v = ultimaMP();
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Planejamento</span></nav>
+    <div class="tabs"><div class="seg">${[['semana', 'Semana'], ['mp', 'Médio prazo'], ['frentes', 'Frentes'], ['revisar', 'Revisar', nErr + nAt], ['hist', 'Histórico']]
+      .map(([k, t, n]) => `<button type="button" class="tab${k === 'revisar' && nErr ? ' erro' : ''}" data-tab="${k}" aria-pressed="${TAB === k}">${t}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div></div>
+    ${v || edita() ? `<div class="topo">${v ? `<p class="muted" style="margin:0">Médio prazo da reunião de <b>${fmtD(v.referencia)}</b>${v.proxima ? ' · próxima em ' + fmtD(v.proxima) : ''} · importado ${fmtDH(v.criado_em)} por ${esc(nomeDe(v.criado_por))}</p>` : '<span></span>'}${edita() && VERS.length ? '<button class="btn sm" type="button" id="bImp">⇪ Importar PDF</button>' : ''}</div>` : ''}
+    <div id="tabBody" style="display:grid;gap:14px"></div>`;
+  m.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  if ($('bImp')) $('bImp').onclick = () => $('arqPdf').click();
+  if (!VERS.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhum planejamento importado</h3><p class="muted" style="margin:0">${edita() ? 'Anexe o PDF do <b>médio prazo</b> (e, se quiser, o do <b>PCP</b> da semana) gerado pelo Painel Pavei. O sistema lê as atividades e as datas, aponta os erros e liga cada atividade às frentes e às modificações.' : 'Quando a Engenharia importar o médio prazo, ele aparece aqui.'}</p>${edita() ? '<button class="btn" type="button" id="bImp0">⇪ Importar PDF</button>' : ''}</div>`;
+    if ($('bImp0')) $('bImp0').onclick = () => $('arqPdf').click(); }
+  else ({ semana: renderSemana, mp: renderMP, frentes: renderFrentes, revisar: renderRevisar, hist: renderHist }[TAB] || renderSemana)();
+}
+const grupoUtil = a => { const g = norm(a.grupo).split(/[ /]/)[0]; return a.grupo && !norm(a.atividade).includes(g) ? a.grupo.length > 26 ? a.grupo.slice(0, 24) + '…' : a.grupo : ''; };
+const linhaAtv = (a, mk, extra) => { const [k] = situacao(a); const av = avisosDe(a.chave);
+  return `<button type="button" class="at ${k === 'atr' ? 'atr' : av.some(x => x.nivel === 'erro') ? 'err' : a.concluida ? 'ok' : ''}" data-a="${esc(a.id)}">${mk || '<span></span>'}<b>${esc(rotAtv(a))}</b><span class="tg">${esc(a.equipe || '')}</span>
+    <small>${[grupoUtil(a), datas(a), extra].filter(Boolean).map(esc).join(' · ')}</small>${flagsHtml(a)}</button>`; };
+const ligarCliques = el => { el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => fichaAtv(b.dataset.a)); el.querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp)); };
+
+/* ---------------- Semana: a semana toda ou um dia + o que preparar ---------------- */
+let DIA = null;   // null = semana toda; 0..5 = segunda..sábado
+function renderSemana() {
+  const si = SEM, sf = somaDias(si, 5), h = hoje(), prox = somaDias(si, 7), proxF = somaDias(si, 12);
+  const at = ATV.filter(a => a.ativa && !a.concluida);
+  const pcpSem = PCP.filter(i => i.v && i.v.referencia === si);
+  const pcpV = pcpSem.length ? pcpSem[0].v : null;
+  if (DIA == null && si === segunda(h) && h <= sf && !renderSemana.escolheu) DIA = difDias(si, h);
+  const noDia = d => ({ ini: at.filter(a => a.inicio === d), fim: at.filter(a => a.termino === d && a.inicio !== d) });
+  const cont = k => { const d = somaDias(si, k), x = noDia(d); return x.ini.length + x.fim.length; };
+  const blocoPCP = its => { const grp = new Map(); its.forEach(i => { const g = i.frente + (i.empresa && i.empresa !== i.frente ? ' · ' + i.empresa : ''); if (!grp.has(g)) grp.set(g, []); grp.get(g).push(i); });
+    return [...grp.entries()].map(([g, L2]) => `<details class="box"><summary>${esc(g)} <small>${plural(L2.length, 'item', 'itens')}</small></summary><div class="lst">${L2.map(pcpHtml).join('')}</div></details>`).join(''); };
+  let corpo;
+  if (DIA == null) {
+    const ini = at.filter(a => a.inicio && a.inicio >= si && a.inicio <= sf).sort((a, b) => a.inicio.localeCompare(b.inicio));
+    const fim = at.filter(a => a.termino && a.termino >= si && a.termino <= sf && !(a.inicio && a.inicio >= si)).sort((a, b) => a.termino.localeCompare(b.termino));
+    corpo = `<section class="secao"><h3>Começam nesta semana <small>${ini.length}</small></h3>${ini.length ? `<div class="lst">${ini.map(a => linhaAtv(a, '<span class="mk ini">' + DSEM[difDias(si, a.inicio)].slice(0, 3) + ' ' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa nesta semana.</span>'}</section>
+      <section class="secao"><h3>Terminam nesta semana <small>${fim.length}</small></h3>${fim.length ? `<div class="lst">${fim.map(a => linhaAtv(a, '<span class="mk fim">' + DSEM[difDias(si, a.termino)].slice(0, 3) + ' ' + fmtDs(a.termino) + '</span>')).join('')}</div>` : '<span class="vz">Nada termina nesta semana.</span>'}</section>
+      ${pcpSem.length ? `<section class="secao"><h3>PCP da semana <small>${plural(pcpSem.length, 'item', 'itens')} por equipe</small></h3>${blocoPCP(pcpSem)}</section>` : ''}`;
+  } else {
+    const d = somaDias(si, DIA), x = noDia(d), pc = pcpSem.filter(i => (i.dias || []).includes(DIA));
+    corpo = `<section class="secao"><h3>${DSEM[DIA]}, ${fmtD(d)}${d === h ? ' <small>hoje</small>' : ''}</h3>
+      ${x.ini.length ? `<div class="lst">${x.ini.map(a => linhaAtv(a, '<span class="mk ini">começa</span>')).join('')}</div>` : ''}
+      ${x.fim.length ? `<div class="lst">${x.fim.map(a => linhaAtv(a, '<span class="mk fim">termina</span>')).join('')}</div>` : ''}
+      ${!x.ini.length && !x.fim.length ? '<span class="vz">Nenhuma atividade do médio prazo começa ou termina neste dia.</span>' : ''}</section>
+      ${pc.length ? `<section class="secao"><h3>No PCP <small>${plural(pc.length, 'item', 'itens')} marcados para ${DSEM[DIA].toLowerCase()}</small></h3>${blocoPCP(pc)}</section>` : pcpV ? '<span class="vz">Nada do PCP marcado para este dia.</span>' : ''}`;
+  }
+  // preparar: começa na semana seguinte (com o que trava); atrasadas; em andamento
+  const prep = at.filter(a => a.inicio && a.inicio >= prox && a.inicio <= proxF).sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const atr = si <= h && h <= sf ? at.filter(a => situacao(a)[0] === 'atr').sort((a, b) => String(a.termino).localeCompare(String(b.termino))) : [];
+  const andam = at.filter(a => { const i0 = a.inicio || a.termino, f0 = a.termino || a.inicio; return i0 && f0 && i0 < si && f0 > sf; });
+  const travadas = prep.filter(a => bandeiras(a).some(f => f[0] === 'bad'));
+  $('tabBody').innerHTML = `<div class="semnav"><button class="btn ghost sm" id="sAnt" type="button" aria-label="Semana anterior">‹</button><h2>${fmtDs(si)} a ${fmtD(sf)}</h2>${si !== segunda(h) ? '<button class="btn ghost sm" id="sHoje" type="button">Hoje</button>' : ''}<button class="btn ghost sm" id="sProx" type="button" aria-label="Semana seguinte">›</button></div>
+    <div class="chips" role="group" aria-label="Dia"><button type="button" class="chip" data-dia="" aria-pressed="${DIA == null}">Semana</button>${[0, 1, 2, 3, 4, 5].map(k => { const d = somaDias(si, k), n = cont(k);
+      return `<button type="button" class="chip${d === h ? ' hj' : ''}" data-dia="${k}" aria-pressed="${DIA === k}">${DSEM[k].slice(0, 3)} ${d.slice(8)}${n ? `<span class="n">${n}</span>` : ''}</button>`; }).join('')}</div>
+    ${atr.length ? `<details class="box atr"><summary><b>${plural(atr.length, 'atrasada')}</b><small>terminavam antes de hoje e não estão concluídas no médio prazo</small></summary><div class="lst">${atr.map(a => linhaAtv(a, '<span class="mk atr">' + difDias(a.termino, h) + 'd</span>')).join('')}</div></details>` : ''}
+    ${corpo}
+    <details class="box"${travadas.length ? ' open' : ''}><summary>Preparar para a semana seguinte <small>${plural(prep.length, 'começa', 'começam')} de ${fmtDs(prox)} a ${fmtDs(proxF)}${travadas.length ? ' · ' + travadas.length + ' com pendência' : ''}</small></summary>
+      ${prep.length ? `<div class="lst">${prep.map(a => linhaAtv(a, '<span class="mk ini">' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa na semana seguinte.</span>'}</details>
+    ${andam.length ? `<details class="box"><summary>Em andamento a semana toda <small>${andam.length}</small></summary><div class="lst">${andam.map(a => linhaAtv(a)).join('')}</div></details>` : ''}
+    <p class="muted" style="margin:0">${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
+  $('sAnt').onclick = () => { SEM = somaDias(SEM, -7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
+  $('sProx').onclick = () => { SEM = somaDias(SEM, 7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
+  if ($('sHoje')) $('sHoje').onclick = () => { SEM = segunda(hoje()); DIA = null; renderSemana.escolheu = false; renderSemana(); };
+  $('tabBody').querySelectorAll('[data-dia]').forEach(b => b.onclick = () => { DIA = b.dataset.dia === '' ? null : +b.dataset.dia; renderSemana.escolheu = true; renderSemana(); });
+  ligarCliques($('tabBody'));
+}
+function pcpHtml(i) {
+  const l = ligacaoPCP(i);
+  return `<button type="button" class="at" data-pcp="${esc(i.id)}"><span class="mk pcp">PCP</span><b>${esc(i.texto)}</b><span class="diasx">${[0, 1, 2, 3, 4, 5].map(k => `<i class="${(i.dias || []).includes(k) ? 'on' : ''}">${['S', 'T', 'Q', 'Q', 'S', 'S'][k]}</i>`).join('')}</span>
+    ${l ? `<small>↔ ${esc(rotAtv(l.a))} · ${datas(l.a)}${l.auto ? ' (sugestão)' : ''}</small>` : ''}</button>`;
+}
+
+/* ---------------- Médio prazo ---------------- */
+function renderMP() {
+  const v = ultimaMP(), notas = v ? (v.notas || []) : [];
+  const at = ATV.filter(a => a.ativa);
+  const grupos = [...new Set(at.map(a => a.grupo))];
+  const SITS = [['', 'Todas as situações'], ['atr', 'Atrasadas'], ['and', 'Em andamento'], ['sem', 'Nesta semana'], ['prox', 'Próximas 3 semanas'], ['mais', 'Mais adiante'], ['nd', 'Sem data'], ['conc', 'Concluídas'], ['err', 'Com erro ou atenção'], ['rep', 'Reprogramadas']];
+  const q = norm(F.q);
+  const vis = at.filter(a => (!F.grupo || a.grupo === F.grupo) && (!F.pav || (a.pavimentos || []).includes(F.pav))
+    && (!F.sit || (F.sit === 'err' ? avisosDe(a.chave).length : F.sit === 'rep' ? a.n_mudancas > 0 : situacao(a)[0] === F.sit))
+    && (!q || norm([a.atividade, a.local, a.equipe, a.grupo, a.servico].join(' ')).includes(q)));
+  const ordem = new Map(grupos.map((g, i) => [g, i]));
+  const G = new Map(); vis.forEach(a => { if (!G.has(a.grupo)) G.set(a.grupo, []); G.get(a.grupo).push(a); });
+  const pavs = pavNomes().filter(p => at.some(a => (a.pavimentos || []).includes(p)));
+  $('tabBody').innerHTML = `<div class="filtros">
+      <label class="busca"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="fQ" type="search" placeholder="Buscar atividade, local ou equipe" value="${esc(F.q)}" aria-label="Buscar"></label>
+      <select class="fsel${F.grupo ? ' on' : ''}" id="fG" aria-label="Disciplina"><option value="">Todas as disciplinas</option>${grupos.map(g => `<option ${g === F.grupo ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select>
+      <select class="fsel${F.pav ? ' on' : ''}" id="fP" aria-label="Pavimento"><option value="">Todos os pavimentos</option>${pavs.map(p => `<option ${p === F.pav ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
+      <select class="fsel${F.sit ? ' on' : ''}" id="fS" aria-label="Situação">${SITS.map(([k, t]) => `<option value="${k}" ${k === F.sit ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    </div>
+    <p class="muted" style="margin:0">${plural(vis.length, 'atividade')}${vis.length !== at.length ? ' de ' + at.length : ''}</p>
+    ${[...G.entries()].sort((a, b) => ordem.get(a[0]) - ordem.get(b[0])).map(([g, L2]) => { const ns = notas.filter(n => n.grupo === g);
+      return `<section class="gr"><h3>${esc(g)}<small>${plural(L2.length, 'atividade')}</small></h3>
+        ${ns.length ? `<details><summary>${plural(ns.length, 'cuidado', 'cuidados')} desta disciplina</summary><div class="notas" style="margin-top:6px">${ns.map(n => `<div class="nota">${esc(n.texto)}</div>`).join('')}</div></details>` : ''}
+        ${L2.map(a => { const [k, t] = situacao(a); return linhaAtv(a, `<span class="sit sit-${k}">${t}</span>`); }).join('')}</section>`; }).join('') || '<div class="vazio"><h3>Nada com estes filtros</h3></div>'}`;
+  $('fQ').oninput = e => { F.q = e.target.value; clearTimeout(renderMP.t); renderMP.t = setTimeout(() => { renderMP(); const x = $('fQ'); x.focus(); x.setSelectionRange(x.value.length, x.value.length); }, 250); };
+  $('fG').onchange = e => { F.grupo = e.target.value; renderMP(); };
+  $('fP').onchange = e => { F.pav = e.target.value; renderMP(); };
+  $('fS').onchange = e => { F.sit = e.target.value; renderMP(); };
+  ligarCliques($('tabBody'));
+}
+
+/* ---------------- Frentes (serviço × pavimento) ---------------- */
+function servicosUsados() {
+  const s = new Set(); PERS.forEach(p => p.status !== 'cancelada' && (p.itens || []).forEach(i => i.servico && s.add(i.servico)));
+  FRENTES.forEach(f => s.add(f.servico)); ATV.forEach(a => a.ativa && a.servico && (a.pavimentos || []).length && s.add(a.servico)); COLS_EXTRA.forEach(x => s.add(x));
+  const ord = ativos('servico'); return [...s].sort((a, b) => (ord.indexOf(a) < 0 ? 999 : ord.indexOf(a)) - (ord.indexOf(b) < 0 ? 999 : ord.indexOf(b)) || a.localeCompare(b));
+}
+function renderFrentes() {
+  const svs = servicosUsados(), pavs = pavNomes().concat([...new Set(PERS.map(p => p.pavimento))].filter(n => !pavNomes().includes(n)));
+  const resto = ativos('servico').filter(s => !svs.includes(s));
+  if (!svs.length) { $('tabBody').innerHTML = `<div class="vazio"><h3>Nenhuma frente ainda</h3><p class="muted" style="margin:0">As colunas aparecem com os serviços ligados às atividades do planejamento e às modificações. Ligue as atividades aos serviços na importação do médio prazo.</p></div>`; return; }
+  const cel = (sv, pav) => {
+    const fr = frenteDe(sv, pav), ps = persDaFrente(sv, pav), fa = faltasFrente(sv, pav), as = atvsDaFrente(sv, pav).filter(a => !a.concluida);
+    let s;
+    if (fr && fr.liberada_em) s = `<span class="s s-lib">Liberada${fr.justificativa ? ' ⚠' : ''}</span><span class="d">${fmtDs(fr.liberada_em)}</span>`;
+    else if (fa.length) s = `<span class="s s-falta">Falta ${fa.length} ciência${fa.length > 1 ? 's' : ''}</span>`;
+    else if (ps.some(p => p.status !== 'solicitada')) s = `<span class="s s-pronta">Pronta para liberar</span>`;
+    else if (ps.length) s = `<span class="s s-sol">Aguardando aprovação</span>`;
+    else if (as.length) s = `<span class="s s-nada">${as.some(a => situacao(a)[0] === 'atr') ? '<b style="color:var(--bad)">atrasada</b>' : 'planejada'}</span>`;
+    else s = `<span class="s s-nada">—</span>`;
+    const a0 = as[0]; const prev = !(fr && fr.liberada_em) ? (a0 ? `<span class="d">${datas(a0)}</span>` : fr && fr.previsto ? `<span class="d">prev. ${fmtDs(fr.previsto)}</span>` : '') : '';
+    return `<button type="button" class="fc" data-fr='${esc(JSON.stringify([sv, pav]))}'>${s}${prev}${ps.length ? `<span class="d">${nPers(ps.length)}</span>` : ''}</button>`;
+  };
+  $('tabBody').innerHTML = `<p class="muted" style="margin:0">Cada célula é um serviço num pavimento. As datas vêm do <b>médio prazo</b> (a 1ª atividade ainda não concluída). A frente só é <b>liberada</b> com o “Estou ciente” de todas as modificações daquele trecho.</p>
+    <div class="fr-wrap"><table class="fr"><thead><tr><th>Pavimento</th>${svs.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
+    <tbody>${pavs.map(pav => `<tr><td>${esc(pav)}</td>${svs.map(sv => `<td>${cel(sv, pav)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="leg"><span><span class="s s-lib" style="padding:1px 7px;border-radius:10px">Liberada</span> pode começar</span><span><span class="s s-falta" style="padding:1px 7px;border-radius:10px">Falta ciência</span> equipe ainda não confirmou</span><span><span class="s s-pronta" style="padding:1px 7px;border-radius:10px">Pronta</span> tudo confirmado, falta liberar</span><span>⚠ liberada com justificativa</span>
+      ${edita() && resto.length ? `<select class="fsel" id="fAdd" style="margin-left:auto"><option value="">+ Acrescentar serviço…</option>${resto.map(s => `<option>${esc(s)}</option>`).join('')}</select>` : ''}</div>`;
+  $('tabBody').querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
+  if ($('fAdd')) $('fAdd').onchange = e => { if (e.target.value) { COLS_EXTRA.push(e.target.value); renderFrentes(); } };
+}
+function fichaFrente(sv, pav) {
+  const fr = frenteDe(sv, pav), ps = persDaFrente(sv, pav), fa = faltasFrente(sv, pav), lib = fr && fr.liberada_em, as = atvsDaFrente(sv, pav);
+  const ST = { solicitada: 'Aguardando aprovação', aprovada: 'Aprovada', executada: 'Executada', conferida: 'Conferida' };
+  openSheet(sv + ' · ' + pav, `<div style="display:grid;gap:12px">
+    ${lib ? `<div class="alerta" style="background:var(--ok-soft);border-color:var(--ok)"><span class="ic" style="background:var(--ok)">✓</span><span><b>Frente liberada</b> em ${fmtDH(fr.liberada_em)} por ${esc(nomeDe(fr.liberada_por))}${fr.justificativa ? `<small>Liberada com ciência faltando. Justificativa: ${esc(fr.justificativa)}</small>` : ''}</span></div>`
+      : fa.length ? `<div class="alerta"><span class="ic">!</span><span><b>Falta a ciência da equipe em ${nPers(fa.length)}.</b><small>Confirme com a equipe antes de liberar a frente.</small></span></div>` : ''}
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">No planejamento (${as.length})</h4>
+    ${as.length ? as.map(a => { const [k, t] = situacao(a); return linhaAtv(a, `<span class="sit sit-${k}">${t}</span>`); }).join('') : `<div class="fld"><label for="frPrev">Data prevista para começar</label>${edita() && !lib ? `<input type="date" id="frPrev" value="${esc((fr && fr.previsto) || '')}">` : `<span>${fr && fr.previsto ? fmtD(fr.previsto) : '—'}</span>`}
+      <span class="muted">Nenhuma atividade do médio prazo ligada a ${esc(sv)} neste pavimento. O aviso aparece ${AVISO_DIAS} dias antes, enquanto houver ciência faltando.</span></div>`}
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Modificações neste trecho (${ps.length})</h4>
+    ${ps.length ? ps.sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), 'pt', { numeric: true })).map(p => { const i = (p.itens || []).find(x => x.servico === sv) || {}, c = ciencia(p, sv);
+      const k = p.status === 'aprovada' ? (c ? 'ok' : 'falta') : '';
+      return `<a class="svc ${k}" href="personalizacoes.html?obra=${encodeURIComponent(OBRA)}&p=${encodeURIComponent(p.id)}" style="text-decoration:none;color:inherit"><span class="h"><b>Apto ${esc(p.unidade)} · ${esc(p.titulo)}</b><span class="st st-${p.status}">${ST[p.status] || p.status}</span></span>
+        ${i.instrucao ? `<span class="ins">${esc(i.instrucao)}</span>` : ''}<span class="ci ${k}">${c ? '✓ Ciente: ' + esc(nomeDe(c.por)) + ' · ' + fmtDH(c.em) : p.status === 'aprovada' ? 'Falta a ciência da equipe (' + esc(i.oficio || '') + ')' : p.status === 'solicitada' ? 'Ainda não aprovada' : ''}</span></a>`; }).join('')
+      : '<p class="muted" style="margin:0">Nenhuma modificação afeta este serviço neste pavimento.</p>'}
+    ${edita() && !lib && fa.length ? `<div class="fld"><label for="frJus">Liberar mesmo assim (justificativa)</label><textarea id="frJus" placeholder="Ex.: equipe avisada por telefone pelo mestre João"></textarea></div>` : ''}</div>`,
+    edita() ? `<span class="msg" id="frMsg"></span>${lib ? '<button class="btn ghost danger" id="frDesf" type="button">Desfazer liberação</button>' : (as.length ? '' : '<button class="btn ghost" id="frSalvar" type="button">Salvar data</button>') + '<button class="btn ok" id="frLib" type="button">Liberar a frente</button>'}` : '');
+  ligarCliques($('ovlB'));
+  const msg = (t, ok) => { $('frMsg').className = 'msg ' + (ok ? 'ok' : 'err'); $('frMsg').textContent = t; };
+  if ($('frSalvar')) $('frSalvar').onclick = async () => {
+    const v = $('frPrev').value || null; const { error } = await sb.from('frentes').upsert({ obra: OBRA, servico: sv, pavimento: pav, previsto: v, atualizado_em: new Date().toISOString() }, { onConflict: 'obra,servico,pavimento' });
+    if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } toast('Data salva.'); closeSheet(); await recarregar(); };
+  if ($('frLib')) $('frLib').onclick = async () => {
+    const jus = $('frJus') ? $('frJus').value.trim() : '';
+    if (fa.length && !jus) { msg('Falta a ciência da equipe. Para liberar mesmo assim, escreva a justificativa.'); $('frJus').focus(); return; }
+    const { error } = await sb.rpc('frente_liberar', { p_obra: OBRA, p_servico: sv, p_pavimento: pav, p_justificativa: jus || null });
+    if (error) { msg(erroMsg(error)); return; } toast('Frente liberada: ' + sv + ' · ' + pav + '.'); closeSheet(); await recarregar(); };
+  if ($('frDesf')) $('frDesf').onclick = async () => { if (!confirm('Desfazer a liberação desta frente?')) return;
+    const { error } = await sb.from('frentes').update({ liberada_em: null, liberada_por: null, justificativa: null }).eq('id', fr.id); if (error) { msg('Não foi possível: ' + erroMsg(error)); return; } closeSheet(); await recarregar(); };
+}
+
+/* ---------------- Revisar: erros e pontos de atenção ---------------- */
+function avisoHtml(x) {
+  const a = x.chave && ATV.find(y => y.chave === x.chave);
+  return `<button type="button" class="av ${x.nivel}" ${a ? `data-a="${esc(a.id)}"` : ''}><span class="ic">${x.nivel === 'erro' ? '!' : x.nivel === 'ajuste' ? '✎' : '?'}</span><span><b>${esc(x.item || x.grupo || '')}</b><br>${esc(x.txt)}</span>${x.grupo ? `<small>${esc(x.grupo)}</small>` : ''}</button>`;
+}
+function renderRevisar() {
+  const av = avisosAtuais(), v = ultimaMP();
+  const E = av.filter(x => x.nivel === 'erro'), A = av.filter(x => x.nivel === 'atencao'), J = av.filter(x => x.nivel === 'ajuste');
+  const sem = ATV.filter(a => a.ativa && !a.concluida && !a.inicio && !a.termino);
+  $('tabBody').innerHTML = `${!v ? '<div class="vazio"><h3>Sem médio prazo</h3></div>' : `<p class="muted" style="margin:0">Conferência automática do médio prazo de ${fmtD(v.referencia)}. Corrija no Painel Pavei; na próxima importação os avisos resolvidos somem.</p>`}
+    <section class="secao"><h3>Erros <small>${E.length ? 'datas que não fazem sentido' : 'nenhum'}</small></h3>${E.map(avisoHtml).join('')}</section>
+    <section class="secao"><h3>Para conferir <small>${A.length ? 'pode estar certo, mas vale olhar' : 'nada'}</small></h3>${A.map(avisoHtml).join('')}</section>
+    ${J.length ? `<section class="secao"><h3>Corrigido à mão na importação <small>vale até a próxima versão</small></h3>${J.map(avisoHtml).join('')}</section>` : ''}
+    ${sem.length ? `<section class="secao"><h3>Sem data <small>${plural(sem.length, 'atividade')} sem início nem término</small></h3>${sem.map(a => linhaAtv(a)).join('')}</section>` : ''}`;
+  ligarCliques($('tabBody'));
+}
+
+/* ---------------- Histórico (versões) ---------------- */
+function renderHist() {
+  $('tabBody').innerHTML = VERS.map(v => { const r = v.resumo || {};
+    return `<button type="button" class="ver" data-v="${esc(v.id)}"><span class="h"><b>${v.tipo === 'mp' ? 'Médio prazo · reunião de ' + fmtD(v.referencia) : 'PCP · semana de ' + fmtDs(v.referencia) + ' a ' + fmtD(v.proxima)}</b><span class="muted">${fmtDH(v.criado_em)} · ${esc(nomeDe(v.criado_por))}</span></span>
+      <span class="muted">${v.tipo === 'mp' ? [plural(v.n_linhas, 'atividade'), r.novas ? r.novas.length + ' novas' : '', r.mudou ? r.mudou.length + ' com data mudada' : '', r.sairam ? r.sairam.length + ' saíram' : '', (v.avisos || []).filter(x => x.nivel === 'erro').length + ' erros'].filter(Boolean).join(' · ') : plural(v.n_linhas, 'item', 'itens')}</span></button>`; }).join('') || '<div class="vazio"><h3>Nada importado ainda</h3></div>';
+  $('tabBody').querySelectorAll('[data-v]').forEach(b => b.onclick = () => fichaVersao(b.dataset.v));
+}
+async function abrirPDF(caminho) {
+  try { const { data, error } = await sb.storage.from('arquivos').download(caminho); if (error) throw error; window.open(URL.createObjectURL(data), '_blank'); }
+  catch (e) { toast('Não foi possível abrir o PDF: ' + (e.message || e)); }
+}
+function fichaVersao(id) {
+  const v = VERS.find(x => x.id === id); if (!v) return; const r = v.resumo || {};
+  const lista = (t, L2, f) => L2 && L2.length ? `<h4 style="margin:0;font:700 1rem var(--f-disp)">${t} (${L2.length})</h4><div class="hist">${L2.map(f).join('')}</div>` : '';
+  openSheet(v.tipo === 'mp' ? 'Médio prazo de ' + fmtD(v.referencia) : 'PCP de ' + fmtDs(v.referencia) + ' a ' + fmtD(v.proxima), `<dl class="kv"><dt>Importado</dt><dd>${fmtDH(v.criado_em)} por ${esc(nomeDe(v.criado_por))}</dd><dt>Título</dt><dd>${esc(v.titulo || '—')}</dd>
+      ${v.tipo === 'mp' ? `<dt>Próxima reunião</dt><dd>${fmtD(v.proxima)}</dd>` : ''}<dt>Linhas</dt><dd>${v.n_linhas}</dd></dl>
+    ${lista('Datas que mudaram', r.mudou, x => `<div class="mud"><b>${esc(x.item)}</b><br><span class="d">${esc(x.de)} → ${esc(x.para)}</span></div>`)}
+    ${lista('Novas', r.novas, x => `<div>${esc(x)}</div>`)}
+    ${lista('Saíram do planejamento', r.sairam, x => `<div>${esc(x)}</div>`)}
+    ${v.tipo === 'mp' && (v.gerais || []).length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Avisos gerais da reunião</summary><p style="white-space:pre-wrap;font-size:.86rem">${esc(v.gerais.join('\n'))}</p></details>` : ''}`,
+    v.arquivo ? '<button class="btn ghost" type="button" id="vPdf">Abrir o PDF</button>' : '');
+  if ($('vPdf')) $('vPdf').onclick = () => abrirPDF(v.arquivo);
+}
+
+/* ---------------- ficha de uma atividade (com histórico) ---------------- */
+async function fichaAtv(id) {
+  const a = ATV.find(x => x.id === id); if (!a) return; const [k, t] = situacao(a); const av = avisosDe(a.chave);
+  const v = ultimaMP(), ns = v ? (v.notas || []).filter(n => n.grupo === a.grupo) : [];
+  const pcp = PCP.filter(i => { const l = ligacaoPCP(i); return l && l.a.id === a.id; });
+  const frentes = a.servico ? (a.pavimentos || []).map(p => ({ p, fa: faltasFrente(a.servico, p), ps: persDaFrente(a.servico, p), fr: frenteDe(a.servico, p) })) : [];
+  openSheet(a.atividade, `<div style="display:grid;gap:12px">
+    <p class="fi-loc" style="margin:0;font-weight:600;color:var(--accent)">${esc(a.grupo || '')}${a.local ? ' · ' + esc(a.local) : ''}</p>
+    <dl class="kv"><dt>Situação</dt><dd><span class="sit sit-${k}">${t}</span></dd><dt>Início</dt><dd>${fmtD(a.inicio)}</dd><dt>Término</dt><dd>${fmtD(a.termino)}</dd><dt>Equipe</dt><dd>${esc(a.equipe || '—')}</dd>
+      <dt>Serviço</dt><dd>${esc(a.servico || 'não ligado')}</dd><dt>Pavimentos</dt><dd>${esc((a.pavimentos || []).join(', ') || 'geral')}</dd>${a.ajuste ? `<dt>Ajuste</dt><dd>${esc(a.ajuste)}</dd>` : ''}</dl>
+    ${av.length ? av.map(avisoHtml).join('') : ''}
+    ${frentes.length ? `<h4 style="margin:0;font:700 1rem var(--f-disp)">Frentes e modificações</h4>${frentes.map(x => `<button type="button" class="at" data-fr='${esc(JSON.stringify([a.servico, x.p]))}'><span></span><b>${esc(a.servico)} · ${esc(x.p)}</b><span class="tg">${x.fr && x.fr.liberada_em ? 'liberada' : ''}</span><small>${x.ps.length ? nPers(x.ps.length) + (x.fa.length ? ' · falta ciência em ' + x.fa.length : ' · ciência ok') : 'sem modificações'}</small></button>`).join('')}` : ''}
+    ${pcp.length ? `<h4 style="margin:0;font:700 1rem var(--f-disp)">No PCP</h4>${pcp.map(pcpHtml).join('')}` : ''}
+    ${ns.length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Cuidados de ${esc(a.grupo)} (${ns.length})</summary><div class="notas" style="margin-top:6px">${ns.map(n => `<div class="nota">${esc(n.texto)}</div>`).join('')}</div></details>` : ''}
+    <h4 style="margin:0;font:700 1rem var(--f-disp)">Histórico ${a.n_mudancas ? `<span class="fl info">reprogramada ${a.n_mudancas}×</span>` : ''}</h4><div id="aHist" class="muted">Carregando…</div></div>`);
+  $('ovlB').querySelectorAll('[data-fr]').forEach(b => b.onclick = () => { const [s, p] = JSON.parse(b.dataset.fr); fichaFrente(s, p); });
+  $('ovlB').querySelectorAll('[data-pcp]').forEach(b => b.onclick = () => fichaPCP(b.dataset.pcp));
+  const { data, error } = await sb.from('plan_hist').select('*').eq('atividade', a.id).order('id');
+  const el = $('aHist'); if (!el) return;
+  if (error) { el.textContent = 'Não foi possível carregar o histórico.'; return; }
+  let ant = null; el.className = 'hist';
+  el.innerHTML = (data || []).map(h => { const vv = VERS.find(x => x.id === h.versao) || {}; const txt = h.ativa ? (h.concluida ? 'concluída' : (fmtDs(h.inicio) || '—') + ' → ' + (fmtDs(h.termino) || '—')) : 'saiu do planejamento';
+    const mud = ant && (ant.inicio !== h.inicio || ant.termino !== h.termino || ant.ativa !== h.ativa); ant = h;
+    return `<div class="${mud ? 'mud' : ''}"><b>${txt}</b>${mud ? ' <span class="fl warn">mudou</span>' : ''}${h.ajuste ? ' <span class="fl info">ajustado à mão</span>' : ''}<br><span class="d">reunião de ${fmtD(vv.referencia)}</span></div>`; }).join('') || 'Sem histórico.';
+}
+function fichaPCP(id) {
+  const i = PCP.find(x => x.id === id); if (!i) return; const l = ligacaoPCP(i); const v = i.v || {};
+  const cand = ATV.filter(a => a.ativa && !a.concluida).sort((a, b) => (a.grupo + a.atividade + a.local).localeCompare(b.grupo + b.atividade + b.local));
+  openSheet('PCP · ' + (i.frente || ''), `<div style="display:grid;gap:12px">
+    <p style="margin:0;font-weight:700">${esc(i.texto)}</p>
+    <dl class="kv"><dt>Frente</dt><dd>${esc(i.frente)}${i.empresa ? ' · ' + esc(i.empresa) : ''}</dd>${i.pessoas ? `<dt>Pessoas</dt><dd>${esc(i.pessoas)}</dd>` : ''}<dt>Semana</dt><dd>${fmtDs(v.referencia)} a ${fmtD(v.proxima)}</dd>
+      <dt>Dias</dt><dd>${(i.dias || []).map(k => DSEM[k]).join(', ') || '—'}</dd>${i.ok ? `<dt>OK</dt><dd>${esc(i.ok)}</dd>` : ''}${i.motivo ? `<dt>Motivo</dt><dd>${esc(i.motivo)}</dd>` : ''}</dl>
+    <div class="fld"><label for="pLig">Atividade do médio prazo</label>
+      ${edita() ? `<select id="pLig"><option value="auto" ${i.ligado === 'auto' ? 'selected' : ''}>Automático${i.ligado === 'auto' && l ? ': ' + esc(rotAtv(l.a)) : ': nenhuma encontrada'}</option><option value="nenhum" ${i.ligado === 'nenhum' ? 'selected' : ''}>Não ligar</option>
+        ${cand.map(a => `<option value="${esc(a.id)}" ${i.ligado === 'manual' && i.atividade === a.id ? 'selected' : ''}>${esc(a.grupo + ' · ' + rotAtv(a))}</option>`).join('')}</select>`
+      : `<span>${l ? esc(rotAtv(l.a)) + (l.auto ? ' (sugestão)' : '') : 'nenhuma'}</span>`}
+      <span class="muted">O sistema sugere pela descrição, pelo pavimento citado e pelas datas da semana. Escolha à mão se a sugestão estiver errada.</span></div>
+    ${l ? linhaAtv(l.a) : ''}</div>`, edita() ? '<span class="msg" id="pMsg"></span><button class="btn" type="button" id="pOk">Salvar ligação</button>' : '');
+  ligarCliques($('ovlB'));
+  if ($('pOk')) $('pOk').onclick = async () => { const val = $('pLig').value;
+    const row = val === 'auto' || val === 'nenhum' ? { ligado: val, atividade: null } : { ligado: 'manual', atividade: val };
+    const { error } = await sb.from('plan_pcp').update(row).eq('id', i.id); if (error) { $('pMsg').className = 'msg err'; $('pMsg').textContent = erroMsg(error); return; }
+    Object.assign(i, row); toast('Ligação salva.'); closeSheet(); render(); };
+}
+
+/* ======================= importação ======================= */
+let BUF = null;
+$('arqPdf').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  toast('Lendo o PDF…', 20000);
+  try {
+    BUF = await f.arrayBuffer();
+    const pags = await PP.paginas(new Uint8Array(BUF.slice(0)));
+    const t = PP.tipo(pags);
+    if (t === 'mp') revisarMP(PP.lerMP(pags), f.name);
+    else if (t === 'pcp') revisarPCP(PP.lerPCP(pags), f.name);
+    else { toast('Este PDF não parece ser o médio prazo nem o PCP do Painel Pavei.', 6000); return; }
+    $('toast').hidden = true;
+  } catch (err) { console.error(err); toast('Não foi possível ler o PDF: ' + (err.message || err), 8000); }
+};
+// serviço sugerido: o nome do serviço aparece na disciplina (1º) ou na atividade
+function sugerirServico(grupo, atividade) {
+  const svs = ativos('servico'); const tok = s => norm(s).replace(/[^A-Z0-9 ]/g, ' ').split(' ').filter(w => w.length >= 3);
+  const acha = txt => { const t = ' ' + norm(txt).replace(/[^A-Z0-9 ]/g, ' ') + ' '; const ok = svs.filter(s => { const w = tok(s); return w.length && w.every(x => t.includes(' ' + x + ' ') || t.includes(' ' + x)); });
+    return ok.sort((a, b) => tok(b).length - tok(a).length)[0] || ''; };
+  const pa = acha(norm(atividade).split(' ')[0]);   // pela atividade, só se o serviço é a 1ª palavra (ex.: "CERÂMICA", "PINTURA")
+  return acha(grupo) || pa;
+}
+const chaveAtv = (g, a) => norm(g) + '|' + norm(a);
+function revisarMP(R, nomeArq) {
+  if (!R.grupos.length) { toast('Não achei as tabelas do médio prazo no PDF.', 6000); return; }
+  const pavs = pavNomes();
+  // linhas com chave única (disciplina + atividade + local)
+  const vistos = new Map(); const linhas = [];
+  for (const g of R.grupos) for (const r of g.linhas) {
+    let ch = norm(g.nome) + '|' + norm(r.atividade) + '|' + norm(r.local); const n = (vistos.get(ch) || 0) + 1; vistos.set(ch, n); if (n > 1) ch += '#' + n;
+    linhas.push(Object.assign({}, r, { grupo: g.nome, chave: ch, ignorar: /^\(SEM DESCRICAO\)$/.test(norm(r.atividade)) || !r.atividade }));
+  }
+  // locais → pavimentos (o que a Engenharia já ligou vale; senão, pelas regras)
+  const locais = new Map();
+  for (const r of linhas) { const k = norm(r.local); if (locais.has(k)) continue;
+    const m = MAPA.local[k]; let v;
+    if (m && Array.isArray(m.pavs)) v = { pavs: m.pavs.filter(p => pavs.includes(p)), geral: !!m.geral, salvo: true };
+    else { const p = PP.pavimentosDe(r.local, pavs); v = p ? Object.assign(p, { auto: true }) : PP.LOCAL_GERAL.test(k.replace(/[^A-Z]/g, '')) || !k ? { pavs: [], geral: true, auto: true } : null; }
+    locais.set(k, { local: r.local, v }); }
+  // atividades → serviço
+  const servs = new Map();
+  for (const r of linhas) { const k = chaveAtv(r.grupo, r.atividade); if (servs.has(k) || r.ignorar) continue;
+    const m = MAPA.servico[k]; servs.set(k, { grupo: r.grupo, atividade: r.atividade, sv: typeof m === 'string' ? m : sugerirServico(r.grupo, r.atividade), salvo: typeof m === 'string' }); }
+  const ST = { linhas, locais, servs, R, nomeArq, verTodos: false };
+  desenharRevisao(ST);
+}
+function aplicarLinha(ST, r) {
+  const l = ST.locais.get(norm(r.local)); const sv = ST.servs.get(chaveAtv(r.grupo, r.atividade));
+  r.pavimentos = l && l.v ? l.v.pavs : []; r.servico = sv ? sv.sv : '';
+}
+function desenharRevisao(ST) {
+  const { linhas, locais, servs, R } = ST;
+  const usar = linhas.filter(r => !r.ignorar); usar.forEach(r => aplicarLinha(ST, r));
+  const avisos = verificar(usar, R.reuniao);
+  const atuais = new Map(ATV.filter(a => a.ativa).map(a => [a.chave, a]));
+  const novas = usar.filter(r => !atuais.has(r.chave)), mud = usar.filter(r => { const a = atuais.get(r.chave); return a && (a.inicio !== r.inicio || a.termino !== r.termino); });
+  const sairam = [...atuais.values()].filter(a => !usar.some(r => r.chave === a.chave));
+  const semLocal = [...locais.values()].filter(x => !x.v);
+  const svsList = [...servs.entries()]; const pendSv = svsList.filter(([, x]) => !x.sv && !x.salvo);
+  const opSv = cur => '<option value="">— não ligar —</option>' + ativos('servico').concat(cur && !ativos('servico').includes(cur) ? [cur] : []).map(s => `<option ${s === cur ? 'selected' : ''}>${esc(s)}</option>`).join('');
+  const comErro = linhas.filter(r => avisos.some(a => a.chave === r.chave && a.nivel === 'erro') || r.ignorar);
+  const pavChips = (k, sel) => `<span class="pvs">${pavNomes().map(p => `<label><input type="checkbox" data-lp="${esc(k)}" value="${esc(p)}" ${sel.includes(p) ? 'checked' : ''}>${esc(p)}</label>`).join('')}</span>`;
+  const rolar = $('ovlB').scrollTop;
+  openSheet('Importar médio prazo', `<div class="rev">
+    <p style="margin:0"><b>${esc(R.titulo || 'Médio prazo')}</b><br><span class="muted">Reunião de ${fmtD(R.reuniao)}${R.proxima ? ' · próxima ' + fmtD(R.proxima) : ''} · ${esc(ST.nomeArq)}</span></p>
+    <div class="resumo"><span><b>${usar.length}</b>atividades</span><span><b>${novas.length}</b>novas</span><span><b>${mud.length}</b>com data mudada</span><span><b>${sairam.length}</b>saem</span><span><b>${avisos.filter(a => a.nivel === 'erro').length}</b>erros</span><span><b>${R.grupos.reduce((s, g) => s + g.notas.length, 0)}</b>cuidados</span></div>
+    ${R.problemas.length ? `<div class="alerta info"><span class="ic">?</span><span><b>${plural(R.problemas.length, 'linha')} do PDF não ${R.problemas.length > 1 ? 'entraram' : 'entrou'} em nenhuma tabela</b><small>${R.problemas.slice(0, 5).map(p => esc(p.txt || p.motivo)).join(' · ')}</small></span></div>` : ''}
+    ${comErro.length ? `<h4 style="margin:4px 0 0">1. Erros no planejamento (${comErro.length})</h4><p class="muted" style="margin:0">Corrija a data aqui (vale só para esta importação; corrija também no Painel) ou ignore a linha.</p>
+      ${comErro.map(r => { const i = linhas.indexOf(r); const as = avisos.filter(a => a.chave === r.chave && a.nivel === 'erro');
+        return `<div class="ln err"><b>${esc(r.grupo)} · ${esc(r.atividade || '(sem descrição)')}${r.local ? ' · ' + esc(r.local) : ''}</b><span class="muted">${as.map(a => esc(a.txt)).join(' ') || 'Linha ignorada.'}</span>
+          <div class="row"><label class="muted">Início <input type="date" data-li="${i}" data-c="inicio" value="${esc(r.inicio || '')}"></label><label class="muted">Término <input type="date" data-li="${i}" data-c="termino" value="${esc(r.termino || '')}"></label>
+          <label class="chk" style="font-size:.84rem"><input type="checkbox" data-ign="${i}" ${r.ignorar ? 'checked' : ''}> ignorar esta linha</label></div></div>`; }).join('')}` : ''}
+    ${semLocal.length ? `<h4 style="margin:4px 0 0">2. Locais que não reconheci (${semLocal.length})</h4><p class="muted" style="margin:0">Marque os pavimentos de cada local ou deixe sem nenhum (local geral). Fica salvo para as próximas versões.</p>
+      ${semLocal.map(x => `<div class="ln atn"><b>${esc(x.local)}</b>${pavChips(norm(x.local), [])}</div>`).join('')}` : ''}
+    <h4 style="margin:4px 0 0">3. Atividades → serviços ${pendSv.length ? `(${pendSv.length} sem serviço)` : ''}</h4>
+    <p class="muted" style="margin:0">O serviço liga a atividade às frentes e às modificações. Só precisa para o que tem frente (drywall, elétrica, cerâmica…). Fica salvo.</p>
+    ${(ST.verTodos ? svsList : pendSv).map(([k, x]) => `<div class="ln"><b>${esc(x.grupo)} · ${esc(x.atividade)}</b><select data-sv="${esc(k)}">${opSv(x.sv)}</select></div>`).join('') || '<span class="vz">Todas as atividades já têm serviço (ou foram marcadas como “não ligar”).</span>'}
+    <button type="button" class="lnk" id="rTodos">${ST.verTodos ? 'Mostrar só as sem serviço' : 'Ver todas as ligações (' + svsList.length + ')'}</button>
+    ${[...locais.values()].filter(x => x.v && !x.v.geral).length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Locais reconhecidos (${[...locais.values()].filter(x => x.v).length})</summary>
+      ${[...locais.entries()].filter(([, x]) => x.v).map(([k, x]) => `<div class="ln"><b>${esc(x.local || '(sem local)')}</b>${x.v.geral ? '<span class="muted">geral (sem pavimento)</span>' : ''}${pavChips(k, x.v.pavs)}</div>`).join('')}</details>` : ''}
+    ${mud.length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Datas que mudam (${mud.length})</summary><div class="hist" style="margin-top:6px">${mud.map(r => { const a = atuais.get(r.chave); return `<div class="mud"><b>${esc(r.atividade)}${r.local ? ' · ' + esc(r.local) : ''}</b><br><span class="d">${datas(a)} → ${datas(r)}</span></div>`; }).join('')}</div></details>` : ''}
+    ${sairam.length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Saem do planejamento (${sairam.length})</summary><div class="hist" style="margin-top:6px">${sairam.map(a => `<div>${esc(rotAtv(a))}</div>`).join('')}</div></details>` : ''}
+    ${avisos.filter(a => a.nivel === 'atencao').length ? `<details><summary class="muted" style="cursor:pointer;font-weight:600">Pontos para conferir (${avisos.filter(a => a.nivel === 'atencao').length})</summary><div style="display:grid;gap:6px;margin-top:6px">${avisos.filter(a => a.nivel === 'atencao').map(avisoHtml).join('')}</div></details>` : ''}
+  </div>`, '<span class="msg" id="rMsg"></span><button class="btn ghost" type="button" id="rC">Cancelar</button><button class="btn" type="button" id="rOk">Importar</button>', true);
+  $('ovlB').scrollTop = rolar;
+  const B = $('ovlB');
+  B.querySelectorAll('[data-li]').forEach(x => x.onchange = () => { const r = linhas[+x.dataset.li]; r[x.dataset.c] = x.value || null; r.ajuste = 'Data corrigida na importação (PDF: ' + (r.inicioTxt || '—') + ' → ' + (r.terminoTxt || '—') + ')'; desenharRevisao(ST); });
+  B.querySelectorAll('[data-ign]').forEach(x => x.onchange = () => { linhas[+x.dataset.ign].ignorar = x.checked; desenharRevisao(ST); });
+  B.querySelectorAll('[data-sv]').forEach(x => x.onchange = () => { const s = servs.get(x.dataset.sv); s.sv = x.value; s.mexeu = true; s.salvo = false; });
+  B.querySelectorAll('[data-lp]').forEach(x => x.onchange = () => { const k = x.dataset.lp; const sel = [...B.querySelectorAll('[data-lp="' + CSS.escape(k) + '"]:checked')].map(c => c.value);
+    const l = locais.get(k); l.v = { pavs: sel, geral: !sel.length }; l.mexeu = true; });
+  $('rTodos').onclick = () => { ST.verTodos = !ST.verTodos; desenharRevisao(ST); };
+  $('rC').onclick = () => closeSheet();
+  $('rOk').onclick = () => importarMP(ST, avisos, { novas, mud, sairam, atuais });
+}
+async function importarMP(ST, avisos, d) {
+  const b = $('rOk'); b.disabled = true; const msg = t => { $('rMsg').className = 'msg err'; $('rMsg').textContent = t; };
+  // locais ainda sem decisão: viram "geral"
+  ST.locais.forEach(l => { if (!l.v) { l.v = { pavs: [], geral: true }; l.mexeu = true; } });
+  const usar = ST.linhas.filter(r => !r.ignorar); usar.forEach(r => aplicarLinha(ST, r));
+  avisos = verificar(usar, ST.R.reuniao);
+  usar.filter(r => r.ajuste).forEach(r => avisos.push({ nivel: 'ajuste', tipo: 'ajuste', chave: r.chave, grupo: r.grupo, item: r.atividade + (r.local ? ' · ' + r.local : ''), txt: r.ajuste + ' → ' + datas(r) }));
+  ST.linhas.filter(r => r.ignorar && r.atividade).forEach(r => avisos.push({ nivel: 'ajuste', tipo: 'ignorada', chave: null, grupo: r.grupo, item: r.atividade, txt: 'Linha ignorada na importação.' }));
+  try {
+    // 1. ligações (valem para as próximas versões)
+    const mapa = [];
+    ST.servs.forEach((x, k) => { if (x.mexeu || !x.salvo) mapa.push({ obra: OBRA, tipo: 'servico', origem: k, destino: x.sv || '', atualizado_em: new Date().toISOString() }); });
+    ST.locais.forEach((x, k) => { if (x.mexeu) mapa.push({ obra: OBRA, tipo: 'local', origem: k, destino: { pavs: x.v.pavs, geral: x.v.geral }, atualizado_em: new Date().toISOString() }); });
+    if (mapa.length) { const { error } = await sb.from('plan_mapa').upsert(mapa, { onConflict: 'obra,tipo,origem' }); if (error) throw error; }
+    // 2. o PDF
+    let arquivo = null; const vid = uuid();
+    try { const cam = 'planejamento/' + OBRA + '/' + vid + '.pdf'; const { error } = await sb.storage.from('arquivos').upload(cam, new Blob([BUF], { type: 'application/pdf' }), { contentType: 'application/pdf', upsert: false }); if (!error) arquivo = cam; } catch (e) {}
+    // 3. a versão
+    const resumo = { novas: d.novas.map(r => r.atividade + (r.local ? ' · ' + r.local : '')), sairam: d.sairam.map(rotAtv),
+      mudou: d.mud.map(r => ({ item: r.atividade + (r.local ? ' · ' + r.local : ''), de: datas(d.atuais.get(r.chave)), para: datas(r) })) };
+    const notas = ST.R.grupos.flatMap(g => g.notas.map(n => ({ grupo: g.nome, texto: n.texto })));
+    const linhas = usar.map(r => ({ chave: r.chave, grupo: r.grupo, atividade: r.atividade, local: r.local, equipe: r.equipe, servico: r.servico || '', pavimentos: r.pavimentos || [],
+      inicio: r.inicio || null, termino: r.termino || null, concluida: !!r.concluida, ajuste: r.ajuste || '' }));
+    const { error } = await sb.rpc('plan_importar_mp', { p_obra: OBRA, p_versao: { titulo: ST.R.titulo, referencia: ST.R.reuniao, proxima: ST.R.proxima, arquivo, resumo, avisos, notas, gerais: ST.R.gerais }, p_linhas: linhas });
+    if (error) throw error;
+    closeSheet(); toast('Médio prazo importado: ' + plural(linhas.length, 'atividade') + (avisos.filter(a => a.nivel === 'erro').length ? ' · ' + avisos.filter(a => a.nivel === 'erro').length + ' erros para revisar' : '') + '.', 6000);
+    TAB = avisos.some(a => a.nivel === 'erro') ? 'revisar' : 'semana'; await recarregar();
+  } catch (e) { b.disabled = false; msg('Não foi possível importar: ' + erroMsg(e)); }
+}
+function revisarPCP(R, nomeArq) {
+  if (!R.semana) { toast('Não achei a semana do PCP no PDF.', 6000); return; }
+  const itens = R.frentes.flatMap((f, fi) => f.itens.map(i => ({ ordem: fi * 100 + i.id, frente: f.nome, empresa: f.empresa, pessoas: f.pessoas, item: i.id, texto: i.texto, dias: i.dias, ok: i.ok, motivo: i.motivo })));
+  const v = { referencia: R.semana.ini, proxima: R.semana.fim };
+  const lig = itens.map(i => ligacaoPCP(Object.assign({ v, ligado: 'auto' }, i)));
+  const ja = VERS.find(x => x.tipo === 'pcp' && x.referencia === R.semana.ini);
+  openSheet('Importar PCP', `<div class="rev">
+    <p style="margin:0"><b>${esc(R.titulo || 'Plano semanal')}</b><br><span class="muted">Semana de ${fmtDs(R.semana.ini)} a ${fmtD(R.semana.fim)} · ${esc(nomeArq)}</span></p>
+    ${ja ? `<div class="alerta info"><span class="ic">!</span><span><b>Já existe um PCP desta semana</b><small>Importado em ${fmtDH(ja.criado_em)}. O novo passa a valer; o anterior fica no histórico.</small></span></div>` : ''}
+    <div class="resumo"><span><b>${R.frentes.length}</b>frentes</span><span><b>${itens.length}</b>itens</span><span><b>${lig.filter(Boolean).length}</b>ligados ao médio prazo</span></div>
+    ${R.frentes.filter(f => f.itens.length).map(f => `<div class="pcpf"><b>${esc(f.nome)}${f.empresa ? ' · ' + esc(f.empresa) : ''}${f.pessoas ? ' — ' + esc(f.pessoas) : ''}</b>
+      ${f.itens.map(i => { const k = itens.findIndex(x => x.frente === f.nome && x.item === i.id); const l = lig[k];
+        return `<div class="at" style="cursor:default"><span class="mk pcp">${i.id}</span><b>${esc(i.texto)}</b><span class="diasx">${[0, 1, 2, 3, 4, 5].map(d => `<i class="${i.dias.includes(d) ? 'on' : ''}">${['S', 'T', 'Q', 'Q', 'S', 'S'][d]}</i>`).join('')}</span>${l ? `<small>↔ ${esc(rotAtv(l.a))} (sugestão)</small>` : ''}</div>`; }).join('')}</div>`).join('')}
+    <p class="muted" style="margin:0">As ligações com o médio prazo são sugestões; depois de importar, toque num item para corrigir.</p></div>`,
+    '<span class="msg" id="rMsg"></span><button class="btn ghost" type="button" id="rC">Cancelar</button><button class="btn" type="button" id="rOk">Importar</button>', true);
+  $('rC').onclick = () => closeSheet();
+  $('rOk').onclick = async () => { const b = $('rOk'); b.disabled = true;
+    try {
+      let arquivo = null; const vid = uuid();
+      try { const cam = 'planejamento/' + OBRA + '/' + vid + '.pdf'; const { error } = await sb.storage.from('arquivos').upload(cam, new Blob([BUF], { type: 'application/pdf' }), { contentType: 'application/pdf', upsert: false }); if (!error) arquivo = cam; } catch (e) {}
+      const { error } = await sb.rpc('plan_importar_pcp', { p_obra: OBRA, p_versao: { titulo: R.titulo, referencia: R.semana.ini, proxima: R.semana.fim, arquivo }, p_itens: itens });
+      if (error) throw error;
+      closeSheet(); toast('PCP importado: ' + plural(itens.length, 'item', 'itens') + '.'); SEM = R.semana.ini; TAB = 'semana'; await recarregar();
+    } catch (e) { b.disabled = false; $('rMsg').className = 'msg err'; $('rMsg').textContent = 'Não foi possível importar: ' + erroMsg(e); } };
+}
+
+/* ======================= janelas ======================= */
+function openSheet(t, body, foot, form) { const o = $('ovl'); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; o.hidden = false; if (form) o.dataset.form = '1'; else delete o.dataset.form; if (!form) $('ovlB').scrollTop = 0; }
+function closeSheet() { const o = $('ovl'); o.hidden = true; $('ovlB').innerHTML = ''; $('ovlF').innerHTML = ''; delete o.dataset.form; }
+$('ovl').addEventListener('click', ev => { if (ev.target === $('ovl') && !$('ovl').dataset.form) closeSheet(); });
+$('ovlX').onclick = () => { if ($('ovl').dataset.form && !confirm('Fechar sem importar?')) return; closeSheet(); };
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('ovl').hidden && !$('ovl').dataset.form) closeSheet(); });
+
+/* ======================= início ======================= */
+(async function iniciar() {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3><p class="muted" style="margin:0">O planejamento é compartilhado pela equipe e precisa do Supabase configurado no config.js.</p></div>'; return; }
+  sb = NV.cliente; OBRA = NV.obraId;
+  try { await carregar(); }
+  catch (e) {
+    if (e.naoTem) { $('main').innerHTML = '<div class="vazio"><h3>Obra não encontrada</h3><a class="btn" href="index.html" style="text-decoration:none">Ver as obras</a></div>'; return; }
+    if (e.banco) { $('main').innerHTML = '<div class="vazio"><h3>Falta preparar o banco</h3><p class="muted" style="margin:0">Rode o arquivo <b>banco.sql</b> no Supabase (SQL Editor) e recarregue a página.</p></div>'; return; }
+    $('main').innerHTML = `<div class="vazio"><h3>Não foi possível carregar</h3><p class="muted" style="margin:0">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return;
+  }
+  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Planejamento';
+  const q = new URLSearchParams(location.search);
+  if (['semana', 'mp', 'frentes', 'revisar', 'hist'].includes(q.get('aba'))) TAB = q.get('aba');
+  render();
+  if (q.get('aba')) history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA));
+  try { sb.channel('plan-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'frentes', filter: 'obra=eq.' + OBRA }, () => { if ($('ovl').hidden) { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); } }).subscribe(); } catch (e) {}
+})();
+})();
+</script>
+</body>
+</html>

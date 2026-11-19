@@ -250,7 +250,11 @@ const FERRAMENTAS = [
   { id: 'almox', nome: 'Almoxarifado', curto: 'Almoxarifado', pagina: 'almoxarifado.html', soOnline: true,
     resumo: 'Estoque de materiais com QR Code e código de barras.',
     desc: 'Todo material da obra: recebimento, etiqueta com QR Code para a prateleira (ou o código de barras da embalagem), entregas para funcionários e terceiros lendo o código pelo celular, estoque mínimo e inventário.',
-    icone: '<img src=\"icones/almoxarifado.svg\" alt=\"\">' }
+    icone: '<img src=\"icones/almoxarifado.svg\" alt=\"\">' },
+  { id: 'planejamento', nome: 'Planejamento', curto: 'Planejamento', pagina: 'planejamento.html', soOnline: true,
+    resumo: 'Médio prazo e PCP: o que fazer em cada semana e dia.',
+    desc: 'Médio prazo e PCP lidos do PDF do Painel Pavei: o que começa e termina em cada dia, o que preparar para a semana seguinte, erros no planejamento, histórico de reprogramações e as frentes de trabalho ligadas às modificações.',
+    icone: '<img src=\"icones/planejamento.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));
@@ -327,7 +331,7 @@ function meuDiaHtml() {
     const cards = [];
     if (NV.perfil !== 'campo') for (const f of FRENTESZ.filter(x => x.previsto <= lim).sort((a, b) => a.previsto.localeCompare(b.previsto))) {
       const fa = PERSZ.filter(p => p.obra === f.obra && p.pavimento === f.pavimento && persFaltas(p).some(i => i.servico === f.servico)); if (!fa.length) continue;
-      cards.push(`<a class="md-c" href="personalizacoes.html?obra=${encodeURIComponent(f.obra)}&aba=frentes"><span class="md-t"><b>${esc(f.servico)} · ${esc(f.pavimento)}</b><small>${esc(nomeObra(f.obra))} · ${f.previsto < hoje ? '<b class="ruim">devia ter começado em ' + fmtD(f.previsto) + '</b>' : 'começa em ' + fmtD(f.previsto)} · <b class="ruim">falta ciência em ${fa.length}</b></small></span><span class="md-ch" aria-hidden="true">›</span></a>`); }
+      cards.push(`<a class="md-c" href="planejamento.html?obra=${encodeURIComponent(f.obra)}&aba=frentes"><span class="md-t"><b>${esc(f.servico)} · ${esc(f.pavimento)}</b><small>${esc(nomeObra(f.obra))} · ${f.previsto < hoje ? '<b class="ruim">devia ter começado em ' + fmtD(f.previsto) + '</b>' : 'começa em ' + fmtD(f.previsto)} · <b class="ruim">falta ciência em ${fa.length}</b></small></span><span class="md-ch" aria-hidden="true">›</span></a>`); }
     const meus = NV.oficios || [];
     for (const p of PERSZ.filter(p => persFaltas(p).some(i => NV.perfil === 'campo' ? meus.includes(i.oficio) : false)))
       cards.push(`<a class="md-c" href="personalizacoes.html?obra=${encodeURIComponent(p.obra)}&p=${encodeURIComponent(p.id)}"><span class="md-t"><b>Apto ${esc(p.unidade)} · ${esc(p.titulo)}</b><small>${esc(nomeObra(p.obra))} · ${esc(p.pavimento)} · <b class="ruim">confirme que está ciente</b></small></span><span class="md-ch" aria-hidden="true">›</span></a>`);
@@ -412,6 +416,11 @@ async function carregarResumo() {
     const { data, error } = await sb.rpc('alm_resumo');
     if (!error) for (const x of data || []) g(x.obra).alm = x;
   } catch (e) {}
+  // planejamento: atividades atrasadas, que começam nesta semana e erros no último médio prazo
+  if (NV.podeVer('planejamento')) try {
+    const { data, error } = await sb.rpc('plan_resumo');
+    if (!error) for (const x of data || []) g(x.obra).plan = x;
+  } catch (e) {}
   if (!['campo', 'almoxarifado'].includes(NV.perfil)) try {
     const { data, error } = await sb.from('registros').select('painel,colecao,id,data:dados->>data,rev:dados->>rev').in('colecao', ['concretagens', 'revisoes', 'areas', 'aplicacoes']);
     if (!error) for (const x of data || []) { const [fe, ob] = String(x.painel).split(':'); if (!ob) continue; const r = g(ob);
@@ -432,6 +441,7 @@ function resumoDe(id, fid) {
   if (fid === 'personalizacao') { const k = r.pers; return k ? k.ativas + ' ativa' + (k.ativas > 1 ? 's' : '') + (k.faltas ? ` · <b class="ruim">${k.faltas} sem ciência da equipe</b>` : '') + (k.sol ? ' · ' + k.sol + ' para aprovar' : '') : 'Nenhuma modificação'; }
   if (fid === 'ceramica') { const k = r.cer; return k && k.pallets ? Math.floor(k.cx) + ' caixa' + (Math.floor(k.cx) === 1 ? '' : 's') + ' em estoque · ' + k.pallets + ' pallet' + (k.pallets > 1 ? 's' : '') : 'Nenhum pallet em estoque'; }
   if (fid === 'almox') { const k = r.alm; return k && k.materiais ? k.materiais + ' materia' + (k.materiais > 1 ? 'is' : 'l') + (k.abaixo ? ` · <b class="ruim">${k.abaixo} abaixo do mínimo</b>` : '') : 'Nenhum material'; }
+  if (fid === 'planejamento') { const k = r.plan; return k && k.ativas ? [k.semana ? k.semana + ' começa' + (k.semana > 1 ? 'm' : '') + ' nesta semana' : 'Nada começa nesta semana', k.atrasadas ? `<b class="ruim">${k.atrasadas} atrasada${k.atrasadas > 1 ? 's' : ''}</b>` : '', k.erros ? `<b class="ruim">${k.erros} erro${k.erros > 1 ? 's' : ''} no planejamento</b>` : ''].filter(Boolean).join(' · ') : 'Nenhum planejamento importado'; }
   if (fid === 'risco') { const k = r.risco; return k ? k.areas + ' área' + (k.areas === 1 ? '' : 's') + (k.rev ? ' · Revisão R' + esc(k.rev) + (k.revData ? ' de ' + fmtD(k.revData) : '') : ' · sem revisão') : 'Nenhuma área'; }
   return '';
 }

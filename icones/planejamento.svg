@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244A66"/><stop offset="0.52" stop-color="#163852"/><stop offset="1" stop-color="#102B43"/></linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F8F9"/><stop offset="1" stop-color="#CBDDE6"/></linearGradient>
+<linearGradient id="orange" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC04F"/><stop offset="1" stop-color="#F18A20"/></linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5FA8D3"/><stop offset="1" stop-color="#2F7FB8"/></linearGradient>
+<linearGradient id="green" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5FD08A"/><stop offset="1" stop-color="#2E9E57"/></linearGradient>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#041D2E" flood-opacity="0.23"/></filter>
+</defs>
+<rect x="65" y="65" width="894" height="894" rx="190" fill="url(#tile)"/>
+<rect x="82" y="82" width="860" height="860" rx="176" fill="none" stroke="#52748B" stroke-width="9" opacity=".65"/>
+<!-- folha do calendário -->
+<g filter="url(#shadow)">
+  <rect x="196" y="236" width="632" height="566" rx="40" fill="url(#paper)"/>
+  <path d="M196 276 Q196 236 236 236 H788 Q828 236 828 276 V352 H196 Z" fill="#244A66"/>
+  <rect x="300" y="186" width="44" height="110" rx="22" fill="url(#orange)"/>
+  <rect x="680" y="186" width="44" height="110" rx="22" fill="url(#orange)"/>
+  <!-- linhas da semana -->
+  <g stroke="#9DB6C4" stroke-width="6" opacity=".7">
+    <path d="M330 352 V770"/><path d="M460 352 V770"/><path d="M590 352 V770"/><path d="M720 352 V770"/>
+  </g>
+  <!-- barras do cronograma -->
+  <rect x="236" y="402" width="300" height="70" rx="20" fill="url(#blue)"/>
+  <rect x="400" y="510" width="330" height="70" rx="20" fill="url(#orange)"/>
+  <rect x="300" y="618" width="250" height="70" rx="20" fill="url(#green)"/>
+  <!-- marcador de hoje -->
+  <path d="M630 372 V760" stroke="#D93A2B" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="630" cy="372" r="20" fill="#D93A2B"/>
+</g>
+</svg>

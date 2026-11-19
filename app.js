@@ -18,7 +18,8 @@
     { id: 'pendencias', nome: 'Pendências', pag: 'pendencias.html', ic: 'pendencias' },
     { id: 'personalizacao', nome: 'Modificações', pag: 'personalizacoes.html', ic: 'personalizacoes' },
     { id: 'ceramica', nome: 'Cerâmicas', pag: 'ceramicas.html', ic: 'ceramicas' },
-    { id: 'almox', nome: 'Almoxarifado', pag: 'almoxarifado.html', ic: 'almoxarifado' }
+    { id: 'almox', nome: 'Almoxarifado', pag: 'almoxarifado.html', ic: 'almoxarifado' },
+    { id: 'planejamento', nome: 'Planejamento', pag: 'planejamento.html', ic: 'planejamento' }
   ];
 
   /* ---------------- tema ---------------- */
@@ -190,7 +191,7 @@
     // só as ferramentas do perfil (Segurança: Risco e Pendências; Campo: só Pendências)
     const visiveis = FERR.filter(f => (nv.podeVer ? nv.podeVer(f.id) : !(nv.cargo === 'encarregado' && f.id !== 'pendencias')));
     // caminho "Obras › Obra › Ferramenta" logo abaixo do topo, com as ações principais da página (botões com data-barra)
-    if (!['pendencias', 'personalizacao', 'ceramica', 'almox'].includes(atual) && !document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
+    if (!['pendencias', 'personalizacao', 'ceramica', 'almox', 'planejamento'].includes(atual) && !document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
     // abas das ferramentas da mesma obra
     const ttl = document.querySelector('.brand .ttl');
     if (ttl && visiveis.length > 1 && !document.querySelector('.mo-abas')) {
