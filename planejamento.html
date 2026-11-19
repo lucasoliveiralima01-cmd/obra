@@ -376,7 +376,7 @@ function situacao(a) {
   const h = hoje(), si = segunda(h), sf = somaDias(si, 4), ini = a.inicio, fim = a.termino;
   if (a.concluida) return ['conc', 'Concluída'];
   if (!ini && !fim) return ['nd', 'Sem data'];
-  if (fim && fim < h) return ['atr', 'Atrasada'];
+  if (fim && uFim(fim) < h) return ['atr', 'Atrasada'];
   const i0 = ini || fim, f0 = fim || ini;
   if (i0 <= h && f0 >= h) return ['and', 'Em andamento'];
   if (i0 <= sf && f0 >= si) return ['sem', 'Esta semana'];
@@ -384,7 +384,8 @@ function situacao(a) {
   return ['mais', 'Mais adiante'];
 }
 const rotAtv = a => a.atividade + (a.local ? ' · ' + a.local : '');
-const datas = a => a.inicio && a.termino ? fmtDs(a.inicio) + ' → ' + fmtDs(a.termino) : a.termino ? 'até ' + fmtDs(a.termino) : a.inicio ? 'de ' + fmtDs(a.inicio) : 'sem data';
+const datas = a => { if (a.inicio && a.termino) { const n = duracaoUtil(a); return fmtDs(a.inicio) + ' → ' + fmtDs(a.termino) + (n ? ' · ' + n + (n === 1 ? ' dia útil' : ' dias úteis') : ''); }
+  return a.termino ? 'até ' + fmtDs(a.termino) : a.inicio ? 'de ' + fmtDs(a.inicio) : 'sem data'; };
 
 /* ---------------- erros e pontos de atenção do planejamento ---------------- */
 // regras de ordem entre serviços no mesmo pavimento (antes → depois). estrita: o seguinte não pode começar antes de o anterior terminar
@@ -403,6 +404,10 @@ function verificar(linhas, ref) {
     if (r.inicioTxt && !r.inicio) add('erro', r, 'Início "' + r.inicioTxt + '" não é uma data.', 'data');
     if (r.terminoTxt && !r.termino) add('erro', r, 'Término "' + r.terminoTxt + '" não é uma data.', 'data');
     if (r.inicio && r.termino && r.termino < r.inicio) add('erro', r, 'Termina (' + fmtD(r.termino) + ') antes de começar (' + fmtD(r.inicio) + ').', 'inverso');
+    // começar e terminar só em dia útil (o período pode ter fim de semana no meio)
+    const FDS = { 6: 'sábado', 0: 'domingo' };
+    if (r.inicio && FDS[dt(r.inicio).getDay()] != null) add('erro', r, 'Início ' + fmtD(r.inicio) + ' cai num ' + FDS[dt(r.inicio).getDay()] + ': a atividade tem que começar em dia útil; seria ' + fmtD(uIni(r.inicio)) + '?', 'fds');
+    if (r.termino && FDS[dt(r.termino).getDay()] != null) add('erro', r, 'Término ' + fmtD(r.termino) + ' cai num ' + FDS[dt(r.termino).getDay()] + ': a atividade tem que terminar em dia útil; seria ' + fmtD(uFim(r.termino)) + '?', 'fds');
   }
   // mesma atividade em vários pavimentos: ano trocado e fora da sequência
   const porAtv = new Map(); linhas.forEach(r => { if (!r.atividade) return; const k = norm(r.grupo) + '|' + norm(r.atividade); if (!porAtv.has(k)) porAtv.set(k, []); porAtv.get(k).push(r); });
@@ -520,6 +525,12 @@ const ligarCliques = el => { el.querySelectorAll('[data-ck]').forEach(b => b.onc
 let DIA = null;   // null = semana toda; 0..4 = segunda..sexta (só os dias úteis)
 const UTEIS = [0, 1, 2, 3, 4];
 // dias úteis (segunda a sexta) entre duas datas: de a (exclusivo) até b (inclusivo)
+// o médio prazo dá um período; o trabalho acontece nos dias úteis dentro dele:
+// início no fim de semana → segunda seguinte; término no fim de semana → sexta anterior
+const diaSem = d => dt(d).getDay();
+const uIni = d => !d ? d : diaSem(d) === 6 ? somaDias(d, 2) : diaSem(d) === 0 ? somaDias(d, 1) : d;
+const uFim = d => !d ? d : diaSem(d) === 6 ? somaDias(d, -1) : diaSem(d) === 0 ? somaDias(d, -2) : d;
+const duracaoUtil = a => { const i = uIni(a.inicio), f = uFim(a.termino); return i && f && f >= i ? diasUteis(somaDias(i, -1), f) : null; };
 function diasUteis(a, b) { let n = 0, d = a; while (d < b) { d = somaDias(d, 1); const w = dt(d).getDay(); if (w >= 1 && w <= 5) n++; } return n; }
 function renderSemana() {
   const si = SEM, sf = somaDias(si, 4), sd = somaDias(si, 6), h = hoje(), prox = somaDias(si, 7), proxF = somaDias(si, 11);
@@ -527,10 +538,10 @@ function renderSemana() {
   const pcpSem = PCP.filter(i => i.v && i.v.referencia === si);
   const pcpV = pcpSem.length ? pcpSem[0].v : null;
   if (DIA == null && si === segunda(h) && h <= sf && !renderSemana.escolheu) DIA = difDias(si, h);
-  const ini0 = a => a.inicio || a.termino, fim0 = a => a.termino || a.inicio;
+  const ini0 = a => uIni(a.inicio || a.termino), fim0 = a => uFim(a.termino || a.inicio);
   const atrasada = a => situacao(a)[0] === 'atr';
   // num dia: começa, termina e em execução (começou antes e termina depois)
-  const noDia = d => ({ ini: at.filter(a => a.inicio === d), fim: at.filter(a => a.termino === d && a.inicio !== d),
+  const noDia = d => ({ ini: at.filter(a => a.inicio && uIni(a.inicio) === d), fim: at.filter(a => a.termino && uFim(a.termino) === d && !(a.inicio && uIni(a.inicio) === d)),
     and: at.filter(a => ini0(a) && ini0(a) < d && fim0(a) > d) });
   // atrasada aparece em vermelho no lugar dela (começa, em execução ou termina)
   const mk = (a, cls, txt) => atrasada(a) ? '<span class="mk atr">atrasada</span>' : '<span class="mk ' + cls + '">' + txt + '</span>';
@@ -538,15 +549,15 @@ function renderSemana() {
   const blocoPCP = its => { const grp = new Map(); its.forEach(i => { const g = i.frente + (i.empresa && i.empresa !== i.frente ? ' · ' + i.empresa : ''); if (!grp.has(g)) grp.set(g, []); grp.get(g).push(i); });
     return [...grp.entries()].map(([g, L2]) => `<details class="box"><summary>${esc(g)} <small>${plural(L2.length, 'item', 'itens')}</small></summary><div class="lst">${L2.map(pcpHtml).join('')}</div></details>`).join(''); };
   const sec = (cls, tit, L2, linha, vazio, sub) => `<section class="secao"><h3><span class="pt ${cls}"></span>${tit} <small>${L2.length}${sub ? ' · ' + sub : ''}</small></h3>${L2.length ? `<div class="lst">${L2.map(linha).join('')}</div>` : `<span class="vz">${vazio}</span>`}</section>`;
-  const dd = d => { const k = difDias(si, d); return (k >= 0 && k <= 6 ? ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][k] + ' ' : '') + fmtDs(d); };
+  const dd = d => { const k = difDias(si, d); return (k >= 0 && k <= 4 ? ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'][k] + ' ' : '') + fmtDs(d); };
   let corpo;
   if (DIA == null) {
-    const ini = at.filter(a => a.inicio && a.inicio >= si && a.inicio <= sd).sort((a, b) => a.inicio.localeCompare(b.inicio));
-    const fim = at.filter(a => a.termino && a.termino >= si && a.termino <= sd && !(a.inicio && a.inicio >= si)).sort((a, b) => a.termino.localeCompare(b.termino));
-    const and = at.filter(a => ini0(a) && ini0(a) < si && fim0(a) > sd).sort((a, b) => fim0(a).localeCompare(fim0(b)));
-    corpo = sec('ini', 'Começam nesta semana', ini, a => (atrasada(a) ? linhaCk : linhaAtv)(a, mk(a, 'ini', dd(a.inicio))), 'Nada começa nesta semana.')
+    const ini = at.filter(a => a.inicio && uIni(a.inicio) >= si && uIni(a.inicio) <= sf).sort((a, b) => uIni(a.inicio).localeCompare(uIni(b.inicio)));
+    const fim = at.filter(a => a.termino && uFim(a.termino) >= si && uFim(a.termino) <= sf && !(a.inicio && uIni(a.inicio) >= si)).sort((a, b) => uFim(a.termino).localeCompare(uFim(b.termino)));
+    const and = at.filter(a => ini0(a) && ini0(a) < si && fim0(a) > sf).sort((a, b) => fim0(a).localeCompare(fim0(b)));
+    corpo = sec('ini', 'Começam nesta semana', ini, a => (atrasada(a) ? linhaCk : linhaAtv)(a, mk(a, 'ini', dd(uIni(a.inicio)))), 'Nada começa nesta semana.')
       + sec('and', 'Em execução a semana toda', and, a => linhaCk(a, mk(a, 'and', 'até ' + fmtDs(fim0(a)))), 'Nada em execução a semana toda.')
-      + sec('fim', 'Terminam nesta semana', fim, a => linhaCk(a, mk(a, 'fim', dd(a.termino))), 'Nada termina nesta semana.')
+      + sec('fim', 'Terminam nesta semana', fim, a => linhaCk(a, mk(a, 'fim', dd(uFim(a.termino)))), 'Nada termina nesta semana.')
       + (pcpSem.length ? `<section class="secao"><h3>PCP da semana <small>${plural(pcpSem.length, 'item', 'itens')} por equipe</small></h3>${blocoPCP(pcpSem)}</section>` : '');
   } else {
     const d = somaDias(si, DIA), x = noDia(d), pc = pcpSem.filter(i => (i.dias || []).includes(DIA));
@@ -557,7 +568,7 @@ function renderSemana() {
       + (pc.length ? `<section class="secao"><h3>No PCP <small>${plural(pc.length, 'item', 'itens')} marcados para ${DSEM[DIA].toLowerCase()}</small></h3>${blocoPCP(pc)}</section>` : pcpV ? '<span class="vz">Nada do PCP marcado para este dia.</span>' : '');
   }
   // preparar: começa na semana seguinte (segunda a sexta); atrasadas (em dias úteis)
-  const prep = at.filter(a => a.inicio && a.inicio >= prox && a.inicio <= proxF).sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const prep = at.filter(a => a.inicio && uIni(a.inicio) >= prox && uIni(a.inicio) <= proxF).sort((a, b) => a.inicio.localeCompare(b.inicio));
   const atr = si <= h && h <= sd ? at.filter(atrasada).sort((a, b) => String(a.termino).localeCompare(String(b.termino))) : [];
   const travadas = prep.filter(a => bandeiras(a).some(f => f[0] === 'bad'));
   $('tabBody').innerHTML = `<div class="semnav"><button class="btn ghost sm" id="sAnt" type="button" aria-label="Semana anterior">‹</button><h2>${fmtDs(si)} a ${fmtD(sf)}</h2>${si !== segunda(h) ? '<button class="btn ghost sm" id="sHoje" type="button">Hoje</button>' : ''}<button class="btn ghost sm" id="sProx" type="button" aria-label="Semana seguinte">›</button></div>
@@ -568,7 +579,7 @@ function renderSemana() {
     ${corpo}
     <details class="box"${travadas.length ? ' open' : ''}><summary>Preparar para a semana seguinte <small>${plural(prep.length, 'começa', 'começam')} de ${fmtDs(prox)} a ${fmtDs(proxF)}${travadas.length ? ' · ' + travadas.length + ' com pendência' : ''}</small></summary>
       ${prep.length ? `<div class="lst">${prep.map(a => linhaAtv(a, '<span class="mk ini">' + fmtDs(a.inicio) + '</span>')).join('')}</div>` : '<span class="vz">Nada começa na semana seguinte.</span>'}</details>
-    <p class="muted" style="margin:0">Dias úteis de segunda a sexta. ${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
+    <p class="muted" style="margin:0">Dias úteis de segunda a sexta: o período do médio prazo vale só nesses dias (término no sábado conta como sexta). ${pcpV ? `PCP importado em ${fmtDH(pcpV.criado_em)}.` : `Sem PCP desta semana.${edita() ? ' Importe o PDF do plano semanal para ver as tarefas de cada dia.' : ''}`}</p>`;
   $('sAnt').onclick = () => { SEM = somaDias(SEM, -7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
   $('sProx').onclick = () => { SEM = somaDias(SEM, 7); DIA = null; renderSemana.escolheu = true; renderSemana(); };
   if ($('sHoje')) $('sHoje').onclick = () => { SEM = segunda(hoje()); DIA = null; renderSemana.escolheu = false; renderSemana(); };
@@ -697,7 +708,7 @@ async function marcarAviso(k, ok) {
 }
 function corrigirDatas(id) {
   const a = ATV.find(x => x.id === id); if (!a) return; const av = avisosAtuais(true).filter(x => x.chave === a.chave && x.nivel !== 'ajuste');
-  const sugs = av.filter(x => x.tipo === 'ano').map(x => ({ c: /^Início/.test(x.txt) ? 'cIni' : 'cFim', alt: (x.txt.match(/seria (\d{2}\/\d{2}\/\d{4})/) || [])[1] })).filter(x => x.alt);
+  const sugs = av.filter(x => x.tipo === 'ano' || x.tipo === 'fds').map(x => ({ c: /^Início/.test(x.txt) ? 'cIni' : 'cFim', alt: (x.txt.match(/seria (\d{2}\/\d{2}\/\d{4})/) || [])[1] })).filter(x => x.alt);
   openSheet('Corrigir datas', `<div style="display:grid;gap:12px"><p style="margin:0"><b>${esc(rotAtv(a))}</b><br><span class="muted">${esc(a.grupo || '')}</span></p>
     ${av.map(x => `<div class="nota" style="background:var(--bad-soft);border-color:var(--bad);color:var(--ink)">${esc(x.txt)}</div>`).join('')}
     <div class="fld"><label for="cIni">Início</label><input type="date" id="cIni" value="${esc(a.inicio || '')}"></div>
