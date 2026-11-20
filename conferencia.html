@@ -302,6 +302,14 @@ function inicio() {
       </div>
       <div class="go"><button class="btn" type="button" id="cVoz">🎙 Começar por voz</button><button class="btn ghost" type="button" id="cTela">Conferir na tela</button></div>
       ${SR ? '' : '<div class="dica">Este navegador não reconhece voz. A conferência funciona tocando nos botões; para falar, use o Chrome no Android ou o Safari no iPhone.</div>'}
+      <details class="cfg" id="cVozCfg"><summary style="cursor:pointer;font-weight:700">🔊 Voz do assistente</summary>
+        <div class="row" style="margin-top:8px">
+          <div class="fld"><label for="vVoz">Voz</label><select id="vVoz"></select></div>
+          <div class="fld"><label for="vVel">Velocidade: <span id="vVelT">${String(PREF.vel).replace('.', ',')}×</span></label><input type="range" id="vVel" min="0.9" max="1.7" step="0.05" value="${PREF.vel}"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="vBip" ${PREF.bip ? 'checked' : ''}> Confirmar com um bip (mais rápido: não fala “Beleza, próximo”)</label>
+        <button class="btn ghost" type="button" id="vTeste">▶ Ouvir esta voz</button>
+        <span class="muted">As vozes são as instaladas no celular. No Android dá para baixar outras em Configurações → Idiomas → Saída de texto para fala (Google).</span></details>
       <div class="dica"><b>Dicas para falar:</b> responda do seu jeito (“tá ok”, “tá torto”, “deu 3 milímetros”). Dá para responder vários itens de uma vez (“esperas ok e o alçapão também”) e usar: <i>pula</i>, <i>volta</i>, <i>repete</i>, <i>não se aplica</i>, <i>quanto falta</i>, <i>pausa</i>, <i>o resto tá tudo ok</i>, <i>encerrar</i>. No não conforme, diga o que está errado e <i>tira</i> para fotografar. Com fone com microfone funciona melhor no barulho.</div></div></section>` : ''}
     <section class="secao" style="display:grid;gap:8px"><h3 style="margin:0;font:700 1.05rem var(--f-disp)">Conferências feitas</h3>
       ${HIST === null ? '<div class="dica">Falta preparar o banco para guardar as conferências: rode o <b>banco.sql</b> no Supabase. Dá para testar mesmo assim (as pendências são criadas normalmente).</div>'
@@ -313,8 +321,21 @@ function inicio() {
   if ($('cCo')) $('cCo').onchange = e => { SEL.comodo = e.target.value; };
   const comecar = voz => { if (!SEL.pav) { toast('Escolha o pavimento.'); return; } iniciarConferencia(voz); };
   if ($('cVoz')) $('cVoz').onclick = () => comecar(true);
+  ajustesVoz();
   if ($('cTela')) $('cTela').onclick = () => comecar(false);
   m.querySelectorAll('[data-h]').forEach(b => b.onclick = () => verHist(b.dataset.h));
+}
+function ajustesVoz() {
+  const sel = $('vVoz'); if (!sel) return;
+  const encher = () => { const L2 = vozesPt(), at = vozPt();
+    sel.innerHTML = L2.length ? L2.map(v => `<option value="${esc(v.voiceURI || v.name)}" ${at && (v.voiceURI || v.name) === (at.voiceURI || at.name) ? 'selected' : ''}>${esc(v.name.replace(/^Google\s*/i, 'Google · '))}${/pt[-_]PT/i.test(v.lang) ? ' (Portugal)' : ''}${v.localService ? '' : ' · online'}</option>`).join('') : '<option>Voz padrão do aparelho</option>'; };
+  encher(); if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', encher);
+  sel.onchange = () => { PREF.voz = sel.value; guardarPref(); testar(); };
+  $('vVel').oninput = e => { PREF.vel = +e.target.value; $('vVelT').textContent = String(PREF.vel).replace('.', ',') + '×'; };
+  $('vVel').onchange = () => { guardarPref(); testar(); };
+  $('vBip').onchange = e => { PREF.bip = e.target.checked; guardarPref(); if (PREF.bip) bip(); };
+  const testar = () => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance('Os montantes e as guias estão inteiros?'); u.lang = 'pt-BR'; const v = vozPt(); if (v) u.voice = v; u.rate = PREF.vel; speechSynthesis.speak(u); } catch (e) {} };
+  $('vTeste').onclick = testar;
 }
 const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || '').split('@')[0];
 
@@ -324,6 +345,20 @@ let MODO = 'pergunta'; // pergunta | descricao | foto | confirmaPend | confirmaR
 let NC = null;         // não conforme em registro: {item, desc, fotos:[{blob,url}], valor}
 let ERROS = 0;         // respostas que não entendi seguidas
 const VOZ = { falar: true, ouvir: true };
+// voz escolhida, velocidade e "confirmar com bip" (ficam neste aparelho)
+const PREF = (() => { const d = { voz: '', vel: 1.2, bip: true }; try { return Object.assign(d, JSON.parse(localStorage.getItem('conf_voz') || '{}')); } catch (e) { return d; } })();
+const guardarPref = () => { try { localStorage.setItem('conf_voz', JSON.stringify(PREF)); } catch (e) {} };
+// bip curto de "anotado" (no lugar de falar "Beleza. Próximo:")
+let AUDIO = null;
+function bip(tipo) {
+  try {
+    if (!AUDIO) AUDIO = new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = AUDIO.currentTime, g = AUDIO.createGain(); g.connect(AUDIO.destination);
+    const notas = tipo === 'nc' ? [523, 392] : [880, 1320];
+    notas.forEach((f, i) => { const o = AUDIO.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(t0 + i * 0.09); o.stop(t0 + i * 0.09 + 0.08); });
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+  } catch (e) {}
+}
 
 function localTxt(c) {
   const u = c.unidade ? (c.comodo ? 'da ' + c.comodo.toLowerCase() + ' do ' + c.unidade : 'do ' + c.unidade) : (c.comodo ? 'da ' + c.comodo.toLowerCase() + ', ' + c.pavimento : 'do ' + c.pavimento);
@@ -337,7 +372,8 @@ function iniciarConferencia(voz) {
   pedirTelaLigada();
   const intro = md.intro[Math.floor(Math.random() * md.intro.length)].replace('{local}', localTxt(C));
   const h = new Date().getHours(); const saud = h < 12 ? 'Bom dia!' : h < 18 ? 'Boa tarde!' : 'Boa noite!';
-  dizer(saud + ' ' + intro + ' São ' + md.itens.length + ' itens.' + (VOZ.ouvir && !C.jaExplicou ? ' Pode responder do seu jeito.' : ''), () => perguntar());
+  if (PREF.bip) bip();   // libera o som no celular (precisa de um toque, que é o "Começar")
+  dizer(saud + ' ' + intro + ' ' + md.itens.length + ' itens.', () => perguntar());
   salvar();
 }
 const itens = () => C.modelo.itens;
@@ -379,6 +415,11 @@ function perguntar(prefixo) {
   else if (feitos === Math.ceil(itens().length / 2) && !C.disseMetade) { C.disseMetade = true; pre += fala('metade'); }
   if (pre && !/[:.!?] ?$/.test(pre)) pre += ' ';
   let q = perguntaDe(it);
+  if (PREF.bip && VOZ.falar) {   // "Beleza. Próximo:" vira um bip; o que informa (etapa, pulado, pendência…) continua falado
+    const curto = new RegExp('^\\s*(' + V.FALAS.ok.concat(V.FALAS.transicao.filter(Boolean)).map(x => x.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\s*', 'g');
+    let ant; do { ant = pre; pre = pre.replace(curto, ''); } while (pre !== ant);
+    if (prefixo && pre.length < prefixo.length) bip();
+  }
   if (/(^|\s)E\s*$/.test(pre)) q = q.charAt(0).toLowerCase() + q.slice(1);
   dizer(pre + q, ouvir);
 }
@@ -689,11 +730,14 @@ function desenharAtual() {
 
 /* ======================= voz: falar e ouvir ======================= */
 let VOZES = null, FALANDO = false;
-function vozPt() {
-  if (!('speechSynthesis' in window)) return null;
+function vozesPt() {
+  if (!('speechSynthesis' in window)) return [];
   if (!VOZES || !VOZES.length) VOZES = speechSynthesis.getVoices();
-  const pt = VOZES.filter(v => /^pt[-_]BR/i.test(v.lang)); const pt2 = pt.length ? pt : VOZES.filter(v => /^pt/i.test(v.lang));
-  return pt2.find(v => /google|luciana|francisca|natural|online/i.test(v.name)) || pt2[0] || null;
+  const pt = VOZES.filter(v => /^pt[-_]BR/i.test(v.lang)); return pt.length ? pt.concat(VOZES.filter(v => /^pt[-_]PT/i.test(v.lang))) : VOZES.filter(v => /^pt/i.test(v.lang));
+}
+function vozPt() {
+  const L2 = vozesPt(); if (!L2.length) return null;
+  return L2.find(v => v.voiceURI === PREF.voz || v.name === PREF.voz) || L2.find(v => /google|luciana|francisca|natural|online/i.test(v.name)) || L2[0];
 }
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { VOZES = speechSynthesis.getVoices(); };
 // fala o texto (e escreve no chat); depois chama "depois"
@@ -705,10 +749,10 @@ function dizer(txt, depois) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(txt.replace(/\bmm\b/g, 'milímetros').replace(/\bcm\b/g, 'centímetros').replace(/#/g, 'número '));
-    u.lang = 'pt-BR'; const v = vozPt(); if (v) u.voice = v; u.rate = 1.07; u.pitch = 1;
+    u.lang = 'pt-BR'; const v = vozPt(); if (v) u.voice = v; u.rate = PREF.vel || 1.2; u.pitch = 1;
     let feito = false; const ok = () => { if (feito) return; feito = true; clearTimeout(t); fim(); };
     u.onend = ok; u.onerror = ok;
-    const t = setTimeout(ok, 2500 + txt.length * 85);   // alguns aparelhos não avisam o fim da fala
+    const t = setTimeout(ok, 2500 + txt.length * 85 / (PREF.vel || 1));   // alguns aparelhos não avisam o fim da fala
     FALANDO = true; micEstado(); speechSynthesis.speak(u);
   } catch (e) { fim(); }
 }
@@ -718,23 +762,38 @@ function ouvir() {
   pararOuvir();
   try {
     const r = new SR(); REC = r; r.lang = 'pt-BR'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
-    let final = false;
+    let final = false, ultimoInterino = '', tCurto = null;
+    const usar = txt => { if (final || REC !== r) return; final = true; TENTATIVAS = 0; clearTimeout(tCurto); REC = null; OUVINDO = false; try { r.abort(); } catch (e) {} processar(txt, 'voz'); };
     r.onresult = ev => {
       let txt = '', fin = false; const alts = [];
-      for (let i = ev.resultIndex; i < ev.results.length; i++) { txt += ev.results[i][0].transcript; if (ev.results[i].isFinal) { fin = true; for (let k = 0; k < ev.results[i].length; k++) alts.push(ev.results[i][k].transcript); } }
-      if (!fin) { interino(txt); return; }
-      final = true; TENTATIVAS = 0;
+      for (let i = 0; i < ev.results.length; i++) { txt += ev.results[i][0].transcript; if (ev.results[i].isFinal) { fin = true; for (let k = 0; k < ev.results[i].length; k++) alts.push(ev.results[i][k].transcript); } }
+      if (!fin) {
+        interino(txt); ultimoInterino = txt;
+        // resposta curta e clara ("sim", "ok", "conforme", "pula"): segue sem esperar o celular fechar a frase
+        clearTimeout(tCurto);
+        if (respostaCurta(txt)) tCurto = setTimeout(() => usar(ultimoInterino), 450);
+        return;
+      }
       // entre as alternativas, a primeira que faz sentido para o momento
-      const boa = alts.find(a => { const e = V.entender(a); return e.pol || e.cmds.length || e.num; }) || alts[0] || txt;
-      REC = null; OUVINDO = false; try { r.stop(); } catch (e) {}
-      processar(boa, 'voz');
+      usar(alts.find(a => { const e = V.entender(a); return e.pol || e.cmds.length || e.num; }) || alts[0] || txt);
     };
     r.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { VOZ.ouvir = false; micTxt('Microfone bloqueado: libere nas permissões do navegador, ou use os botões'); const b = $('tOuvir'); if (b) b.setAttribute('aria-pressed', 'false'); } };
-    r.onend = () => { if (REC !== r) return; REC = null; OUVINDO = false; micEstado();
+    r.onend = () => { if (REC !== r) return;
+      // no Android, resposta curta às vezes termina sem o resultado "final": usa o que já tinha ouvido
+      if (!final && ultimoInterino.trim()) { usar(ultimoInterino); return; }
+      REC = null; OUVINDO = false; micEstado();
       // não ouviu nada: volta a escutar (com limite, para não gastar bateria à toa)
       if (!final && C && MODO !== 'fim' && VOZ.ouvir && !FALANDO) { TENTATIVAS++; if (TENTATIVAS <= 6) setTimeout(ouvir, 250); else { TENTATIVAS = 0; micTxt('Toque em 🎙 Microfone para voltar a ouvir'); } } };
     r.start(); OUVINDO = true; micEstado();
   } catch (e) { OUVINDO = false; micEstado(); }
+}
+// só uma ou duas palavras, com sentido claro e sem número (número e descrição esperam a frase inteira)
+function respostaCurta(txt) {
+  const n = V.norm(txt); if (!n || n.split(' ').length > 2 || /\d/.test(n)) return false;
+  if (MODO === 'descricao' || (MODO === 'pergunta' && atual() && atual().tipo === 'medida' && !atual().aceitaSim)) return false;
+  const e = V.entender(n);
+  return (e.pol === 'sim' && /^(sim|ok|okay|conforme|certo|beleza|blz|positivo|isso|correto|perfeito|show|pronto|tranquilo|confere|aham|uhum|ta ok|ta certo|ta bom|tudo certo|tudo ok|pode passar|esta conforme|ta conforme)$/.test(n))
+    || (e.cmds.length === 1 && ['pular', 'repetir', 'voltar', 'foto', 'semfoto', 'continuar'].includes(e.cmds[0]) && /^(pula|pular|repete|volta|tira|bate|sem foto|continua|continuar)$/.test(n));
 }
 function pararOuvir() { const r = REC; REC = null; OUVINDO = false; if (r) { try { r.abort(); } catch (e) {} } }
 function micTxt(t) { const el = $('micT'); if (el) el.textContent = t; }
