@@ -4170,6 +4170,67 @@ $p24$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 25: Conferências de serviço (FVQ) por voz
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 25 then return; end if;
+  execute $p25$
+-- uma conferência = uma ficha (modelo) num local; os itens e as respostas ficam em "itens"
+create table if not exists public.fvq_conferencias (
+  id          uuid primary key,
+  obra        text not null references public.obras(id) on delete cascade,
+  modelo      text not null,              -- id da ficha (ex.: fvq-030)
+  modelo_nome text not null,
+  pavimento   text not null,
+  unidade     text,
+  comodo      text,
+  itens       jsonb not null default '[]',  -- [{id, txt, st: ok|nc|na|null, valor, unidade, desc, pend, pnum, lote, em}]
+  resumo      jsonb not null default '{}',  -- {ok, nc, na, vz}
+  status      text not null default 'andamento' check (status in ('andamento', 'concluida')),
+  modo        text,                         -- voz | tela
+  inicio      timestamptz not null default now(),
+  fim         timestamptz,
+  por         text,
+  atualizado_em timestamptz not null default now()
+);
+create index if not exists fvq_conferencias_obra on public.fvq_conferencias (obra, inicio desc);
+alter table public.fvq_conferencias enable row level security;
+
+create or replace function public.fvq_ve(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia', 'consulta'), false)
+$$;
+create or replace function public.fvq_edita(p_obra text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.obra_ok(p_obra) and coalesce(public.perfil_atual() in ('admin', 'engenharia'), false)
+$$;
+grant execute on function public.fvq_ve(text), public.fvq_edita(text) to authenticated;
+
+drop policy if exists "ve fvq" on public.fvq_conferencias;
+drop policy if exists "cria fvq" on public.fvq_conferencias;
+drop policy if exists "edita fvq" on public.fvq_conferencias;
+drop policy if exists "apaga fvq" on public.fvq_conferencias;
+create policy "ve fvq" on public.fvq_conferencias for select to authenticated using (public.fvq_ve(obra));
+create policy "cria fvq" on public.fvq_conferencias for insert to authenticated with check (public.fvq_edita(obra));
+create policy "edita fvq" on public.fvq_conferencias for update to authenticated using (public.fvq_edita(obra)) with check (public.fvq_edita(obra));
+create policy "apaga fvq" on public.fvq_conferencias for delete to authenticated using (public.fvq_edita(obra));
+
+-- autoria e data (o aparelho não decide quem conferiu)
+create or replace function public.fvq_ao_gravar() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then new.por := lower(auth.jwt() ->> 'email'); else new.por := old.por; new.obra := old.obra; new.inicio := old.inicio; end if;
+  new.atualizado_em := now();
+  return new;
+end $$;
+drop trigger if exists fvq_ao_gravar on public.fvq_conferencias;
+create trigger fvq_ao_gravar before insert or update on public.fvq_conferencias for each row execute function public.fvq_ao_gravar();
+$p25$;
+  update public.banco_versao set versao = 25, atualizado_em = now();
+  raise notice 'Passo 25 aplicado: Conferências de serviço (FVQ)';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin

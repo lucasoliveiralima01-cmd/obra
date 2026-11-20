@@ -19,7 +19,8 @@
     { id: 'personalizacao', nome: 'Modificações', pag: 'personalizacoes.html', ic: 'personalizacoes' },
     { id: 'ceramica', nome: 'Cerâmicas', pag: 'ceramicas.html', ic: 'ceramicas' },
     { id: 'almox', nome: 'Almoxarifado', pag: 'almoxarifado.html', ic: 'almoxarifado' },
-    { id: 'planejamento', nome: 'Planejamento', pag: 'planejamento.html', ic: 'planejamento' }
+    { id: 'planejamento', nome: 'Planejamento', pag: 'planejamento.html', ic: 'planejamento' },
+    { id: 'conferencia', nome: 'Conferências', pag: 'conferencia.html', ic: 'conferencia' }
   ];
 
   /* ---------------- tema ---------------- */
@@ -97,7 +98,7 @@
     background:#22425c;color:#fff;border-radius:12px;padding:8px 8px 8px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);font:600 .88rem var(--f-body,sans-serif);max-width:calc(100vw - 24px)}
   #moVersao button{background:#fff;color:#22425c;border:0;border-radius:8px;padding:7px 12px;font:700 .85rem var(--f-body,sans-serif);cursor:pointer}
   #moVersao button.x{background:none;color:#d4e4ee;padding:4px 8px;font-size:1.2rem;line-height:1}
-  @media (max-width:640px){.mo-abas{width:100%;justify-content:center;gap:6px;order:3}
+  @media (max-width:640px){.mo-abas{width:100%;justify-content:space-between;gap:2px;order:3}.mo-abas a{padding:2px}.mo-abas a img{width:31px;height:31px}
     .brand .hctl{width:auto;margin-left:auto;order:2}
     .brand .ttl{width:auto;flex:1 1 0;min-width:0}
     .brand #bQuem{display:none}
@@ -191,7 +192,7 @@
     // só as ferramentas do perfil (Segurança: Risco e Pendências; Campo: só Pendências)
     const visiveis = FERR.filter(f => (nv.podeVer ? nv.podeVer(f.id) : !(nv.cargo === 'encarregado' && f.id !== 'pendencias')));
     // caminho "Obras › Obra › Ferramenta" logo abaixo do topo, com as ações principais da página (botões com data-barra)
-    if (!['pendencias', 'personalizacao', 'ceramica', 'almox', 'planejamento'].includes(atual) && !document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
+    if (!['pendencias', 'personalizacao', 'ceramica', 'almox', 'planejamento', 'conferencia'].includes(atual) && !document.querySelector('.crumbs')) montarTrilha(id, atual, visiveis.length > 1);
     // abas das ferramentas da mesma obra
     const ttl = document.querySelector('.brand .ttl');
     if (ttl && visiveis.length > 1 && !document.querySelector('.mo-abas')) {

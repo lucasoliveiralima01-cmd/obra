@@ -7,10 +7,10 @@
    Os dados (Supabase) não passam por aqui.
    ===================================================================== */
 // Só troque o número se mudar a lista BASICO (o que é guardado já na instalação).
-const CACHE = 'obra-v14';
-const BASICO = ['./', 'index.html', 'pendencias.html', 'personalizacoes.html', 'ceramicas.html', 'almoxarifado.html', 'planejamento.html', 'risco.html', 'concretagem.html', 'fachadas.html',
-  'estilo.css', 'listas-comum.js', 'plan-pdf.js', 'relatorio-pdf.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png',
-  'icones/principal.svg', 'icones/pendencias.svg', 'icones/risco.svg', 'icones/concretagem.svg', 'icones/fachadas.svg', 'icones/personalizacoes.svg', 'icones/ceramicas.svg', 'icones/almoxarifado.svg', 'icones/planejamento.svg',
+const CACHE = 'obra-v15';
+const BASICO = ['./', 'index.html', 'pendencias.html', 'personalizacoes.html', 'ceramicas.html', 'almoxarifado.html', 'planejamento.html', 'conferencia.html', 'risco.html', 'concretagem.html', 'fachadas.html',
+  'estilo.css', 'listas-comum.js', 'plan-pdf.js', 'fvq-voz.js', 'fvq-modelos.js', 'relatorio-pdf.js', 'nuvem.js', 'config.js', 'app.js', 'manifest.webmanifest', 'icone-192.png', 'icone-aviso.png',
+  'icones/principal.svg', 'icones/pendencias.svg', 'icones/risco.svg', 'icones/concretagem.svg', 'icones/fachadas.svg', 'icones/personalizacoes.svg', 'icones/ceramicas.svg', 'icones/almoxarifado.svg', 'icones/planejamento.svg', 'icones/conferencia.svg',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
 

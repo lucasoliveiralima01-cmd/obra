@@ -254,7 +254,11 @@ const FERRAMENTAS = [
   { id: 'planejamento', nome: 'Planejamento', curto: 'Planejamento', pagina: 'planejamento.html', soOnline: true,
     resumo: 'Médio prazo e PCP: o que fazer em cada semana e dia.',
     desc: 'Médio prazo e PCP lidos do PDF: o que começa e termina em cada dia, o que preparar para a semana seguinte, erros no planejamento, histórico de reprogramações e as frentes de trabalho ligadas às modificações.',
-    icone: '<img src=\"icones/planejamento.svg\" alt=\"\">' }
+    icone: '<img src=\"icones/planejamento.svg\" alt=\"\">' },
+  { id: 'conferencia', nome: 'Conferências (FVQ)', curto: 'Conferências', pagina: 'conferencia.html', soOnline: true,
+    resumo: 'Fichas de verificação por voz, com foto e pendência.',
+    desc: 'Conferência dos serviços pelas fichas de verificação (FVQ): o celular pergunta cada item em voz alta, entende a resposta falada (ou tocada), fotografa o não conforme e já abre a pendência.',
+    icone: '<img src=\"icones/conferencia.svg\" alt=\"\">' }
 ];
 // cada perfil vê só as suas ferramentas (Segurança: Riscos e Pendências; Campo: só Pendências)
 const ferramentasVisiveis = () => FERRAMENTAS.filter(f => !(f.soOnline && !NV) && (!NV || NV.podeVer(f.id)));

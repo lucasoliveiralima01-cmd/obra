@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="description" content="Conferência de serviços (FVQ) por voz: o celular pergunta cada item, entende a resposta falada, fotografa e abre a pendência.">
+<meta name="theme-color" content="#22425c">
+<title>Conferências</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icone-apple.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Obra"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icones/conferencia.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="estilo.css">
+<style>
+/* cores e fontes comuns: estilo.css; aqui só as desta página */
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px var(--f-body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
+/* faixa da marca */
+.brand{background:var(--navy);color:var(--brand-ink);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;right:-40px;top:0;bottom:0;width:min(46%,560px);background:var(--petrol);clip-path:polygon(64px 0,100% 0,100% 100%,0 100%);z-index:0}
+.brand-in{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px))}
+.logo{display:block;color:inherit}
+.logo img{height:40px;width:40px;display:block}
+.ttl{display:grid;border-left:1px solid rgba(255,255,255,.25);padding-left:16px;min-width:0}
+.ttl h1{font:700 1.35rem/1.1 var(--f-disp);margin:0}
+.ttl .obra{font-size:.82rem;color:#d4e4ee}
+.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:6px 11px;font:600 .82rem var(--f-body);display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+
+main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.86rem;color:var(--muted)}
+.crumbs a{font-weight:600;text-decoration:none;color:var(--accent)} .crumbs a:hover{text-decoration:underline}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:8px}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 18px;font:700 .92rem var(--f-body);color:var(--ink)}
+.tab:hover{border-color:var(--accent)}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab b{font-family:var(--f-body);margin-left:4px;opacity:.85}
+.muted{color:var(--muted);font-size:.88rem}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font:600 .9rem var(--f-body);white-space:nowrap}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:.82rem}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.lnk{background:none;border:0;color:var(--accent);font:600 .88rem var(--f-body);padding:4px 2px}
+.lnk:hover{text-decoration:underline}
+
+/* avisos no topo */
+.alertas{display:grid;gap:8px}
+.alerta{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r);padding:10px 12px;color:var(--ink)}
+.alerta.info{background:var(--warn-soft);border-color:var(--warn)}
+.alerta .ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--bad);color:#fff;font:700 .9rem var(--f-body)}
+.alerta.info .ic{background:var(--warn)}
+.alerta b{font-weight:700}
+.alerta small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+
+/* filtros */
+.filtros{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.busca{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);min-height:40px}
+.busca input{flex:1;border:0;background:none;outline:0;padding:9px 0;min-width:0;color:var(--ink)}
+.fsel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .88rem var(--f-body);min-height:40px;max-width:100%}
+.fsel.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip{background:none;border:1px solid var(--line);border-radius:16px;padding:6px 11px;font:500 .84rem var(--f-body);color:var(--ink);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+
+/* lista */
+.grupo{display:grid;gap:8px}
+.grupo>h2{margin:4px 0 0;font:700 1rem var(--f-disp);color:var(--muted);letter-spacing:.02em}
+.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.card{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;width:100%;color:inherit;transition:border-color .12s,background .12s}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card.falta{border-left-color:var(--bad)} .card.ok{border-left-color:var(--ok)} .card.sol{border-left-color:var(--warn)}
+.c-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.c-loc{font-size:.8rem;color:var(--muted)}
+.c-tit{font:700 1rem/1.25 var(--f-body);overflow-wrap:anywhere}
+.st{flex:none;font:600 .74rem var(--f-body);padding:2px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st-solicitada{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.st-aprovada{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.st-executada,.st-conferida{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.st-cancelada{text-decoration:line-through}
+.svs{display:flex;flex-wrap:wrap;gap:5px}
+.sv{font:600 .76rem var(--f-body);padding:2px 8px;border-radius:12px;border:1px solid var(--line);color:var(--muted)}
+.sv.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.sv.falta{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.vazio{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
+.vazio h3{margin:0;font:700 1.15rem var(--f-disp)}
+
+/* frentes */
+.fr-wrap{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.fr{border-collapse:separate;border-spacing:0;width:100%;font-size:.86rem}
+table.fr th,table.fr td{padding:6px;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);text-align:center;vertical-align:middle}
+table.fr th{font:700 .8rem var(--f-disp);color:var(--muted);background:var(--panel);position:sticky;top:0}
+table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600;min-width:120px;z-index:1}
+.fc{display:grid;gap:2px;justify-items:center;width:100%;min-width:104px;background:none;border:1px solid transparent;border-radius:7px;padding:6px 4px;color:inherit}
+.fc:hover{border-color:var(--accent);background:var(--accent-soft)}
+.fc .s{font:600 .76rem var(--f-body);padding:1px 7px;border-radius:10px}
+.fc .d{font-size:.74rem;color:var(--muted)}
+.s-lib{background:var(--ok-soft);color:var(--ok)} .s-sol{background:var(--warn-soft);color:var(--warn)} .s-falta{background:var(--bad-soft);color:var(--bad)} .s-pronta{background:var(--accent-soft);color:var(--accent)} .s-nada{color:var(--muted)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+
+/* botão flutuante */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+
+/* janelas */
+.overlay{position:fixed;inset:0;background:rgba(6,20,30,.5);display:grid;place-items:center;padding:12px;z-index:20}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(760px,100%);max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.sheet>header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.sheet>header h3{margin:0;font:700 1.2rem var(--f-disp);flex:1}
+.sheet>header .x{background:none;border:1px solid var(--line);border-radius:8px;min-width:36px;height:36px;font-size:1.2rem;line-height:1;color:var(--ink)}
+.sheet .body{overflow:auto;padding:14px 16px;display:grid;gap:14px;align-content:start}
+.sheet>footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.sheet>footer:not(:has(.btn)){display:none}
+.fld{display:grid;gap:5px}
+.fld>label,.fld>.l{font:600 .72rem var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.req{color:var(--bad)}
+.fld input:not([type=file]):not([type=checkbox]),.fld select,.fld textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0}
+.fld textarea{min-height:64px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font:600 .86rem var(--f-body);color:var(--ink);min-height:36px}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
+.msg{font-size:.86rem;margin-right:auto}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.itens{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:8px}
+.item textarea{grid-column:1/-1;min-height:46px}
+.item select,.item textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 9px;width:100%;min-width:0}
+.arqs{display:flex;flex-wrap:wrap;gap:8px}
+.arq{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:.72rem;color:var(--muted);text-align:center;padding:4px}
+.arq img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.arq .rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;line-height:22px;padding:0}
+.addarq{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:8px;padding:9px 13px;font:600 .9rem var(--f-body);color:var(--ink);cursor:pointer}
+.addarq input{display:none}
+/* ficha */
+.fi-tit{margin:0;font:700 1.4rem/1.2 var(--f-disp);overflow-wrap:anywhere}
+.fi-loc{margin:0;font:600 .98rem var(--f-body);color:var(--accent)}
+.fi-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.86rem;color:var(--muted)}
+.fi-desc{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fi h4{margin:0;font:700 1.02rem var(--f-disp)}
+.svc{display:grid;gap:6px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:10px 12px}
+.svc.ok{border-left-color:var(--ok)} .svc.falta{border-left-color:var(--bad)}
+.svc .h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between}
+.svc .h b{font:700 .98rem var(--f-body)}
+.svc .ins{margin:0;font-weight:600;white-space:pre-wrap}
+.svc .ci{font-size:.84rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.svc .ci.ok{color:var(--ok)} .svc .ci.falta{color:var(--bad)}
+.viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.viewer .vx:hover{background:rgba(20,30,40,.92)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
+.viewer img{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);object-fit:contain}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 15px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px)}
+@media (max-width:640px){
+  .brand::after{display:none}
+  .ttl{border-left:0;padding-left:0}
+  .hctl{width:auto;margin-left:auto;order:2}
+  #bQuem{display:none}
+  .lista{grid-template-columns:1fr}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;width:100%}
+  .tabs{display:grid}
+  .overlay{padding:0;place-items:end stretch}
+  .sheet{border-radius:14px 14px 0 0;max-height:94dvh;width:100%}
+  .item{grid-template-columns:1fr auto}
+  .item select:nth-of-type(2){grid-column:1/2}
+}
+/* conferência por voz */
+main>*{min-width:0}
+.mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.mod{display:grid;gap:4px;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:var(--r);padding:12px;color:inherit}
+.mod[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.mod b{font:700 1rem var(--f-disp)} .mod small{color:var(--muted)}
+.cfg{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;gap:10px}
+.cfg .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.go{display:flex;flex-wrap:wrap;gap:8px}
+.go .btn{flex:1 1 200px;padding:14px;font-size:1.02rem}
+.conv{display:grid;grid-template-rows:auto 1fr auto;gap:10px;min-height:calc(100dvh - 190px)}
+.barra{display:grid;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.barra .t{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.barra .t b{font:700 1rem var(--f-disp)}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex}
+.prog i{display:block;height:100%}
+.prog .ok{background:var(--ok)} .prog .nc{background:var(--bad)} .prog .na{background:var(--muted)}
+.ctl{display:flex;gap:6px;flex-wrap:wrap}
+.ctl button{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:600 .82rem var(--f-body);color:var(--ink)}
+.ctl button[aria-pressed="false"]{opacity:.55;text-decoration:line-through}
+.chat{display:flex;flex-direction:column;gap:8px;overflow:auto;padding:4px 2px;max-height:46dvh}
+.bal{max-width:85%;padding:9px 12px;border-radius:14px;font-size:.95rem;line-height:1.35;overflow-wrap:break-word}
+.bal.a{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
+.bal.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:4px}
+.bal.s{align-self:center;background:none;color:var(--muted);font-size:.8rem;padding:2px}
+.bal.u.int{opacity:.6}
+.atual{background:var(--panel);border:2px solid var(--accent);border-radius:var(--r);padding:12px;display:grid;gap:10px;position:sticky;bottom:0}
+.atual .q{font:700 1.05rem/1.3 var(--f-body)}
+.atual .meta{font-size:.8rem;color:var(--muted)}
+.bts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.bts button{border-radius:10px;padding:13px 10px;font:700 .98rem var(--f-body);border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+.bts .b-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.bts .b-nc{background:var(--bad);border-color:var(--bad);color:#fff}
+.bts .b-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.num{display:flex;gap:8px}
+.num input{flex:1;min-width:0;font-size:1.2rem;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}
+.mic{display:flex;align-items:center;gap:8px;font:600 .86rem var(--f-body);color:var(--muted)}
+.mic .d{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.mic.ouv .d{background:var(--bad);animation:pul 1s infinite} .mic.fal .d{background:var(--accent)}
+@keyframes pul{50%{transform:scale(1.5);opacity:.5}}
+.digitar{display:flex;gap:6px}
+.digitar input{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.cam{position:relative;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:4/3;max-height:40dvh}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.fts{display:flex;gap:6px;flex-wrap:wrap}
+.fts img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.res{display:grid;gap:6px}
+.ri{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:start;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:8px 10px}
+.ri.ok{border-left-color:var(--ok)} .ri.nc{border-left-color:var(--bad)} .ri.na{border-left-color:var(--muted)} .ri.vz{border-left-color:var(--warn)}
+.ri .ic{font:700 1rem var(--f-body);width:22px;text-align:center}
+.ri.ok .ic{color:var(--ok)} .ri.nc .ic{color:var(--bad)}
+.ri small{grid-column:2;color:var(--muted);font-size:.82rem}
+.hist{display:grid;gap:6px}
+.hi{display:grid;gap:2px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:inherit}
+.hi .h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.dica{background:var(--accent-soft);border:1px solid var(--accent);border-radius:9px;padding:9px 11px;font-size:.86rem}
+</style>
+<body>
+<header class="brand"><div class="brand-in">
+  <a class="logo" href="index.html" title="Início: ferramentas e obras" aria-label="Início"><img src="icones/conferencia.svg" alt="" width="40" height="40"></a>
+  <div class="ttl"><h1>Conferências</h1><span class="obra" id="obraNome">Carregando…</span></div>
+  <div class="hctl"></div>
+</div></header>
+
+<main id="main"><p class="muted">Carregando…</p></main>
+<div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+<script src="config.js"></script>
+<script>window.NUVEM_FERRAMENTA = 'conferencia';</script>
+<script src="nuvem.js"></script>
+<script src="listas-comum.js"></script>
+<script src="fvq-modelos.js"></script>
+<script src="fvq-voz.js"></script>
+<script>
+/* =====================================================================
+   Conferência de serviços (FVQ) por voz, sem IA e sem custo
+   - O celular lê cada item em voz alta (voz do próprio aparelho) e escuta a
+     resposta (reconhecimento de voz do navegador). Tudo também funciona
+     tocando nos botões ou digitando.
+   - Entende sim/não de vários jeitos, medidas faladas ("noventa e dois",
+     "3 milímetros"), várias respostas numa frase ("sim, e o alçapão também"),
+     e comandos: pula, volta, repete, não se aplica, quanto falta, pausa,
+     "o resto tá tudo ok", encerrar.
+   - Não conforme: pergunta o que está errado, abre a câmera ("tira" fotografa)
+     e abre a pendência já preenchida.
+   Fichas: fvq-modelos.js. Entendedor: fvq-voz.js. Banco: passo 25.
+   ===================================================================== */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(t, ms) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 4000); }
+const fmtDH = s => { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const V = window.FVQVoz, MODELOS = window.FVQ_MODELOS || [], LO = window.ListasObra;
+const fala = V.sorteio();
+const num = v => String(Math.round(v * 10) / 10).replace('.', ',');
+const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', 'Pavimento 05', 'Pavimento 06', 'Cobertura'].map(n => ({ nome: n, unidades: [] }));
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
+let CFG = { pavimentos: [] }, L = { comodo: [] }, HIST = [];
+const edita = () => NV && ['admin', 'engenharia'].includes(NV.perfil);
+const SEL = { modelo: MODELOS[0] ? MODELOS[0].id : null, pav: '', un: '', comodo: '' };
+
+/* ======================= dados ======================= */
+async function carregar() {
+  const [lp, lc, lo, lh] = await Promise.all([
+    sb.from('pend_listas').select('tipo,valor,ordem,extra').order('ordem'),
+    sb.from('pend_config').select('pavimentos,listas').eq('obra', OBRA).maybeSingle(),
+    NV.obras.obter(OBRA),
+    sb.from('fvq_conferencias').select('*').eq('obra', OBRA).order('inicio', { ascending: false }).limit(40)
+  ]);
+  if (!lo) { const e = new Error('obra não encontrada'); e.naoTem = true; throw e; }
+  const c = (lc && lc.data) || {};
+  L = LO.efetivas(LO.deTabela(lp.data || []), c.listas || null);
+  CFG = { pavimentos: (c.pavimentos && c.pavimentos.length) ? c.pavimentos : PAV_PADRAO };
+  OBRA_NOME = lo.nome; HIST = lh.error ? null : (lh.data || []);
+}
+const comodos = () => LO.ativos(L.comodo || []).map(x => x.valor);
+
+/* ======================= tela inicial ======================= */
+function inicio() {
+  pararTudo();
+  const m = $('main'), pav = CFG.pavimentos.find(p => p.nome === SEL.pav), uns = pav ? (pav.unidades || []) : [];
+  m.innerHTML = `<nav class="crumbs" aria-label="Caminho"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><span>Conferências</span></nav>
+    ${edita() ? `<section class="secao" style="display:grid;gap:10px"><h3 style="margin:0;font:700 1.05rem var(--f-disp)">Nova conferência</h3>
+      <div class="mods">${MODELOS.map(md => `<button type="button" class="mod" data-m="${esc(md.id)}" aria-pressed="${SEL.modelo === md.id}"><b>${esc(md.nome)}</b><small>${md.itens.length} itens · ${esc(md.oficio)}</small></button>`).join('')}</div>
+      <div class="cfg"><div class="row">
+        <div class="fld"><label for="cPav">Pavimento</label><select id="cPav"><option value="">Escolha…</option>${CFG.pavimentos.map(p => `<option ${p.nome === SEL.pav ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="cUn">Apartamento</label><select id="cUn"><option value="">Área comum / todo o pavimento</option>${uns.map(u => `<option ${u === SEL.un ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="cCo">Cômodo (opcional)</label><select id="cCo"><option value="">Todos</option>${comodos().map(x => `<option ${x === SEL.comodo ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      </div>
+      <div class="go"><button class="btn" type="button" id="cVoz">🎙 Começar por voz</button><button class="btn ghost" type="button" id="cTela">Conferir na tela</button></div>
+      ${SR ? '' : '<div class="dica">Este navegador não reconhece voz. A conferência funciona tocando nos botões; para falar, use o Chrome no Android ou o Safari no iPhone.</div>'}
+      <div class="dica"><b>Dicas para falar:</b> responda do seu jeito (“tá ok”, “tá torto”, “deu 3 milímetros”). Dá para responder vários itens de uma vez (“esperas ok e o alçapão também”) e usar: <i>pula</i>, <i>volta</i>, <i>repete</i>, <i>não se aplica</i>, <i>quanto falta</i>, <i>pausa</i>, <i>o resto tá tudo ok</i>, <i>encerrar</i>. No não conforme, diga o que está errado e <i>tira</i> para fotografar. Com fone com microfone funciona melhor no barulho.</div></div></section>` : ''}
+    <section class="secao" style="display:grid;gap:8px"><h3 style="margin:0;font:700 1.05rem var(--f-disp)">Conferências feitas</h3>
+      ${HIST === null ? '<div class="dica">Falta preparar o banco para guardar as conferências: rode o <b>banco.sql</b> no Supabase. Dá para testar mesmo assim (as pendências são criadas normalmente).</div>'
+        : HIST.length ? `<div class="hist">${HIST.map(h => { const r = h.resumo || {}; return `<button type="button" class="hi" data-h="${esc(h.id)}"><span class="h"><b>${esc(h.modelo_nome)} · ${esc([h.pavimento, h.unidade ? 'Apto ' + h.unidade : '', h.comodo].filter(Boolean).join(' · '))}</b><span class="muted">${fmtDH(h.inicio)}</span></span><span class="muted">${r.ok || 0} conformes · ${r.nc || 0} não conformes · ${r.na || 0} não se aplica${r.vz ? ' · ' + r.vz + ' sem resposta' : ''}${h.status === 'andamento' ? ' · em andamento' : ''} · ${esc(nomeDe(h.por))}</span></button>`; }).join('')}</div>`
+        : '<p class="muted" style="margin:0">Nenhuma ainda.</p>'}</section>`;
+  m.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { SEL.modelo = b.dataset.m; inicio(); });
+  if ($('cPav')) $('cPav').onchange = e => { SEL.pav = e.target.value; SEL.un = ''; inicio(); };
+  if ($('cUn')) $('cUn').onchange = e => { SEL.un = e.target.value; };
+  if ($('cCo')) $('cCo').onchange = e => { SEL.comodo = e.target.value; };
+  const comecar = voz => { if (!SEL.pav) { toast('Escolha o pavimento.'); return; } iniciarConferencia(voz); };
+  if ($('cVoz')) $('cVoz').onclick = () => comecar(true);
+  if ($('cTela')) $('cTela').onclick = () => comecar(false);
+  m.querySelectorAll('[data-h]').forEach(b => b.onclick = () => verHist(b.dataset.h));
+}
+const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || '').split('@')[0];
+
+/* ======================= a conferência ======================= */
+let C = null;          // conferência em andamento
+let MODO = 'pergunta'; // pergunta | descricao | foto | confirmaPend | confirmaResto | confirmaEncerrar | medidaExata | foraTol | pausa | fim
+let NC = null;         // não conforme em registro: {item, desc, fotos:[{blob,url}], valor}
+let ERROS = 0;         // respostas que não entendi seguidas
+const VOZ = { falar: true, ouvir: true };
+
+function localTxt(c) {
+  const u = c.unidade ? (c.comodo ? 'da ' + c.comodo.toLowerCase() + ' do ' + c.unidade : 'do ' + c.unidade) : (c.comodo ? 'da ' + c.comodo.toLowerCase() + ', ' + c.pavimento : 'do ' + c.pavimento);
+  return u;
+}
+function iniciarConferencia(voz) {
+  const md = MODELOS.find(x => x.id === SEL.modelo); if (!md) return;
+  C = { id: uuid(), modelo: md, pavimento: SEL.pav, unidade: SEL.un || null, comodo: SEL.comodo || null, res: {}, pulados: [], cursor: 0, inicio: new Date().toISOString(), hist: [] };
+  VOZ.falar = voz; VOZ.ouvir = voz && !!SR; MODO = 'pergunta'; NC = null; ERROS = 0;
+  telaConversa();
+  pedirTelaLigada();
+  const intro = md.intro[Math.floor(Math.random() * md.intro.length)].replace('{local}', localTxt(C));
+  const h = new Date().getHours(); const saud = h < 12 ? 'Bom dia!' : h < 18 ? 'Boa tarde!' : 'Boa noite!';
+  dizer(saud + ' ' + intro + ' São ' + md.itens.length + ' itens.' + (VOZ.ouvir && !C.jaExplicou ? ' Pode responder do seu jeito.' : ''), () => perguntar());
+  salvar();
+}
+const itens = () => C.modelo.itens;
+const resp = it => C.res[it.id];
+const respondido = it => !!(resp(it) && resp(it).st);
+const atual = () => itens()[C.cursor];
+function proximo() {
+  // próximo sem resposta a partir do cursor; depois os pulados
+  const L2 = itens();
+  for (let k = C.cursor; k < L2.length; k++) if (!respondido(L2[k]) && !C.pulados.includes(L2[k].id)) return k;
+  for (let k = 0; k < L2.length; k++) if (!respondido(L2[k]) && !C.pulados.includes(L2[k].id)) return k;
+  return -1;
+}
+function contagem() { const r = { ok: 0, nc: 0, na: 0, vz: 0 }; itens().forEach(it => { const x = resp(it); r[x && x.st ? x.st : 'vz']++; }); return r; }
+
+// texto da pergunta do item, variando
+function perguntaDe(it, outra) {
+  const ps = it.perguntas && it.perguntas.length ? it.perguntas : [it.txt + '?'];
+  let i = Math.floor(Math.random() * ps.length); if (outra && ps.length > 1 && i === it._ult) i = (i + 1) % ps.length; it._ult = i;
+  return ps[i];
+}
+function perguntar(prefixo) {
+  let k = proximo();
+  if (k < 0 && C.pulados.length) {   // só sobraram os pulados
+    const pend = itens().filter(it => !respondido(it) && C.pulados.includes(it.id));
+    C.pulados = [];
+    if (pend.length) { dizer((prefixo || '') + 'Ficaram ' + (pend.length === 1 ? 'um item pulado' : pend.length + ' itens pulados') + '. Vamos neles.', () => perguntar()); return; }
+    k = proximo();
+  }
+  if (k < 0) { finalizar(prefixo); return; }
+  C.cursor = k; MODO = 'pergunta'; ERROS = 0;
+  const it = atual(), c = contagem(), feitos = c.ok + c.nc + c.na, falta = itens().length - feitos;
+  let pre = prefixo || '';
+  const TRANS = /\s*(Agora: |Próximo: |E |Seguindo: |Vamos lá: )\s*$/;
+  const extra = (it.secao && C.modelo.secoes && it.secao !== C.secao) || falta === 1 || (feitos === Math.ceil(itens().length / 2) && !C.disseMetade);
+  if (extra) pre = pre.replace(TRANS, ' ');
+  if (it.secao && C.modelo.secoes && it.secao !== C.secao) { const ss = C.modelo.secoes[it.secao]; C.secao = it.secao; if (ss && ss.length) pre += ss[Math.floor(Math.random() * ss.length)] + ' '; }
+  if (falta === 1) pre += fala('ultimo');
+  else if (feitos === Math.ceil(itens().length / 2) && !C.disseMetade) { C.disseMetade = true; pre += fala('metade'); }
+  if (pre && !/[:.!?] ?$/.test(pre)) pre += ' ';
+  let q = perguntaDe(it);
+  if (/(^|\s)E\s*$/.test(pre)) q = q.charAt(0).toLowerCase() + q.slice(1);
+  dizer(pre + q, ouvir);
+}
+
+/* ---------- entender a resposta ---------- */
+function processar(txt, origem) {
+  txt = String(txt || '').trim(); if (!txt || !C || MODO === 'fim') return;
+  pararOuvir();
+  balao('u', txt);
+  const e = V.entender(txt);
+  // comandos que valem em qualquer momento
+  if (MODO === 'pausa') { if (e.cmds.includes('continuar') || e.pol === 'sim') { dizer(fala('voltei'), () => repetirAtual()); } else ouvir(); return; }
+  if (e.cmds.includes('encerrar') && MODO !== 'confirmaEncerrar') { const c = contagem(); MODO = 'confirmaEncerrar'; dizer('Quer encerrar agora?' + (c.vz ? ' ' + (c.vz === 1 ? 'Um item fica' : c.vz + ' itens ficam') + ' sem resposta.' : ''), ouvir); return; }
+  if (e.cmds.includes('pausa') && MODO !== 'descricao') { MODO = 'pausa'; dizer(fala('pausa'), ouvir); return; }
+  if (e.cmds.includes('status') && MODO !== 'descricao') { const c = contagem(); dizer('Já foram ' + (c.ok + c.nc + c.na) + ' de ' + itens().length + '. ' + c.ok + ' conforme' + (c.ok === 1 ? '' : 's') + (c.nc ? ', ' + c.nc + ' não conforme' + (c.nc > 1 ? 's' : '') : '') + '.', () => repetirAtual()); return; }
+  if (e.cmds.includes('repetir') && !['descricao'].includes(MODO)) { repetirAtual(true); return; }
+  if (e.cmds.includes('voltar') && ['pergunta', 'medidaExata'].includes(MODO)) { voltar(); return; }
+  ({ pergunta: emPergunta, medidaExata: emMedidaExata, foraTol: emForaTol, descricao: emDescricao, foto: emFoto, confirmaPend: emConfirmaPend, confirmaResto: emConfirmaResto, confirmaEncerrar: emConfirmaEncerrar }[MODO] || emPergunta)(e, txt);
+}
+function repetirAtual(outra) {
+  if (MODO === 'pausa') MODO = 'pergunta';
+  const it = atual();
+  if (MODO === 'pergunta' || !it) { if (!it) { perguntar(); return; } dizer(perguntaDe(it, outra), ouvir); }
+  else if (MODO === 'descricao') dizer(fala('oQueErrado'), ouvir);
+  else if (MODO === 'foto') dizer('Diga "tira" para fotografar, ou "pronto".', ouvir);
+  else if (MODO === 'confirmaPend') perguntarPendencia();
+  else if (MODO === 'medidaExata') dizer(fala('pedeNumero'), ouvir);
+  else dizer(perguntaDe(it, outra), ouvir);
+}
+function voltar() {
+  // volta ao último item respondido (desfaz a resposta)
+  const L2 = C.hist.slice(); const ult = L2.pop();
+  if (!ult) { dizer('Ainda não tem nada pra voltar.', ouvir); return; }
+  C.hist = L2; delete C.res[ult]; C.cursor = itens().findIndex(x => x.id === ult); MODO = 'pergunta'; desenharAtual(); salvar();
+  dizer('Ok, voltando. ' + perguntaDe(atual(), true), ouvir);
+}
+function marcar(it, st, extra) {
+  C.res[it.id] = Object.assign({ st, em: new Date().toISOString() }, extra || {});
+  C.pulados = C.pulados.filter(x => x !== it.id);
+  C.hist = C.hist.filter(x => x !== it.id).concat(it.id);
+  desenharAtual(); salvar();
+}
+function naoEntendi() {
+  ERROS++;
+  if (ERROS >= 3) { ERROS = 0; dizer('Tá difícil de ouvir aqui. Pode tocar nos botões da tela, ou tentar de novo.', ouvir); return; }
+  dizer(MODO === 'pergunta' && atual().tipo === 'medida' ? 'Não peguei a medida. ' + fala('pedeNumero') : fala('naoEntendi'), ouvir);
+}
+
+// resposta ao item atual (e a outros citados na mesma frase)
+function emPergunta(e, txt) {
+  const it = atual();
+  if (e.cmds.includes('na')) { marcar(it, 'na'); perguntar(fala('na') + ' '); return; }
+  if (e.cmds.includes('pular')) { C.pulados.push(it.id); C.cursor = Math.min(C.cursor + 1, itens().length); perguntar(fala('pulei') + ' '); return; }
+  if (e.cmds.includes('restotudo')) { pedirResto(it, e); return; }
+  if ((e.cmds.includes('camera') || e.cmds.includes('foto')) && e.pol !== 'sim') { iniciarNC(it, ''); return; }
+  // outros itens citados (respondidos junto, ou "vamos pro nível")
+  const extras = []; let doAtual = null;
+  for (const p of V.pedacos(txt)) {
+    const ep = V.entender(p);
+    const doItem = V.itensCitados(p, [it]).length > 0;
+    const cit = doItem ? [] : V.itensCitados(p, itens()).filter(x => x !== it);
+    if (!cit.length) { if (ep.pol || ep.num) doAtual = doAtual || ep; continue; }
+    for (const x of cit) {
+      if (respondido(x)) continue;
+      const pol = ep.pol || (/\btambem\b/.test(p) ? (doAtual && doAtual.pol) || e.pol : null);
+      if (x.tipo === 'medida' && ep.num && !ep.num.vago) { const v = V.converte(ep.num.valor, ep.num.unidade || x.unidade, x.unidade); if (dentro(x, v)) { marcar(x, 'ok', { valor: v }); extras.push(x.txt.split(/[(,]/)[0].trim() + ' ' + num(v) + ' ' + x.unidade); } }
+      else if (x.tipo !== 'medida' && pol === 'sim') { marcar(x, 'ok'); extras.push(x.txt.split(/[(,]/)[0].trim()); }
+    }
+  }
+  const resto = extras.length ? ' ' + (extras.length === 1 ? 'Também marquei: ' : 'Também marquei: ') + extras.join(', ') + '.' : '';
+  const e2 = doAtual || e;
+  // só citou outro item, sem responder: pula para ele
+  if (!e2.pol && !e2.num && !extras.length) {
+    const cit = V.itensCitados(txt, itens()).filter(x => x !== it && !respondido(x));
+    if (cit.length) { C.cursor = itens().indexOf(cit[0]); dizer('Ok, vamos ' + (cit[0].txt.split(/[(,]/)[0].trim().toLowerCase().startsWith('a') ? 'à ' : 'ao ') + cit[0].txt.split(/[(,]/)[0].trim().toLowerCase() + '. ' + perguntaDe(cit[0]), ouvir); return; }
+    if (extras.length === 0) { naoEntendi(); return; }
+  }
+  if (it.tipo === 'medida') {
+    if (e2.num) { tratarMedida(it, e2.num, resto); return; }
+    if (e2.pol === 'nao') { iniciarNC(it, txt, resto); return; }
+    if (e2.pol === 'sim' && it.aceitaSim) { marcar(it, 'ok', { semMedida: true }); perguntar(fala('ok') + resto + ' ' + fala('transicao')); return; }
+    if (e2.pol === 'sim' || extras.length) { MODO = 'medidaExata'; dizer((resto ? resto.trim() + ' ' : '') + (e2.pol === 'sim' ? 'Beleza, mas preciso do número. ' : '') + fala('pedeNumero'), ouvir); return; }
+    naoEntendi(); return;
+  }
+  if (e2.pol === 'sim') { marcar(it, 'ok'); perguntar(fala('ok') + resto + ' ' + fala('transicao')); return; }
+  if (e2.pol === 'nao') { iniciarNC(it, txt, resto); return; }
+  if (extras.length) { dizer(resto.trim() + ' E ' + perguntaDe(it, true).replace(/^[A-Z]/, c => c.toLowerCase()), ouvir); return; }
+  naoEntendi();
+}
+const dentro = (it, v) => (it.min == null || v >= it.min - 1e-9) && (it.max == null || v <= it.max + 1e-9);
+const limitesTxt = it => it.min != null && it.max != null ? 'entre ' + num(it.min) + ' e ' + num(it.max) + ' ' + it.unidade : it.max != null ? 'máximo ' + num(it.max) + ' ' + it.unidade : 'mínimo ' + num(it.min) + ' ' + it.unidade;
+function tratarMedida(it, n, resto) {
+  if (n.vago) { MODO = 'medidaExata'; dizer((resto || '').trim() + ' ' + (n.valor ? 'Uns ' + num(n.valor) + '? ' : '') + fala('pedeNumero'), ouvir); return; }
+  let v = V.converte(n.valor, n.unidade || it.unidade, it.unidade);
+  // "noventa" para uma medida em cm com limite de 90: ok; "900" mm digitado em cm etc. ficam como estão
+  if (dentro(it, v)) { marcar(it, 'ok', { valor: v }); perguntar(fala('okMedida', { v: num(v) + ' ' + nomeUn(it.unidade) }) + (resto || '') + ' ' + fala('transicao')); return; }
+  NC = { item: it, valor: v, desc: it.txt.split('(')[0].trim() + ': ' + num(v) + ' ' + it.unidade + ' (' + limitesTxt(it) + ')', fotos: [] };
+  MODO = 'foraTol'; dizer((resto || '').trim() + ' Deu ' + num(v) + ' ' + nomeUn(it.unidade) + ', fora do limite: ' + limitesTxt(it).replace(/ mm\b/, ' milímetros').replace(/ cm\b/, ' centímetros') + '. Marco como não conforme?', ouvir);
+}
+const nomeUn = u => ({ mm: 'milímetros', cm: 'centímetros', m: 'metros' }[u] || u);
+function emMedidaExata(e, txt) {
+  const it = atual();
+  if (e.num) { tratarMedida(it, Object.assign({}, e.num, { vago: false })); return; }
+  if (e.cmds.includes('na')) { marcar(it, 'na'); perguntar(fala('na') + ' '); return; }
+  if (e.cmds.includes('pular')) { C.pulados.push(it.id); perguntar(fala('pulei') + ' '); return; }
+  if (e.pol === 'nao') { iniciarNC(it, txt); return; }
+  naoEntendi();
+}
+function emForaTol(e, txt) {
+  if (e.pol === 'sim') { abrirFoto(NC.desc); return; }
+  if (e.num) { MODO = 'pergunta'; tratarMedida(atual(), e.num); return; }
+  if (e.pol === 'nao') { MODO = 'medidaExata'; dizer('Ok. Então qual é a medida certa?', ouvir); return; }
+  naoEntendi();
+}
+function pedirResto(it, e) {
+  const falta = itens().filter(x => !respondido(x));
+  const precisa = x => x.critico || (x.tipo === 'medida' && !x.aceitaSim);
+  const crit = falta.filter(precisa), simples = falta.filter(x => !precisa(x));
+  if (!simples.length) { dizer('Os que faltam precisam de resposta um por um, porque são críticos ou têm medida. ' + perguntaDe(it), ouvir); return; }
+  C.resto = simples.map(x => x.id); MODO = 'confirmaResto';
+  dizer('Marco ' + (simples.length === 1 ? 'o item que falta' : 'os ' + simples.length + ' itens simples que faltam') + ' como conforme?' + (crit.length ? ' ' + (crit.length === 1 ? 'Um item crítico eu ainda vou perguntar.' : crit.length + ' itens críticos eu ainda vou perguntar.') : ''), ouvir);
+}
+function emConfirmaResto(e) {
+  if (e.pol === 'sim') { (C.resto || []).forEach(id => { const it = itens().find(x => x.id === id); if (it && !respondido(it)) marcar(it, 'ok', { lote: true }); }); perguntar('Marquei. '); return; }
+  if (e.pol === 'nao') { perguntar('Ok, vamos um por um. '); return; }
+  naoEntendi();
+}
+function emConfirmaEncerrar(e) {
+  if (e.pol === 'sim') { finalizar(''); return; }
+  if (e.pol === 'nao' || e.cmds.includes('continuar')) { MODO = 'pergunta'; dizer(fala('voltei'), () => repetirAtual()); return; }
+  naoEntendi();
+}
+
+/* ---------- não conforme: descrição, foto e pendência ---------- */
+const PALAVRAS_SO_NAO = /^(nao|nao conforme|nao esta conforme|nao ta|negativo|tem problema|nao confere|errado|ta errado|nao esta|reprovado)$/;
+function descricaoDe(txt) {
+  let t = String(txt || '').trim();
+  const n = V.norm(t);
+  if (!n || PALAVRAS_SO_NAO.test(n.replace(/[.,]/g, '').trim())) return '';
+  t = t.replace(/^\s*(n[aã]o( conforme| est[aá] conforme)?|negativo)[\s,.:-]*/i, '').replace(/\b(abre|abrir) a c[aâ]mera\b.*$/i, '').trim();
+  return t.split(/\s+/).length >= 2 ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+}
+function iniciarNC(it, txt, resto) {
+  NC = { item: it, desc: descricaoDe(txt), fotos: [] };
+  if (!NC.desc) { MODO = 'descricao'; dizer(((resto || '') + ' ' + fala('nc') + ' ' + fala('oQueErrado')).trim(), ouvir); return; }
+  abrirFoto(((resto || '') + ' ' + fala('nc')).trim());
+}
+function emDescricao(e, txt) {
+  if (e.cmds.includes('pular') || (e.pol === 'sim' && V.norm(txt).split(' ').length <= 2)) { MODO = 'pergunta'; perguntar('Ok, deixei sem marcar. '); return; }
+  const d = descricaoDe('x ' + txt) || txt; NC.desc = d.charAt(0).toUpperCase() + d.slice(1);
+  if (NC.reDesc) { NC.reDesc = false; perguntarPendencia(); return; }
+  abrirFoto('Anotado.');
+}
+async function abrirFoto(pre) {
+  MODO = 'foto'; desenharAtual();
+  const ok = await ligarCamera();
+  dizer(pre + ' ' + (ok ? 'Câmera aberta. Diga "tira" para fotografar, ou "sem foto".' : 'Não consegui abrir a câmera. Toque em "Tirar foto" ou diga "sem foto".'), ouvir);
+}
+function emFoto(e) {
+  if (e.cmds.includes('foto')) { tirarFoto(); return; }
+  if (e.cmds.includes('semfoto') || e.pol === 'sim' || e.cmds.includes('continuar') || /\b(pronto|so isso|chega|ja foi|tirei)\b/.test(e.t)) { desligarCamera(); perguntarPendencia(); return; }
+  if (e.pol === 'nao') { desligarCamera(); perguntarPendencia(); return; }
+  dizer('Diga "tira" para fotografar, ou "pronto".', ouvir);
+}
+async function tirarFoto() {
+  const v = document.querySelector('.cam video');
+  if (!v || !v.videoWidth) { dizer('A câmera ainda não está pronta. Toque em "Tirar foto".', ouvir); return; }
+  const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight)); const cv = document.createElement('canvas');
+  cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k); cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
+  NC.fotos.push({ blob, url: URL.createObjectURL(blob) }); desenharAtual();
+  dizer(NC.fotos.length === 1 ? 'Foto tirada. Mais uma, ou pronto?' : 'Mais uma tirada. Mais alguma, ou pronto?', ouvir);
+}
+function perguntarPendencia() {
+  MODO = 'confirmaPend'; desenharAtual();
+  const loc = [C.unidade ? 'apartamento ' + C.unidade : C.pavimento, comodoDe(NC.desc) || C.comodo].filter(Boolean).join(', ');
+  dizer('Abro a pendência: ' + NC.desc + ', no ' + loc + ', para ' + C.modelo.oficio.toLowerCase() + '?' + ' Diga sim, "só anota", ou "muda a descrição".', ouvir);
+}
+function emConfirmaPend(e, txt) {
+  const t = e.t;
+  if (/\b(muda|mudar|corrige|corrigir|troca|trocar|altera|outra descricao|descricao)\b/.test(t)) { MODO = 'descricao'; NC.reDesc = true; dizer('Ok, me diz a descrição de novo.', ouvir); return; }
+  if (/\b(so anota|apenas anota|so marca|sem pendencia|nao precisa)\b/.test(t) || e.pol === 'nao') { fecharNC(false); return; }
+  if (e.pol === 'sim') { fecharNC(true); return; }
+  naoEntendi();
+}
+const comodoDe = d => { const n = V.norm(d); return comodos().find(c => n.includes(V.norm(c))) || null; };
+async function fecharNC(abrir) {
+  const it = NC.item, x = { desc: NC.desc, valor: NC.valor };
+  const nfotos = NC.fotos.length;
+  marcar(it, 'nc', x);
+  if (!abrir) { NC = null; perguntar('Fica só anotado na ficha. ' + fala('transicao')); return; }
+  const nc = NC; NC = null;
+  dizer('Registrando a pendência…');
+  const r = await criarPendencia(it, nc);
+  if (r.ok) { C.res[it.id].pend = r.id; C.res[it.id].pnum = r.numero; salvar(); desenharAtual();
+    perguntar('Pendência ' + (r.numero ? 'número ' + r.numero + ' ' : '') + 'registrada' + (nfotos ? ' com ' + (nfotos === 1 ? 'a foto' : nfotos + ' fotos') : '') + '. ' + fala('transicao')); }
+  else { C.res[it.id].pendErro = r.erro; C.res[it.id].fotosPend = nc.fotos; salvar(); perguntar('Não consegui registrar a pendência agora (' + r.erro + '). Ficou anotada e dá para registrar no final. '); }
+}
+async function criarPendencia(it, nc) {
+  try {
+    const id = uuid();
+    const row = { id, obra: OBRA, pavimento: C.pavimento, local_tipo: C.unidade ? 'Apartamento' : 'Outro', unidade: C.unidade, comodo: C.unidade ? (comodoDe(nc.desc) || C.comodo) : null,
+      tipo: C.modelo.tipo, disciplina: C.modelo.oficio, prioridade: 'media', seguranca: false,
+      descricao: it.txt + ': ' + nc.desc, observacoes: 'Registrada na conferência por voz (' + C.modelo.nome + ').' };
+    const { error } = await sb.from('pendencias').insert(row); if (error) throw error;
+    for (const f of nc.fotos) { const fid = uuid(); const cam = 'pendencias/' + OBRA + '/' + id + '/' + fid + '.jpg';
+      const up = await sb.storage.from('arquivos').upload(cam, f.blob, { contentType: 'image/jpeg', upsert: false }); if (up.error) throw up.error;
+      const { error: e2 } = await sb.from('pendencia_fotos').insert({ id: fid, pendencia: id, tipo: 'antes', caminho: cam }); if (e2) throw e2; }
+    const { data } = await sb.from('pendencias').select('numero').eq('id', id).maybeSingle();
+    return { ok: true, id, numero: data && data.numero };
+  } catch (e) { console.error(e); return { ok: false, erro: (e && e.message) || 'sem conexão' }; }
+}
+
+/* ---------- fim ---------- */
+function finalizar(pre) {
+  MODO = 'fim'; pararOuvir(); desligarCamera();
+  C.fim = new Date().toISOString(); salvar(true);
+  const c = contagem(), np = itens().filter(it => resp(it) && resp(it).pend).length;
+  dizer((pre || '') + 'Fechou! ' + c.ok + ' conforme' + (c.ok === 1 ? '' : 's') + (c.nc ? ', ' + c.nc + ' não conforme' + (c.nc > 1 ? 's' : '') : '') + (c.na ? ', ' + c.na + ' não se aplica' : '') + (c.vz ? ' e ' + c.vz + ' sem resposta' : '') + '.' + (np ? ' ' + (np === 1 ? 'Uma pendência aberta.' : np + ' pendências abertas.') : '') + ' Bom trabalho.');
+  liberarTela();
+  resumo();
+}
+function resumo() {
+  const c = contagem();
+  $('main').innerHTML = `<nav class="crumbs"><a href="index.html">Obras</a><span>›</span><a href="index.html?obra=${encodeURIComponent(OBRA)}">${esc(OBRA_NOME)}</a><span>›</span><a href="#" id="voltaIni">Conferências</a><span>›</span><span>Resumo</span></nav>
+    <div class="barra"><div class="t"><b>${esc(C.modelo.nome)} · ${esc([C.pavimento, C.unidade ? 'Apto ' + C.unidade : '', C.comodo].filter(Boolean).join(' · '))}</b><span class="muted">${fmtDH(C.inicio)}</span></div>${barraProg()}
+      <span class="muted">${c.ok} conforme${c.ok === 1 ? '' : 's'} · ${c.nc} não conforme${c.nc === 1 ? '' : 's'} · ${c.na} não se aplica${c.vz ? ' · ' + c.vz + ' sem resposta' : ''}</span></div>
+    <div class="res">${itens().map(itemRes).join('')}</div>
+    ${itens().some(it => resp(it) && resp(it).pendErro) ? '<button class="btn" type="button" id="rePend">Registrar as pendências que falharam</button>' : ''}
+    <div class="go"><button class="btn" type="button" id="nova">Nova conferência</button>${itens().some(it => !respondido(it)) && edita() ? '<button class="btn ghost" type="button" id="cont">Responder os que faltam</button>' : ''}</div>`;
+  $('voltaIni').onclick = ev => { ev.preventDefault(); recarregarInicio(); };
+  $('nova').onclick = () => recarregarInicio();
+  if ($('cont')) $('cont').onclick = () => { MODO = 'pergunta'; C.fim = null; telaConversa(); perguntar('Vamos nos que faltam. '); };
+  if ($('rePend')) $('rePend').onclick = async () => { for (const it of itens()) { const x = resp(it); if (!x || !x.pendErro) continue;
+    const r = await criarPendencia(it, { desc: x.desc, fotos: x.fotosPend || [] }); if (r.ok) { x.pend = r.id; x.pnum = r.numero; delete x.pendErro; delete x.fotosPend; } } salvar(true); resumo(); };
+}
+function itemRes(it) {
+  const x = resp(it) || {}; const st = x.st || 'vz'; const ic = { ok: '✓', nc: '✗', na: '—', vz: '?' }[st];
+  return `<div class="ri ${st}"><span class="ic">${ic}</span><span>${it.id.includes('.') ? '<b>' + esc(it.id) + '</b> ' : ''}${esc(it.txt)}</span>
+    <small>${st === 'ok' ? (x.valor != null ? num(x.valor) + ' ' + it.unidade + ' · ' : '') + (x.lote ? 'conforme (no “resto tudo ok”)' : x.semMedida ? 'conforme, dentro da tolerância' : 'conforme') : st === 'na' ? 'não se aplica' : st === 'nc' ? esc(x.desc || 'não conforme') + (x.pnum ? ' · <a href="pendencias.html?obra=' + encodeURIComponent(OBRA) + '">pendência #' + x.pnum + '</a>' : x.pend ? ' · pendência aberta' : x.pendErro ? ' · <b style="color:var(--bad)">pendência não registrada</b>' : ' · só anotado') : 'sem resposta'}</small></div>`;
+}
+async function recarregarInicio() { C = null; try { await carregar(); } catch (e) {} inicio(); }
+
+/* ---------- guardar no banco ---------- */
+let salvando = null;
+function salvar(agora) {
+  if (!C || HIST === null) return;
+  clearTimeout(salvar.t);
+  const fazer = async () => {
+    const c = contagem();
+    const itensJ = itens().map(it => { const x = resp(it) || {}; return { id: it.id, txt: it.txt, st: x.st || null, valor: x.valor ?? null, unidade: it.unidade || null, desc: x.desc || null, pend: x.pend || null, pnum: x.pnum || null, lote: !!x.lote, em: x.em || null }; });
+    const row = { id: C.id, obra: OBRA, modelo: C.modelo.id, modelo_nome: C.modelo.nome, pavimento: C.pavimento, unidade: C.unidade, comodo: C.comodo,
+      itens: itensJ, resumo: c, status: C.fim ? 'concluida' : 'andamento', inicio: C.inicio, fim: C.fim || null, modo: VOZ.ouvir ? 'voz' : 'tela' };
+    const { error } = await sb.from('fvq_conferencias').upsert(row);
+    if (error && !salvar.avisou) { salvar.avisou = true; toast('Não foi possível guardar a conferência: ' + error.message); }
+  };
+  if (agora) salvando = fazer(); else salvar.t = setTimeout(() => { salvando = fazer(); }, 800);
+}
+
+/* ======================= tela da conversa ======================= */
+function barraProg() {
+  const c = contagem(), n = itens().length;
+  return `<div class="prog" aria-hidden="true"><i class="ok" style="width:${c.ok / n * 100}%"></i><i class="nc" style="width:${c.nc / n * 100}%"></i><i class="na" style="width:${c.na / n * 100}%"></i></div>`;
+}
+function telaConversa() {
+  $('main').innerHTML = `<div class="conv">
+    <div class="barra"><div class="t"><b>${esc(C.modelo.nome)} · ${esc([C.pavimento, C.unidade ? 'Apto ' + C.unidade : '', C.comodo].filter(Boolean).join(' · '))}</b>
+      <span class="ctl"><button type="button" id="tFalar" aria-pressed="${VOZ.falar}" title="Voz do assistente">🔊 Voz</button>${SR ? `<button type="button" id="tOuvir" aria-pressed="${VOZ.ouvir}" title="Microfone">🎙 Microfone</button>` : ''}<button type="button" id="tFim">Encerrar</button></span></div>
+      <div id="prog">${barraProg()}</div><span class="mic" id="mic"><span class="d"></span><span id="micT">${VOZ.ouvir ? 'Microfone pronto' : 'Microfone desligado: responda pelos botões'}</span></span></div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="atual" id="atual"></div></div>`;
+  $('tFalar').onclick = () => { VOZ.falar = !VOZ.falar; if (!VOZ.falar) speechSynthesis.cancel(); $('tFalar').setAttribute('aria-pressed', VOZ.falar); };
+  if ($('tOuvir')) $('tOuvir').onclick = () => { VOZ.ouvir = !VOZ.ouvir; $('tOuvir').setAttribute('aria-pressed', VOZ.ouvir); if (VOZ.ouvir) ouvir(); else { pararOuvir(); micTxt('Microfone desligado'); } };
+  $('tFim').onclick = () => processar('encerrar');
+  desenharAtual();
+}
+function balao(quem, txt, interino) {
+  const ch = $('chat'); if (!ch) return;
+  let b = ch.querySelector('.bal.int');
+  if (b && quem === 'u') { b.remove(); b = null; }
+  b = document.createElement('div'); b.className = 'bal ' + quem + (interino ? ' int' : ''); b.textContent = txt; ch.appendChild(b); ch.scrollTop = ch.scrollHeight;
+}
+function interino(txt) { const ch = $('chat'); if (!ch) return; let b = ch.querySelector('.bal.int'); if (!b) { b = document.createElement('div'); b.className = 'bal u int'; ch.appendChild(b); } b.textContent = txt; ch.scrollTop = ch.scrollHeight; }
+function desenharAtual() {
+  const el = $('atual'); if (!el || !C) return; $('prog').innerHTML = barraProg();
+  const it = atual(); const c = contagem();
+  const NOMESEC = { inicio: 'Condições de início', execucao: 'Execução do serviço', pos: 'Pós-execução' };
+  const cab = it ? `<span class="meta">${it.secao ? esc(NOMESEC[it.secao] || it.secao) + ' · ' : ''}${esc(it.id.includes('.') ? it.id : 'Item ' + (itens().indexOf(it) + 1))} · ${c.ok + c.nc + c.na} de ${itens().length} respondidos</span><span class="q">${esc(it.txt)}</span>` : '';
+  const b = (cls, txt, fala2) => `<button type="button" class="${cls}" data-f="${esc(fala2)}">${txt}</button>`;
+  let h = '';
+  if (MODO === 'foto') h = `<span class="q">Não conforme: ${esc(NC ? NC.desc : '')}</span><div class="cam"><video playsinline muted autoplay></video></div>
+      <div class="fts">${(NC ? NC.fotos : []).map(f => `<img src="${f.url}" alt="Foto">`).join('')}</div><div class="bts">${b('b-pri', '📷 Tirar foto', 'tira')}${b('', 'Pronto', 'pronto')}${b('', 'Sem foto', 'sem foto')}</div>`;
+  else if (MODO === 'descricao') h = `${cab}<div class="digitar"><input id="dDesc" placeholder="O que está errado?" autocomplete="off"><button class="btn" type="button" id="dOk">OK</button></div><div class="bts">${b('', 'Pular', 'pula')}</div>`;
+  else if (MODO === 'confirmaPend') h = `<span class="q">Abrir pendência: ${esc(NC ? NC.desc : '')}</span><span class="meta">${esc([C.unidade ? 'Apto ' + C.unidade : C.pavimento, NC && comodoDe(NC.desc) || C.comodo].filter(Boolean).join(' · '))} · ${esc(C.modelo.oficio)} · ${NC ? NC.fotos.length : 0} foto(s)</span><div class="bts">${b('b-pri', 'Abrir pendência', 'sim')}${b('', 'Só anotar', 'só anota')}${b('', 'Mudar descrição', 'muda a descrição')}</div>`;
+  else if (['confirmaResto', 'confirmaEncerrar', 'foraTol'].includes(MODO)) h = `${cab}<div class="bts">${b('b-ok', 'Sim', 'sim')}${b('', 'Não', 'não')}</div>`;
+  else if (MODO === 'pausa') h = `<span class="q">Pausado</span><div class="bts">${b('b-pri', 'Continuar', 'continuar')}</div>`;
+  else if (it) h = `${cab}${it.tipo === 'medida' ? `<div class="num"><input id="nVal" type="number" inputmode="decimal" step="any" placeholder="Medida em ${esc(it.unidade)} (${esc(limitesTxt(it))})"><button class="btn" type="button" id="nOk">OK</button></div>` : ''}
+      <div class="bts">${it.tipo === 'medida' && !it.aceitaSim ? '' : b('b-ok', '✓ Conforme', 'sim')}${b('b-nc', '✗ Não conforme', 'não conforme')}${b('', 'Não se aplica', 'não se aplica')}${b('', 'Pular', 'pula')}</div>`;
+  h += `<div class="digitar"><input id="dTxt" placeholder="Ou digite como falaria…" autocomplete="off" aria-label="Digitar resposta"><button class="btn ghost" type="button" id="dEnv">Enviar</button></div>`;
+  el.innerHTML = h;
+  el.querySelectorAll('[data-f]').forEach(x => x.onclick = () => { if (x.dataset.f === 'tira' && MODO === 'foto') { pararOuvir(); balao('u', '📷'); tirarFoto(); return; } processar(x.dataset.f, 'botao'); });
+  if ($('nOk')) $('nOk').onclick = () => { const v = $('nVal').value; if (v) processar(v + ' ' + atual().unidade, 'botao'); };
+  if ($('dOk')) $('dOk').onclick = () => { const v = $('dDesc').value.trim(); if (v) processar(v, 'botao'); };
+  const env = () => { const v = $('dTxt').value.trim(); if (v) { $('dTxt').value = ''; processar(v, 'digitado'); } };
+  $('dEnv').onclick = env; $('dTxt').onkeydown = ev => { if (ev.key === 'Enter') env(); };
+  if (MODO === 'foto' && STREAM) { const v = el.querySelector('video'); if (v) { v.srcObject = STREAM; v.play().catch(() => {}); } }
+}
+
+/* ======================= voz: falar e ouvir ======================= */
+let VOZES = null, FALANDO = false;
+function vozPt() {
+  if (!('speechSynthesis' in window)) return null;
+  if (!VOZES || !VOZES.length) VOZES = speechSynthesis.getVoices();
+  const pt = VOZES.filter(v => /^pt[-_]BR/i.test(v.lang)); const pt2 = pt.length ? pt : VOZES.filter(v => /^pt/i.test(v.lang));
+  return pt2.find(v => /google|luciana|francisca|natural|online/i.test(v.name)) || pt2[0] || null;
+}
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { VOZES = speechSynthesis.getVoices(); };
+// fala o texto (e escreve no chat); depois chama "depois"
+function dizer(txt, depois) {
+  txt = String(txt || '').replace(/\s+/g, ' ').trim(); if (!txt) { if (depois) depois(); return; }
+  pararOuvir(); balao('a', txt); desenharAtual();
+  const fim = () => { FALANDO = false; micEstado(); if (depois) setTimeout(depois, 120); };
+  if (!VOZ.falar || !('speechSynthesis' in window)) { fim(); return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt.replace(/\bmm\b/g, 'milímetros').replace(/\bcm\b/g, 'centímetros').replace(/#/g, 'número '));
+    u.lang = 'pt-BR'; const v = vozPt(); if (v) u.voice = v; u.rate = 1.07; u.pitch = 1;
+    let feito = false; const ok = () => { if (feito) return; feito = true; clearTimeout(t); fim(); };
+    u.onend = ok; u.onerror = ok;
+    const t = setTimeout(ok, 2500 + txt.length * 85);   // alguns aparelhos não avisam o fim da fala
+    FALANDO = true; micEstado(); speechSynthesis.speak(u);
+  } catch (e) { fim(); }
+}
+let REC = null, OUVINDO = false, TENTATIVAS = 0;
+function ouvir() {
+  if (!C || MODO === 'fim' || !VOZ.ouvir || !SR || FALANDO) { micEstado(); return; }
+  pararOuvir();
+  try {
+    const r = new SR(); REC = r; r.lang = 'pt-BR'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
+    let final = false;
+    r.onresult = ev => {
+      let txt = '', fin = false; const alts = [];
+      for (let i = ev.resultIndex; i < ev.results.length; i++) { txt += ev.results[i][0].transcript; if (ev.results[i].isFinal) { fin = true; for (let k = 0; k < ev.results[i].length; k++) alts.push(ev.results[i][k].transcript); } }
+      if (!fin) { interino(txt); return; }
+      final = true; TENTATIVAS = 0;
+      // entre as alternativas, a primeira que faz sentido para o momento
+      const boa = alts.find(a => { const e = V.entender(a); return e.pol || e.cmds.length || e.num; }) || alts[0] || txt;
+      REC = null; OUVINDO = false; try { r.stop(); } catch (e) {}
+      processar(boa, 'voz');
+    };
+    r.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { VOZ.ouvir = false; micTxt('Microfone bloqueado: libere nas permissões do navegador, ou use os botões'); const b = $('tOuvir'); if (b) b.setAttribute('aria-pressed', 'false'); } };
+    r.onend = () => { if (REC !== r) return; REC = null; OUVINDO = false; micEstado();
+      // não ouviu nada: volta a escutar (com limite, para não gastar bateria à toa)
+      if (!final && C && MODO !== 'fim' && VOZ.ouvir && !FALANDO) { TENTATIVAS++; if (TENTATIVAS <= 6) setTimeout(ouvir, 250); else { TENTATIVAS = 0; micTxt('Toque em 🎙 Microfone para voltar a ouvir'); } } };
+    r.start(); OUVINDO = true; micEstado();
+  } catch (e) { OUVINDO = false; micEstado(); }
+}
+function pararOuvir() { const r = REC; REC = null; OUVINDO = false; if (r) { try { r.abort(); } catch (e) {} } }
+function micTxt(t) { const el = $('micT'); if (el) el.textContent = t; }
+function micEstado() { const m = $('mic'); if (!m) return; m.className = 'mic' + (OUVINDO ? ' ouv' : FALANDO ? ' fal' : '');
+  micTxt(FALANDO ? 'Falando…' : OUVINDO ? 'Ouvindo… pode falar' : VOZ.ouvir ? 'Microfone pronto' : 'Microfone desligado: responda pelos botões'); }
+function pararTudo() { pararOuvir(); try { speechSynthesis.cancel(); } catch (e) {} desligarCamera(); liberarTela(); }
+
+/* ---------- câmera (foto por voz: não precisa tocar) ---------- */
+let STREAM = null;
+async function ligarCamera() {
+  if (STREAM) return true;
+  try { STREAM = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false }); desenharAtual(); return true; }
+  catch (e) { STREAM = null; return false; }
+}
+function desligarCamera() { if (STREAM) { STREAM.getTracks().forEach(t => t.stop()); STREAM = null; } }
+// tela sempre ligada durante a conferência
+let TRAVA = null;
+async function pedirTelaLigada() { try { if (navigator.wakeLock) TRAVA = await navigator.wakeLock.request('screen'); } catch (e) {} }
+function liberarTela() { try { if (TRAVA) TRAVA.release(); } catch (e) {} TRAVA = null; }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && C && MODO !== 'fim') pedirTelaLigada(); });
+
+/* ---------- conferência guardada ---------- */
+function verHist(id) {
+  const h = (HIST || []).find(x => x.id === id); if (!h) return;
+  openSheet(h.modelo_nome, `<p class="muted" style="margin:0">${esc([h.pavimento, h.unidade ? 'Apto ' + h.unidade : '', h.comodo].filter(Boolean).join(' · '))} · ${fmtDH(h.inicio)} · ${esc(nomeDe(h.por))} · ${h.modo === 'voz' ? 'por voz' : 'na tela'}</p>
+    <div class="res">${(h.itens || []).map(x => { const st = x.st || 'vz'; return `<div class="ri ${st}"><span class="ic">${{ ok: '✓', nc: '✗', na: '—', vz: '?' }[st]}</span><span>${esc(x.txt)}</span><small>${st === 'ok' ? (x.valor != null ? num(x.valor) + ' ' + (x.unidade || '') + ' · ' : '') + 'conforme' + (x.lote ? ' (no “resto tudo ok”)' : '') : st === 'na' ? 'não se aplica' : st === 'nc' ? esc(x.desc || '') + (x.pnum ? ' · pendência #' + x.pnum : ' · só anotado') : 'sem resposta'}</small></div>`; }).join('')}</div>`);
+}
+function openSheet(t, body, foot) { const o = $('ovl'); $('ovlT').textContent = t; $('ovlB').innerHTML = body; $('ovlF').innerHTML = foot || ''; o.hidden = false; }
+function closeSheet() { $('ovl').hidden = true; $('ovlB').innerHTML = ''; }
+$('ovl').addEventListener('click', ev => { if (ev.target === $('ovl')) closeSheet(); });
+$('ovlX').onclick = closeSheet;
+window.addEventListener('beforeunload', ev => { if (C && MODO !== 'fim') { salvar(true); } });
+
+/* ======================= início ======================= */
+(async function iniciar() {
+  NV = await (window.NUVEM_PRONTA || Promise.resolve(null));
+  if (!NV) { $('main').innerHTML = '<div class="vazio"><h3>Precisa do banco online</h3></div>'; return; }
+  sb = NV.cliente; OBRA = NV.obraId;
+  try { await carregar(); }
+  catch (e) {
+    if (e.naoTem) { $('main').innerHTML = '<div class="vazio"><h3>Obra não encontrada</h3><a class="btn" href="index.html" style="text-decoration:none">Ver as obras</a></div>'; return; }
+    $('main').innerHTML = `<div class="vazio"><h3>Não foi possível carregar</h3><p class="muted" style="margin:0">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">Recarregar</button></div>`; return;
+  }
+  $('obraNome').textContent = OBRA_NOME; document.title = OBRA_NOME + ' · Conferências';
+  inicio();
+  window.__CONF = { processar, estado: () => ({ MODO, C, NC }) };   // para testes
+})();
+})();
+</script>
+</body>
+</html>
