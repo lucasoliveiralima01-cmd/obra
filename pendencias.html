@@ -355,7 +355,6 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="app.js"></script>
 <script src="relatorio-pdf.js"></script>
 <script src="config.js"></script>
@@ -1307,7 +1306,8 @@ async function lerLogo(arq) {
   cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
   return cv.toDataURL('image/png');
 }
-function formRelatorio() {
+async function formRelatorio() {
+  if (!window.jspdf) { try { await AppObra.lib('jspdf'); } catch (e) {} }
   if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
   let logo = lsLer('pend_logo');
   openSheet('Relatório em PDF', `<div class="fld"><span class="l">Modelo</span><div class="opts small" id="rgMod"><button type="button" class="opt" data-mod="consolidado">Consolidado (2 por página)</button><button type="button" class="opt" data-mod="individual">Individual (1 por página)</button><button type="button" class="opt" data-mod="foto">Fotográfico</button><button type="button" class="opt" data-mod="lista">Lista detalhada</button></div><div class="relmod"><span id="rgModV"></span><p id="rgModD"></p></div></div>
@@ -1462,6 +1462,7 @@ async function gerarRelPadrao(modelo, arr, o, prog) {
 }
 // ficha: exportar só esta pendência (relatório individual)
 async function exportarIndividual(p) {
+  if (!window.jspdf) { try { await AppObra.lib('jspdf'); } catch (e) {} }
   if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
   toast('Gerando o PDF…', 15000);
   try { const r = await gerarRelPadrao('individual', [p], { endereco: lsLer('pend_end_' + OBRA), empresa: lsLer('pend_empresa') || 'PAVEI Empreendimentos', logo: lsLer('pend_logo') }, () => {});

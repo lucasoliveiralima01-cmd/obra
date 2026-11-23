@@ -271,7 +271,6 @@ details summary{cursor:pointer;font-size:.8rem;color:var(--muted)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>/* Leitor IFC (STEP) em JavaScript puro — sem WebAssembly.
    Lê entidades sob demanda, monta placements, pavimentos, propriedades e
    triangula a geometria dos tipos mais comuns em exportações de Revit/ArchiCAD/TQS.
@@ -940,7 +939,6 @@ details summary{cursor:pointer;font-size:.8rem;color:var(--muted)}
   root.IFCReader = { readIFC, parseArgs, decodeStr };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
-<script src="start.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
 <script src="config.js"></script>
@@ -2194,7 +2192,7 @@ function exportSheet(kind){
     const r2=v.quadro&&n?buildQuadro(st,v,dpi/25.4):null;
     if(kind==='png'){ const b=await new Promise(res=>r.cv.toBlob(res,'image/png')); if(!b){ msg.textContent='O navegador não conseguiu gerar a imagem.'; msg.className='msg err'; return } await Store.saveFile(base+'.png',b,'image/png');
       if(r2){ const b2=await new Promise(res=>r2.cv.toBlob(res,'image/png')); if(b2) await Store.saveFile(base+'_quadro.png',b2,'image/png') } }
-    else { if(!window.jspdf){ msg.textContent='A biblioteca de PDF não carregou. Verifique a conexão e tente de novo.'; msg.className='msg err'; return }
+    else { if(!window.jspdf){ msg.textContent='Carregando o gerador de PDF…'; await libOk('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js') } if(!window.jspdf){ msg.textContent='A biblioteca de PDF não carregou. Verifique a conexão e tente de novo.'; msg.className='msg err'; return }
       const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:[Wmm,Hmm],compress:true}); pdf.setProperties({title:'Mapa de risco – '+st.name,subject:'Mapa de riscos (NR-5)',creator:'Mapa de Risco'});
       pdf.addImage(r.cv,'PNG',0,0,Wmm,Hmm,undefined,'FAST'); if(r2){ pdf.addPage([Wmm,Hmm],'landscape'); pdf.addImage(r2.cv,'PNG',0,0,Wmm,Hmm,undefined,'FAST') } await Store.saveFile(base+'.pdf',pdf.output('blob'),'application/pdf') }
     msg.textContent=(kind==='pdf'?(r2?'PDF com 2 folhas gerado':'PDF gerado'):(r2?'Imagens da planta e do quadro geradas':'Imagem gerada'))+(dpi<v.dpi?' (resolução reduzida para '+dpi+' dpi pelo tamanho da folha)':'')+'.'; };
@@ -2213,7 +2211,11 @@ async function parseIFC(name,buf){
   try{ return await IFCReader.readIFC(text,{onProgress:async(st,p)=>{ setLoading(true,null,st+'…',p); await sleep(0) }}) }
   catch(err){ console.error(err); setLoading(false); toast('Não foi possível ler '+name+'. '+(err&&err.message||'')); return null }
 }
-async function loadDemo(){ const bin=Uint8Array.from(atob(window.DEMO_IFC_GZ),c=>c.charCodeAt(0)); return await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer() }
+// bibliotecas e dados pesados: só são baixados quando usados
+const LIBS={};
+function lib(src){ return LIBS[src]||(LIBS[src]=new Promise((res,rej)=>{ const x=document.createElement('script'); x.src=src; x.onload=res; x.onerror=()=>{ delete LIBS[src]; rej(new Error('não carregou '+src)) }; document.head.appendChild(x) })) }
+const libOk=src=>lib(src).catch(e=>console.warn(e));
+async function loadDemo(){ if(!window.DEMO_IFC_GZ) await lib('start.js'); const bin=Uint8Array.from(atob(window.DEMO_IFC_GZ),c=>c.charCodeAt(0)); return await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer() }
 async function openModel(name,buf,isDemo){ const res=await parseIFC(name,buf); if(!res) return false; setupModel(res,name,isDemo); setLoading(false); afterDataChange(); P.fitted=null; setView(S.view); return true }
 $('bIfc').onclick=()=>{
   const info=S.res?`<dl class="kv"><dt>Modelo atual</dt><dd>${esc(S.modelName)}${S.isDemo?' (exemplo)':''}</dd><dt>Pavimentos</dt><dd>${S.storeys.length}</dd><dt>Elementos</dt><dd>${S.els.length}</dd></dl>`:'';
@@ -2328,7 +2330,7 @@ async function loadExample(){ if(S.readOnly){toast('Acesso somente leitura.');re
   toast('Exemplo carregado: mapa de risco do térreo feito à mão, redesenhado sobre o modelo de exemplo.',6000) }
 
 // grava o exemplo embutido (as peças que já existirem com o mesmo id ficam como estão)
-async function putExample(){ const ex=clone(window.EXAMPLE_AREAS||[]), ey=clone(window.EXAMPLE_SYMS||[]), er=window.EXAMPLE_REV?clone(window.EXAMPLE_REV):null;
+async function putExample(){ if(!window.EXAMPLE_AREAS) await libOk('start.js'); const ex=clone(window.EXAMPLE_AREAS||[]), ey=clone(window.EXAMPLE_SYMS||[]), er=window.EXAMPLE_REV?clone(window.EXAMPLE_REV):null;
   for(const a of ex){ if(S.areas.some(x=>x.id===a.id)) continue; if(await Store.put('areas',a)===false) return false; if(Store.kind==='db') await sleep(40) }
   for(const y of ey){ if(S.syms.some(x=>x.id===y.id)) continue; if(await Store.put('simbolos',y)===false) return false; if(Store.kind==='db') await sleep(40) }
   if(er&&!S.revs.some(x=>x.id===er.id)) await Store.put('revisoes',er); return true }

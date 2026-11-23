@@ -341,6 +341,7 @@ const nomeDe = e => NV && NV.pessoas ? NV.pessoas.nome(e) : String(e || '').spli
 
 /* ======================= a conferência ======================= */
 let C = null;          // conferência em andamento
+window.paginaOcupada = () => !!C && MODO !== 'fim';
 let MODO = 'pergunta'; // pergunta | descricao | foto | confirmaPend | confirmaResto | confirmaEncerrar | medidaExata | foraTol | pausa | fim
 let NC = null;         // não conforme em registro: {item, desc, fotos:[{blob,url}], valor}
 let ERROS = 0;         // respostas que não entendi seguidas

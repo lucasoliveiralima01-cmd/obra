@@ -2,7 +2,7 @@
    Abertura rápida e funcionamento sem sinal.
    - Páginas, scripts, ícones e bibliotecas: abre na hora com a cópia guardada no
      aparelho e, ao mesmo tempo, busca a versão publicada para a próxima abertura.
-     Se a versão publicada mudou, a página recebe o aviso e oferece "Atualizar".
+     Se o conteúdo publicado mudou, avisa a página, que se atualiza sozinha (app.js).
    - Sem cópia guardada (primeira vez): vai à internet normalmente.
    Os dados (Supabase) não passam por aqui.
    ===================================================================== */
@@ -45,10 +45,23 @@ const guardar = u => /\.(html|js|css|png|svg|webmanifest|woff2?)(\?|$)/.test(u.p
 const chave = u => u.origin === location.origin ? new Request(u.origin + u.pathname) : null;
 // versão publicada mudou? (ETag/Last-Modified do GitHub Pages; sem eles, o tamanho)
 const marca = r => r ? (r.headers.get('etag') || '') + '|' + (r.headers.get('last-modified') || '') + '|' + (r.headers.get('content-length') || '') : '';
-let avisado = 0;
+// junta as mudanças de vários arquivos (página + scripts) num aviso só, depois de todos gravados
+let espera = null;
 function avisarNovidade() {
-  const agora = Date.now(); if (agora - avisado < 4000) return; avisado = agora;
-  self.clients.matchAll({ type: 'window' }).then(cs => cs.forEach(c => c.postMessage({ tipo: 'versao-nova' })));
+  if (espera) clearTimeout(espera.t); else { let ok; espera = { p: new Promise(r => ok = r) }; espera.ok = ok; }
+  const e = espera;
+  e.t = setTimeout(() => { espera = null; self.clients.matchAll({ type: 'window' }).then(cs => cs.forEach(c => c.postMessage({ tipo: 'versao-nova' }))).finally(e.ok); }, 1500);
+  return e.p;
+}
+// mesmo conteúdo? (o cabeçalho pode mudar sem o arquivo mudar)
+async function igual(a, b) {
+  try {
+    const [x, y] = await Promise.all([a.arrayBuffer(), b.clone().arrayBuffer()]);
+    if (x.byteLength !== y.byteLength) return false;
+    const p = new Uint8Array(x), q = new Uint8Array(y);
+    for (let i = 0; i < p.length; i++) if (p[i] !== q[i]) return false;
+    return true;
+  } catch (e) { return true; }
 }
 
 self.addEventListener('fetch', ev => {
@@ -60,15 +73,18 @@ self.addEventListener('fetch', ev => {
   const k = chave(u) || r;
   ev.respondWith(caches.open(CACHE).then(async c => {
     const velho = await c.match(k);
+    const copia = meu && velho ? velho.clone() : null;   // para comparar o conteúdo depois (o original vai para a página)
     // do próprio site: confere a versão publicada (304 é rápido); bibliotecas: têm versão fixa no endereço
+    let depois = Promise.resolve();
     const rede = (meu ? fetch(u.origin + u.pathname + u.search, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(r)).then(res => {
       if (res && (res.ok || res.type === 'opaque')) {
-        if (meu && velho && marca(velho) !== marca(res) && /\.(html|js|css)$|\/$/.test(u.pathname)) avisarNovidade();
-        c.put(k, res.clone()).catch(() => {});
+        const mudou = meu && velho && marca(velho) !== marca(res) && /\.(html|js|css)$|\/$/.test(u.pathname);
+        const grava = c.put(k, res.clone()).catch(() => {});
+        if (mudou) depois = Promise.all([igual(copia, res), grava]).then(([ig]) => ig ? null : avisarNovidade());
       }
       return res;
     });
-    if (velho) { ev.waitUntil(rede.catch(() => {})); return velho; }
+    if (velho) { ev.waitUntil(rede.then(() => depois).catch(() => {})); return velho; }
     return rede.catch(() => (r.mode === 'navigate' ? c.match(new Request(location.origin + new URL('pendencias.html', self.registration.scope).pathname)) : undefined).then(m => m || Response.error()));
   }));
 });

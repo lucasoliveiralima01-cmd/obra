@@ -94,10 +94,6 @@
   .mo-trilha .hbtn[hidden]{display:none}
   .mo-trilha .hbtn.pendchip{background:var(--warn-soft,#fbecd2);color:var(--warn,#b86e00);border-color:var(--warn,#b86e00)}
   .mo-trilha .hbtn.alerta{background:var(--bad-soft,#f8e0dc);color:var(--bad,#c23b2f);border-color:var(--bad,#c23b2f)}
-  #moVersao{position:fixed;z-index:70;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;
-    background:#22425c;color:#fff;border-radius:12px;padding:8px 8px 8px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3);font:600 .88rem var(--f-body,sans-serif);max-width:calc(100vw - 24px)}
-  #moVersao button{background:#fff;color:#22425c;border:0;border-radius:8px;padding:7px 12px;font:700 .85rem var(--f-body,sans-serif);cursor:pointer}
-  #moVersao button.x{background:none;color:#d4e4ee;padding:4px 8px;font-size:1.2rem;line-height:1}
   @media (max-width:640px){.mo-abas{width:100%;justify-content:space-between;gap:2px;order:3}.mo-abas a{padding:2px}.mo-abas a img{width:31px;height:31px}
     .brand .hctl{width:auto;margin-left:auto;order:2}
     .brand .ttl{width:auto;flex:1 1 0;min-width:0}
@@ -239,19 +235,41 @@
   window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); pedido = ev; botaoInstalar(); });
   window.addEventListener('appinstalled', () => { pedido = null; const b = document.getElementById('bInstalar'); if (b) b.remove(); });
 
-  /* ---------------- versão nova publicada ---------------- */
-  // as páginas abrem com a cópia guardada no aparelho (rápido); quando o site muda, avisa aqui
-  function avisoVersao() {
-    if (document.getElementById('moVersao')) return;
-    const d = document.createElement('div'); d.id = 'moVersao'; d.setAttribute('role', 'status');
-    d.innerHTML = '<span>Há uma versão nova do app.</span><button type="button">Atualizar</button><button type="button" aria-label="Fechar" class="x">×</button>';
-    d.querySelector('button').onclick = () => location.reload();
-    d.querySelector('.x').onclick = () => d.remove();
-    document.body.appendChild(d);
+  /* ---------------- versão nova publicada: atualiza sozinho ---------------- */
+  // As páginas abrem com a cópia guardada no aparelho (rápido) e o sw.js já baixa a versão nova.
+  // A tela recarrega sozinha só quando não atrapalha: logo ao abrir (antes de mexer em algo) ou
+  // ao voltar para o app. Se a pessoa começou a preencher algo, tirar foto ou conferir,
+  // não recarrega: a versão nova entra ao abrir a próxima tela.
+  const abriuEm = Date.now(); let temNova = false, mexeu = false, tocou = false;
+  const campo = el => el && el.closest && el.closest('input,textarea,select,[contenteditable="true"]');
+  document.addEventListener('focusin', ev => { if (campo(ev.target)) mexeu = true; }, true);
+  document.addEventListener('input', () => { mexeu = true; }, true);
+  document.addEventListener('pointerdown', ev => { tocou = true; if (campo(ev.target)) mexeu = true; }, true);
+  function podeRecarregar() {
+    if (mexeu || document.visibilityState !== 'visible') return false;
+    try { if (typeof window.paginaOcupada === 'function' && window.paginaOcupada()) return false; } catch (e) { return false; }
+    try { const k = 'app_recarga', u = +sessionStorage.getItem(k) || 0; if (Date.now() - u < 60000) return false; sessionStorage.setItem(k, String(Date.now())); } catch (e) {}
+    return true;
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.tipo === 'versao-nova') avisoVersao(); });
+  function versaoNova() {
+    temNova = true;
+    if (!tocou && Date.now() - abriuEm < 15000 && podeRecarregar()) location.reload();
+  }
+  document.addEventListener('visibilitychange', () => { if (temNova && podeRecarregar()) location.reload(); });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.tipo === 'versao-nova') versaoNova(); });
 
-  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema, pinca };
+  // bibliotecas pesadas (PDF, Excel…): baixadas só quando usadas
+  const LIBS = { jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' }, carregando = {};
+  function lib(nome) {
+    const src = LIBS[nome] || nome;
+    return carregando[src] || (carregando[src] = new Promise((ok, erro) => {
+      const s = document.createElement('script'); s.src = src; s.onload = ok;
+      s.onerror = () => { delete carregando[src]; erro(new Error('não carregou ' + src)); };
+      document.head.appendChild(s);
+    }));
+  }
+
+  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema, pinca, lib };
   if ('serviceWorker' in navigator) window.AppObra.registro = navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw', e); return null; });
 
   function iniciar() {

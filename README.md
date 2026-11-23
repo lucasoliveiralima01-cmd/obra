@@ -53,7 +53,7 @@ Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse ca
 | `planejamento.html`, `plan-pdf.js` | Planejamento: lê o PDF do médio prazo e do PCP, semana e dia, erros, histórico e frentes |
 | `ifc-leitor.js`, `fachada-gerar.js` | Leem o IFC da arquitetura e geram as imagens das fachadas (só carregam na hora de gerar) |
 | `sw.js` | Guarda as páginas no aparelho para as pendências abrirem sem sinal |
-| `start.js`, `start-concretagem.js` | Dados da obra Start (modelo IFC, mapa de risco e concretagens) |
+| `start.js`, `start-concretagem.js` | Dados da obra Start (modelo IFC, mapa de risco e concretagens). Baixados só quando usados (carga inicial ou modelo de exemplo) |
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
 | `nuvem.js` | Login, perfil de quem entrou, cadastro de obras e conexão com o banco (não precisa mexer) |
 | `estilo.css` | Cores e fontes comuns a todas as páginas (tema claro e escuro) |
