@@ -1290,7 +1290,7 @@ function formComentario(p, titulo, rotulo, botao, para) {
 
 /* ---------------- relatório em PDF ---------------- */
 const GRUPOS = { disciplina: 'Ofício de quem corrige', tipo: 'Tipo de problema', pavimento: 'Pavimento' };
-const FSTATUS = { nfechadas: ['Não fechadas', p => p.status !== 'fechada'], avaliacao: ['Em avaliação', p => p.status === 'avaliacao'], abertas: ['Abertas e em correção', p => p.status === 'aberta' || p.status === 'em_correcao'], corrigidas: ['Corrigidas (aguardando aprovação)', p => p.status === 'corrigida'], fechadas: ['Fechadas', p => p.status === 'fechada'], todas: ['Todas', () => true] };
+const FSTATUS = { naberto: ['Abertas, em correção e em avaliação', p => ['aberta', 'em_correcao', 'avaliacao'].includes(p.status)], corfec: ['Corrigidas e fechadas', p => p.status === 'corrigida' || p.status === 'fechada'], nfechadas: ['Não fechadas', p => p.status !== 'fechada'], avaliacao: ['Em avaliação', p => p.status === 'avaliacao'], abertas: ['Abertas e em correção', p => p.status === 'aberta' || p.status === 'em_correcao'], corrigidas: ['Corrigidas (aguardando aprovação)', p => p.status === 'corrigida'], fechadas: ['Fechadas', p => p.status === 'fechada'], todas: ['Todas', () => true] };
 // opções do relatório fotográfico guardadas neste aparelho (logo da empresa e endereço de cada obra)
 const lsLer = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
 const lsGravar = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; } catch (e) { return false; } };
@@ -1306,6 +1306,7 @@ function formRelatorio() {
   if (!window.jspdf) { toast('A biblioteca de PDF não carregou. Verifique a conexão.'); return; }
   let logo = lsLer('pend_logo');
   openSheet('Relatório em PDF', `<div class="fld"><span class="l">Modelo</span><div class="opts small" id="rgMod"><button type="button" class="opt" data-mod="consolidado">Consolidado (2 por página)</button><button type="button" class="opt" data-mod="individual">Individual (1 por página)</button><button type="button" class="opt" data-mod="foto">Fotográfico (não conformidade)</button><button type="button" class="opt" data-mod="lista">Lista detalhada</button></div><p class="muted" id="rgModD" style="margin:0"></p></div>
+    <div class="fld" id="rgVer"><span class="l">Versão</span><div class="opts small"><button type="button" class="opt" data-ver="aberto">Em aberto (antes)</button><button type="button" class="opt" data-ver="pos">Pós-correção (antes e depois)</button></div></div>
     <div class="fld"><label for="rgS">Status</label><select id="rgS">${Object.entries(FSTATUS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div>
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rgL" checked> Usar também os filtros da lista (pavimento, ofício, tipo, prioridade, busca)</label>
     <div id="rgPav" style="display:grid;gap:12px">
@@ -1330,11 +1331,21 @@ function formRelatorio() {
     <div id="rgP" hidden><div class="muted" id="rgPT"></div><div class="prog"><i id="rgPB"></i></div></div>`,
     '<span class="msg" id="rgM"></span><button class="btn ghost" id="rgC" type="button">Fechar</button><button class="btn" id="rgOk" type="button">Gerar PDF</button>');
   let mod = lsLer('pend_rel_mod2') || 'consolidado';
-  const DESC = { consolidado: 'Duas pendências por página, com fotos do antes e do depois e a correção. Fotos extras e textos longos vão para os anexos no fim.', individual: 'Uma página por pendência: dados completos, fotos do antes e do depois, local na planta, correção e encerramento.', foto: 'Fotos em duas colunas com legenda numerada, no modelo do relatório de não conformidade.', lista: 'Lista agrupada, com os dados de cada pendência e fotos pequenas.' };
+  let ver = lsLer('pend_rel_ver') || 'aberto';
+  // status de cada versão do consolidado
+  const SV = { aberto: [['abertas', 'Abertas e em correção'], ['avaliacao', 'Em avaliação'], ['naberto', 'Abertas, em correção e em avaliação']], pos: [['corfec', 'Corrigidas e fechadas'], ['corrigidas', 'Só corrigidas (aguardando aprovação)'], ['fechadas', 'Só fechadas']] };
+  const encherStatus = () => { const sel = $('rgS'), at = sel.value;
+    const L3 = mod === 'consolidado' ? SV[ver] : Object.entries(FSTATUS).filter(([k]) => !['naberto', 'corfec'].includes(k)).map(([k, v]) => [k, v[0]]);
+    sel.innerHTML = L3.map(([k, n]) => `<option value="${k}">${n}</option>`).join(''); if (L3.some(x => x[0] === at)) sel.value = at; };
+  const DESC = { consolidado: 'Duas pendências por página. Em aberto: dados e fotos do antes. Pós-correção: antes e depois lado a lado, a correção e a linha do tempo (registrada, corrigida e fechada). Fotos extras e textos longos vão para os anexos.', individual: 'Uma página por pendência: dados completos, fotos do antes e do depois, local na planta, correção e encerramento.', foto: 'Fotos em duas colunas com legenda numerada, no modelo do relatório de não conformidade.', lista: 'Lista agrupada, com os dados de cada pendência e fotos pequenas.' };
   const vis = (id, on) => { $(id).hidden = !on; $(id).style.display = on ? 'grid' : 'none'; };
   const marcaMod = () => { $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mod === mod))); $('rgModD').textContent = DESC[mod];
+    vis('rgVer', mod === 'consolidado'); encherStatus();
     vis('rgFoto', mod === 'foto'); vis('rgLista', mod === 'lista'); vis('rgPav', mod === 'consolidado' || mod === 'individual'); vis('rgLogoBox', mod !== 'lista'); };
-  $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { mod = b.dataset.mod; marcaMod(); }); marcaMod();
+  $('rgMod').querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { mod = b.dataset.mod; marcaMod(); });
+  const marcaVer = () => $('rgVer').querySelectorAll('[data-ver]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ver === ver)));
+  $('rgVer').querySelectorAll('[data-ver]').forEach(b => b.onclick = () => { ver = b.dataset.ver; marcaVer(); encherStatus(); });
+  marcaVer(); marcaMod();
   $('rgLogo').onchange = async e => { const a = e.target.files[0]; if (!a) return; try { logo = await lerLogo(a); if (!lsGravar('pend_logo', logo)) toast('O logo vale só para este relatório (o aparelho não deixou guardar).'); $('rgLogoV').src = logo; $('rgLogoV').style.display = ''; $('rgLogoX').hidden = false; } catch (er) { toast('Não foi possível ler a imagem.'); } };
   $('rgLogoX').onclick = () => { logo = ''; lsGravar('pend_logo', ''); $('rgLogoV').style.display = 'none'; $('rgLogoX').hidden = true; };
   $('rgC').onclick = closeSheet;
@@ -1349,7 +1360,8 @@ function formRelatorio() {
     try {
       if (mod === 'consolidado' || mod === 'individual') {
         const end = $('rgEnd2').value.trim(), emp = $('rgEmp').value.trim(); lsGravar('pend_end_' + OBRA, end); lsGravar('pend_empresa', emp);
-        const r = await gerarRelPadrao(mod, arr, { endereco: end, empresa: emp, logo, resumo: FSTATUS[s][0] + ($('rgL').checked ? ' · com os filtros da lista' : '') }, prog);
+        if (mod === 'consolidado') lsGravar('pend_rel_ver', ver);
+        const r = await gerarRelPadrao(mod === 'consolidado' ? ver : mod, arr, { endereco: end, empresa: emp, logo, resumo: FSTATUS[s][0] + ($('rgL').checked ? ' · com os filtros da lista' : '') }, prog);
         if (r.falhas) { $('rgM').className = 'msg err'; $('rgM').textContent = 'PDF gerado, mas ' + r.falhas + ' imagem(ns) não carregaram (aparecem como "Foto não carregada"). Confira a conexão e gere de novo.'; $('rgOk').disabled = false; return; }
       } else if (mod === 'foto') {
         const end = $('rgEnd').value.trim(), tit = $('rgTit').value.trim() || 'RELATÓRIO DE NÃO CONFORMIDADE';
@@ -1460,7 +1472,10 @@ async function prepararPend(p, comPlanta, contar) {
     status: p.status, statusTxt: ST[p.status] || p.status, prioridade: p.prioridade, prioridadeTxt: (PRI[p.prioridade] || ['—'])[0],
     servico: p.tipo, responsavel: [p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : '', p.responsavel_nome || (p.equipe ? EQUIPE[p.equipe] : '')].filter(Boolean).join(' · ') || 'A definir',
     bloqueia: (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; '),
-    registrada: fmtDH(p.criado_em) + ' · ' + nomeDe(p.criado_por),
+    registrada: fmtDH(p.criado_em) + ' · ' + nomeDe(p.criado_por), regEm: fmtDH(p.criado_em), regPor: nomeDe(p.criado_por),
+    prazoTxt: p.prazo ? 'Prazo ' + fmtD(p.prazo).slice(0, 5) + (p.status !== 'fechada' && p.status !== 'corrigida' && p.prazo < hoje() ? ' · atrasada' : '') : '',
+    respOficio: p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : 'A definir', respNome: p.responsavel_nome || (p.equipe ? EQUIPE[p.equipe] : ''),
+    atrasada: !!(p.prazo && p.status !== 'fechada' && p.status !== 'corrigida' && p.prazo < hoje()),
     fotos: { antes: await Promise.all(antes.map(carregar)), depois: await Promise.all(depois.map(carregar)) },
     dataAntes: antes.length && antes[0].em ? fmtD(antes[0].em) : '', dataDepois: depois.length && depois[0].em ? fmtD(depois[0].em) : '',
     planta, plantaMsg: p.ponto ? 'Planta indisponível' : 'Local não marcado na planta',
@@ -1477,7 +1492,7 @@ async function gerarRelPadrao(modelo, arr, o, prog) {
   let logo = null; if (o.logo) { const im = new Image(); await new Promise(r => { im.onload = r; im.onerror = r; im.src = o.logo; }); if (im.naturalWidth) logo = { d: o.logo, r: im.naturalWidth / im.naturalHeight, tipo: /^data:image\/jpe?g/.test(o.logo) ? 'JPEG' : 'PNG' }; }
   prog('Montando o PDF…', .95);
   const { pdf, layout } = RelatorioPDF.gerar(modelo, dados, { obra: OBRA_NOME, endereco: o.endereco, empresa: o.empresa, logo, emissao: fmtD(hoje()), resumo: o.resumo });
-  const nome = 'Pendencias_' + (modelo === 'individual' ? 'individual' : 'consolidado') + '_' + String(OBRA_NOME).replace(/[^\wÀ-ú]+/g, '_') + (arr.length === 1 && arr[0].numero ? '_' + arr[0].numero : '') + '_' + hoje().replace(/-/g, '') + '.pdf';
+  const nome = 'Pendencias_' + ({ individual: 'individual', aberto: 'em_aberto', pos: 'pos_correcao' }[modelo] || 'consolidado') + '_' + String(OBRA_NOME).replace(/[^\wÀ-ú]+/g, '_') + (arr.length === 1 && arr[0].numero ? '_' + arr[0].numero : '') + '_' + hoje().replace(/-/g, '') + '.pdf';
   const b = pdf.output('blob'); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
   window.__ultimoRelatorio = { modelo, layout, paginas: pdf.getNumberOfPages() };   // para conferir as posições nos testes
   return { falhas, layout };
