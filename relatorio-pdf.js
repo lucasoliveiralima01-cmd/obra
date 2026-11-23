@@ -1,6 +1,7 @@
 /* =====================================================================
    Relatórios de pendências em PDF (jsPDF): Consolidado (duas versões:
-   "Em aberto" e "Pós-correção", dois cartões por página) e Individual.
+   "Em aberto" e "Pós-correção", dois cartões por página), Individual (uma
+   pendência por página) e Fotográfico (um cartão por pendência com as fotos dela).
    Este arquivo só desenha. Quem chama (pendencias.html) entrega os dados
    já prontos, com as fotos e a planta carregadas (imagem + tamanho).
 
@@ -122,83 +123,11 @@
     const pad = 3, aw = w - 2 * pad, ah = h - 2 * pad, r = pl.w / pl.h; let iw = aw, ih = aw / r; if (ih > ah) { ih = ah; iw = ah * r; }
     pdf.addImage(pl.d, 'JPEG', x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
   }
-  // texto da correção e do fechamento (o que existir; nada é presumido)
-  function linhasEncerramento(p) {
-    const cor = p.correcao ? 'Corrigida: ' + [p.correcao.por, p.correcao.em].filter(Boolean).join(' · ') : 'Correção: ainda não informada';
-    const fec = p.fechamento ? 'Fechada: ' + [p.fechamento.por, p.fechamento.em].filter(Boolean).join(' · ') : p.status === 'corrigida' ? 'Fechamento: aguardando aprovação' : 'Fechamento: em aberto';
-    return { cor, fec };
-  }
-
-  /* ---------------- Modelo A: Individual (uma pendência por página) ---------------- */
-  function paginaIndividual(pdf, o, p, anexos) {
-    const m = MED.ind, X = PG.M, R = PG.W - PG.M;
-    cabecalho(pdf, o, 'FICHA INDIVIDUAL  •  Pendência ' + p.numeroTxt);
-    // B. identificação
-    fonte(pdf, 'bold', 8, COR.azul); pdf.text('PENDÊNCIA ' + p.numeroTxt.toUpperCase(), X, m.idY);
-    selo(pdf, p.status, p.statusTxt, R, m.idY - 2, 36);
-    fonte(pdf, 'bold', 14.5, COR.tinta); const t = caber(pdf, p.titulo, PG.L - 42, 1); pdf.text(t.ls, X, m.titY);
-    fonte(pdf, 'bold', 9, COR.cinza); pdf.text(uma(pdf, p.localTxt, PG.L), X, m.locY);
-    if (p.descricao && p.descricao !== p.titulo) { fonte(pdf, 'normal', 8.2, COR.tinta); const d = caber(pdf, p.descricao, PG.L, m.descLinhas); pdf.text(d.ls, X, m.descY); if (d.cortou) anexos.push({ tipo: 'texto', rot: 'Descrição completa', txt: p.descricao }); }
-    else if (t.cortou) anexos.push({ tipo: 'texto', rot: 'Descrição completa', txt: p.titulo });
-    const g = 4, w3 = (PG.L - 2 * g) / 3, w2 = (PG.L - g) / 2;
-    cartao(pdf, X, m.cards1Y, w3, m.cardH, 'Serviço', p.servico);
-    cartao(pdf, X + w3 + g, m.cards1Y, w3, m.cardH, 'Prioridade', p.prioridadeTxt, COR_PRI[p.prioridade]);
-    cartao(pdf, X + 2 * (w3 + g), m.cards1Y, w3, m.cardH, 'Responsável', p.responsavel);
-    cartao(pdf, X, m.cards2Y, w2, m.cardH, 'Bloqueia', p.bloqueia || 'Nenhum serviço bloqueado');
-    cartao(pdf, X + w2 + g, m.cards2Y, w2, m.cardH, 'Registrada', p.registrada);
-    if (p.bloqueia && pdf.getTextWidth(p.bloqueia) > w2 - 8) anexos.push({ tipo: 'texto', rot: 'Serviços bloqueados', txt: p.bloqueia });
-    // C. fotos
-    tituloSecao(pdf, '01', 'Registro fotográfico', m.sec1Y);
-    quadroFotos(pdf, 'ANTES' + (p.dataAntes ? '  |  ' + p.dataAntes : ''), p.fotos.antes, X, m.fotoY, w2, m.fotoH);
-    quadroFotos(pdf, 'DEPOIS' + (p.dataDepois ? '  |  ' + p.dataDepois : ''), p.fotos.depois, X + w2 + g, m.fotoY, w2, m.fotoH);
-    // D. planta
-    tituloSecao(pdf, '02', 'Localização na planta', m.sec2Y);
-    plantaArea(pdf, p.planta, p.plantaMsg, X, m.plantaY, PG.L, m.plantaH);
-    // E. correção e encerramento
-    tituloSecao(pdf, '03', 'Correção e encerramento', m.sec3Y);
-    pdf.setFillColor(...COR.fundo); pdf.roundedRect(X, m.encY, PG.L, m.encH, 2, 2, 'F');
-    rotulo(pdf, 'Correção informada', X + 4, m.encY + 5);
-    fonte(pdf, 'bold', 9, COR.tinta); const c = caber(pdf, p.correcao && p.correcao.texto ? p.correcao.texto : 'Sem descrição da correção', PG.L - 8, 1); pdf.text(c.ls, X + 4, m.encY + 10);
-    if (c.cortou) anexos.push({ tipo: 'texto', rot: 'Correção informada (completa)', txt: p.correcao.texto });
-    const e = linhasEncerramento(p); fonte(pdf, 'normal', 7.8, COR.tinta);
-    pdf.text(uma(pdf, e.cor, PG.L / 2 - 6), X + 4, m.encY + 15.5); pdf.text(uma(pdf, e.fec, PG.L / 2 - 6), X + PG.L / 2 + 2, m.encY + 15.5);
-    return { y0: m.idY - 5, y1: m.encY + m.encH };
-  }
-
-  /* ---------------- Modelo B: Consolidado (dois blocos iguais por página) ---------------- */
-  function bloco(pdf, p, y0, anexos) {
-    const H = MED.con.blocoH, X = PG.M, R = PG.W - PG.M, pad = 5, ix = X + pad, iw = PG.L - 2 * pad;
-    pdf.setDrawColor(...COR.linha); pdf.setLineWidth(0.35); pdf.roundedRect(X, y0, PG.L, H, 2, 2, 'S');
-    pdf.setFillColor(...COR.azul); pdf.rect(X, y0, PG.L, 1.4, 'F');
-    // A. identificação compacta
-    fonte(pdf, 'bold', 7.8, COR.azul); pdf.text('PENDÊNCIA ' + p.numeroTxt.toUpperCase(), ix, y0 + 7.5);
-    selo(pdf, p.status, p.statusTxt, R - pad, y0 + 4, 30);
-    fonte(pdf, 'bold', 11, COR.tinta); const t = caber(pdf, p.titulo, iw - 34, 1); pdf.text(t.ls, ix, y0 + 14);
-    if (t.cortou || (p.descricao && p.descricao !== p.titulo)) anexos.push({ tipo: 'texto', rot: 'Descrição completa', txt: p.descricao || p.titulo });
-    fonte(pdf, 'normal', 8, COR.cinza); pdf.text(uma(pdf, p.localTxt, iw), ix, y0 + 19);
-    fonte(pdf, 'normal', 7.6, COR.tinta);
-    pdf.text(uma(pdf, 'Serviço: ' + p.servico + '   |   Prioridade: ' + p.prioridadeTxt + '   |   Resp.: ' + (p.responsavel || '—'), iw), ix, y0 + 24.5);
-    if (p.bloqueia) { const b = caber(pdf, 'Bloqueia: ' + p.bloqueia, iw, 1); pdf.text(b.ls, ix, y0 + 29); if (b.cortou) anexos.push({ tipo: 'texto', rot: 'Serviços bloqueados', txt: p.bloqueia }); }
-    // B. fotos (áreas fixas)
-    const g = 5, w2 = (iw - g) / 2, fy = y0 + MED.con.fotoY, fh = MED.con.fotoH;
-    quadroFotos(pdf, 'ANTES', p.fotos.antes, ix, fy, w2, fh);
-    quadroFotos(pdf, 'DEPOIS', p.fotos.depois, ix + w2 + g, fy, w2, fh);
-    // C. conclusão
-    const cy = fy + fh + 5;
-    rotulo(pdf, 'Correção', ix, cy, COR.azul);
-    fonte(pdf, 'bold', 8.6, COR.tinta); const c = caber(pdf, p.correcao && p.correcao.texto ? p.correcao.texto : 'Sem descrição da correção', iw, 1); pdf.text(c.ls, ix, cy + 4.6);
-    if (c.cortou) anexos.push({ tipo: 'texto', rot: 'Correção informada (completa)', txt: p.correcao.texto });
-    const e = linhasEncerramento(p); fonte(pdf, 'normal', 7.6, COR.cinza);
-    pdf.text(uma(pdf, e.cor + '     |     ' + e.fec, iw), ix, cy + 9.4);
-    fonte(pdf, 'normal', 6.6, COR.cinzaClaro); pdf.text(uma(pdf, 'Registrada em ' + p.registrada, iw), ix, y0 + H - 3);
-    return { y0, y1: y0 + H };
-  }
-
   /* ---------------- anexos: fotos excedentes e textos longos ---------------- */
   function anexosPaginas(pdf, o, modelo, lista) {
     // lista: [{ p, itens: [{tipo:'texto', rot, txt} | {tipo:'foto', rot, im}] }]
     let y = 0, abriu = false;
-    const novo2 = modelo === 'Em aberto' || modelo === 'Pós-correção';
+    const novo2 = true;
     const nova = sub => { pdf.addPage(); if (novo2) { cab2(pdf, o, modelo + ' · anexos', lista.length); y = L2.card1 + 2; } else { cabecalho(pdf, o, sub); y = MED.cab.fim + 6; } abriu = true; };
     const limite = MED.rod.linhaY - 6;
     for (const { p, itens } of lista) {
@@ -244,8 +173,8 @@
   function cab2(pdf, o, versaoTxt, n) {
     if (o.logo) { let h = 15, w = h * o.logo.r; if (w > 50) { w = 50; h = w / o.logo.r; } pdf.addImage(o.logo.d, o.logo.tipo || 'PNG', PG.M, 9 + (15 - h) / 2, w, h); }
     else { fonte(pdf, 'bold', 16, C2.navy); pdf.text(uma(pdf, o.empresa || o.obra, 80), PG.M, 20); }
-    fonte(pdf, 'bold', 15, C2.tinta); pdf.text('RELATÓRIO DE PENDÊNCIAS', PG.W - PG.M, L2.cabTit, { align: 'right' });
-    fonte(pdf, 'normal', 10, [70, 100, 130]); pdf.text(versaoTxt.toUpperCase() + '   |   ' + n + ' registro' + (n === 1 ? '' : 's'), PG.W - PG.M, L2.cabSub, { align: 'right' });
+    fonte(pdf, 'bold', 15, C2.tinta); pdf.text(uma(pdf, (o.titulo || 'RELATÓRIO DE PENDÊNCIAS').toUpperCase(), 120), PG.W - PG.M, L2.cabTit, { align: 'right' });
+    fonte(pdf, 'normal', 10, [70, 100, 130]); pdf.text(versaoTxt.toUpperCase() + (n == null ? '' : '   |   ' + n + ' registro' + (n === 1 ? '' : 's')), PG.W - PG.M, L2.cabSub, { align: 'right' });
     pdf.setDrawColor(...C2.navy); pdf.setLineWidth(0.7); pdf.line(PG.M, L2.cabLinha, PG.W - PG.M, L2.cabLinha);
     // OBRA Start  |  endereço  |  EMISSÃO: data
     let x = PG.M; const y = L2.obraY, sep = () => { fonte(pdf, 'normal', 10, C2.cinza); pdf.text('|', x + 2.5, y); x += 7.5; };
@@ -312,6 +241,8 @@
     fonte(pdf, 'bold', 9.6, C2.navy); pdf.text(tit, x + 4.5, y + 6.6); if (mais) { const tw = pdf.getTextWidth(tit); fonte(pdf, 'normal', 7.6, C2.cinza); pdf.text(mais, x + 4.5 + tw, y + 6.6); }
     const ax = x + 4, ay = y + 10, aw = w - 8, ah = h - 14, L = fotos.slice(0, 4), g = 3.2;
     if (!L.length) return semFotos(pdf, ax, ay, aw, ah, 'Sem registro fotográfico');
+    if (modo === 'ind' && L.length === 1) { pdf.setFillColor(226, 231, 236); pdf.roundedRect(ax, ay, aw, ah, 1.6, 1.6, 'F'); return fotoNaCelula(pdf, L[0], ax, ay, aw, ah); }   // foto inteira, sem cortar
+    if (modo === 'ind' && L.length === 2) { const ch = (ah - g) / 2; L.forEach((im, i) => fotoCobre(pdf, im, ax, ay + i * (ch + g), aw, ch)); return; }
     if (modo === 'fileira' || L.length <= 2) { const cw = (aw - (L.length - 1) * g) / L.length; L.forEach((im, i) => fotoCobre(pdf, im, ax + i * (cw + g), ay, cw, ah)); return; }
     const cw = (aw - g) / 2, ch = (ah - g) / 2; L.forEach((im, i) => fotoCobre(pdf, im, ax + (i % 2) * (cw + g), ay + Math.floor(i / 2) * (ch + g), cw, ch));
   }
@@ -390,38 +321,130 @@
     return { pdf, layout };
   }
 
+
+  /* ================= Individual: uma pendência por página, no mesmo visual ================= */
+  function linhaTempo(pdf, p, ix, iw, by, bh, anexos) {
+    const cw = 50;
+    fonte(pdf, 'bold', 9.6, C2.navy); pdf.text('CORREÇÃO', ix, by + 5);
+    const txt = p.correcao && p.correcao.texto ? p.correcao.texto : (p.correcao ? 'Sem descrição da correção.' : 'Ainda não corrigida.');
+    fonte(pdf, 'normal', 8.6, C2.tinta); const c = caber(pdf, txt, cw - 2, 3); pdf.text(c.ls, ix, by + 10);
+    if (c.cortou) anexos.push({ tipo: 'texto', rot: 'Correção informada (completa)', txt });
+    pdf.setDrawColor(...C2.borda); pdf.setLineWidth(0.3); pdf.line(ix + cw + 1.5, by, ix + cw + 1.5, by + bh);
+    const x0 = ix + cw + 5, sw = 7.2, chw = (ix + iw - x0 - 2 * sw) / 3;
+    chip(pdf, 'reg', 'REGISTRADA', 'doc', p.regPor, p.regEm, x0, by, chw, bh);
+    seta(pdf, x0 + chw + 1.8, by + bh / 2);
+    chip(pdf, p.correcao ? 'cor' : 'nada', 'CORRIGIDA', 'chave', p.correcao && p.correcao.por, p.correcao ? p.correcao.em : 'Aguardando', x0 + chw + sw, by, chw, bh);
+    seta(pdf, x0 + 2 * chw + sw + 1.8, by + bh / 2);
+    chip(pdf, p.fechamento ? 'fec' : 'nada', 'FECHADA', 'ok', p.fechamento && p.fechamento.por, p.fechamento ? p.fechamento.em : 'Aguardando', x0 + 2 * (chw + sw), by, chw, bh);
+  }
+  function painelPlanta(pdf, pl, msg, x, y, w, h) {
+    pdf.setFillColor(...C2.painel); pdf.setDrawColor(222, 229, 235); pdf.setLineWidth(0.3); pdf.roundedRect(x, y, w, h, 2.5, 2.5, 'FD');
+    fonte(pdf, 'bold', 9.6, C2.navy); pdf.text('LOCALIZAÇÃO NA PLANTA', x + 4.5, y + 6.6);
+    const ax = x + 4, ay = y + 10, aw = w - 8, ah = h - 14;
+    if (!pl || pl.erro) return semFotos(pdf, ax, ay, aw, ah, pl && pl.erro ? 'Planta não carregada' : msg || 'Local não marcado na planta');
+    const r = pl.w / pl.h; let iw = aw, ih = aw / r; if (ih > ah) { ih = ah; iw = ah * r; }
+    pdf.setFillColor(255, 255, 255); pdf.roundedRect(ax + (aw - iw) / 2 - 1, ay + (ah - ih) / 2 - 1, iw + 2, ih + 2, 1.2, 1.2, 'F');
+    pdf.addImage(pl.d, 'JPEG', ax + (aw - iw) / 2, ay + (ah - ih) / 2, iw, ih);
+  }
+  function paginaIndividual2(pdf, o, p, anexos) {
+    const y = L2.card1, H = L2.rodLinha - 5 - y, ix = PG.M + 5.5, iw = PG.L - 11;
+    moldura(pdf, y, H); topoCard(pdf, p, y, ix, iw, []);
+    // descrição completa (quando é maior que o título)
+    let yy = y + 31;
+    if (p.descricao && p.descricao !== p.titulo) { fonte(pdf, 'normal', 9.2, C2.tinta); const d = caber(pdf, p.descricao, iw, 3); pdf.text(d.ls, ix, yy + 1.5); yy += d.ls.length * 4.4 + 1.5; if (d.cortou) anexos.push({ tipo: 'texto', rot: 'Descrição completa', txt: p.descricao }); }
+    else if (pdf.getTextWidth(p.titulo) > iw - 44) anexos.push({ tipo: 'texto', rot: 'Descrição completa', txt: p.titulo });
+    yy = Math.max(yy, y + 31) + 1;
+    faixa(pdf, ix, yy, iw, 19.5, [
+      { rot: 'Serviço', val: p.servico, sub: p.bloqueia ? 'Bloqueia: ' + p.bloqueia : 'Não bloqueia serviço', peso: 30 },
+      { rot: 'Prioridade', val: p.prioridadeTxt, cor: COR_PRI[p.prioridade], sub: p.prazoTxt || '', subCor: p.atrasada ? [178, 46, 34] : null, peso: 21 },
+      { rot: 'Responsável', val: p.respOficio || p.responsavel, sub: p.respNome || '', peso: 24 },
+      { rot: 'Registro', val: p.regEm, sub: p.regPor ? 'por ' + p.regPor : '', peso: 25 }], anexos);
+    if (p.bloqueia && p.bloqueia.length > 46) anexos.push({ tipo: 'texto', rot: 'Serviços bloqueados', txt: p.bloqueia });
+    const fim = y + H - 4, bh = 17.5, by = fim - bh, sep = by - 4;
+    const temPlanta = !!(p.planta || p.plantaMsg === 'Planta indisponível');
+    const fy = yy + 23, plH = temPlanta ? 52 : 0, fh = sep - 4 - fy - (plH ? plH + 4 : 0), g = 5, w2 = (iw - g) / 2;
+    painelFotos(pdf, 'ANTES' + (p.dataAntes ? '  ·  ' + p.dataAntes : ''), p.fotos.antes, ix, fy, w2, fh, 'ind');
+    painelFotos(pdf, 'DEPOIS' + (p.dataDepois ? '  ·  ' + p.dataDepois : ''), p.fotos.depois, ix + w2 + g, fy, w2, fh, 'ind');
+    if (plH) painelPlanta(pdf, p.planta, p.plantaMsg, ix, fy + fh + 4, iw, plH);
+    pdf.setDrawColor(...C2.borda); pdf.setLineWidth(0.3); pdf.line(ix, sep, ix + iw, sep);
+    linhaTempo(pdf, p, ix, iw, by, bh, anexos);
+    return { y0: y, y1: y + H };
+  }
+
+  /* ================= Fotográfico: um cartão por pendência, com as fotos dela ================= */
+  const F3 = { col: 2, g: 4, fotoH: 60, leg: 5, grupoH: 7, topo: 27, pe: 4 };
+  function topoFoto(pdf, p, y, ix, iw, cont) {
+    fonte(pdf, 'bold', 11, C2.navy); pdf.text('PENDÊNCIA ' + p.numeroTxt.toUpperCase() + (cont ? '  (continuação)' : ''), ix, y + 10.5);
+    pill(pdf, p, ix + iw, y + 4.8);
+    fonte(pdf, 'bold', 12, C2.tinta); pdf.text(uma(pdf, p.titulo, iw - 44), ix, y + 17.5);
+    fonte(pdf, 'normal', 9.4, [80, 98, 116]); pdf.text(uma(pdf, p.localTxt + (p.servico ? '   ·   ' + p.servico : ''), iw), ix, y + 23.2);
+  }
+  function gerarFotografico(pends, o) {
+    const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    const vt = 'Relatório fotográfico', layout = [], ix = PG.M + 5.5, iw = PG.L - 11, cw = (iw - (F3.col - 1) * F3.g) / F3.col;
+    const topoPag = L2.card1, fimPag = L2.rodLinha - 5;
+    pdf.setProperties({ title: (o.titulo || 'Relatório fotográfico') + ' · ' + o.obra, author: o.empresa || '', creator: 'Ferramentas da Obra' });
+    let y = 0;
+    const pagina = () => { if (pdf.getNumberOfPages() > 1 || y) pdf.addPage(); cab2(pdf, o, vt, pends.length); y = topoPag; };
+    pagina();
+    if (o.objeto) {   // objeto do relatório (primeira página)
+      fonte(pdf, 'normal', 9.2, C2.tinta); const ls = caber(pdf, o.objeto, PG.L - 12, 3).ls; const h = 8 + ls.length * 4.3;
+      pdf.setFillColor(...C2.faixa); pdf.roundedRect(PG.M, y, PG.L, h, 2.2, 2.2, 'F');
+      fonte(pdf, 'bold', 7.6, C2.rot); pdf.text('OBJETO', PG.M + 5, y + 5.5); fonte(pdf, 'normal', 9.2, C2.tinta); pdf.text(ls, PG.M + 5, y + 10);
+      y += h + 5;
+    }
+    for (const p of pends) {
+      // grupos de fotos desta pendência
+      const grupos = [{ rot: 'ANTES', fotos: p.fotos.antes }];
+      if (o.depois && p.fotos.depois.length) grupos.push({ rot: 'DEPOIS', fotos: p.fotos.depois });
+      const linhas = []; grupos.forEach(gp => { linhas.push({ tipo: 'grupo', rot: gp.rot + '  (' + gp.fotos.length + ')', vazio: !gp.fotos.length });
+        for (let k = 0; k < gp.fotos.length; k += F3.col) linhas.push({ tipo: 'fotos', fotos: gp.fotos.slice(k, k + F3.col), rot: gp.rot, ini: k }); });
+      if (o.planta && (p.planta || p.plantaMsg === 'Planta indisponível')) linhas.push({ tipo: 'planta' });   // só quando o local foi marcado
+      const alt = l => l.tipo === 'grupo' ? F3.grupoH + (l.vazio ? 7 : 0) : l.tipo === 'fotos' ? F3.fotoH + F3.leg + 1.5 : 48;
+      const total = F3.topo + linhas.reduce((a, l) => a + alt(l), 0) + F3.pe;
+      // o cartão inteiro cabe no resto da página? senão, página nova (e, se nem numa página inteira couber, continua na seguinte)
+      // não cabe no resto da página: vai inteiro para a próxima se o espaço que sobra é pouco; senão começa aqui e continua (com "continuação")
+      const resta = fimPag - y; if (total > resta && resta < (total <= fimPag - topoPag ? 120 : 90)) pagina();
+      let i = 0, cont = false;
+      while (i < linhas.length || !cont) {
+        let h = F3.topo, k = i; while (k < linhas.length && y + h + alt(linhas[k]) + F3.pe <= fimPag) { h += alt(linhas[k]); k++; }
+        if (k > i + 1 && k < linhas.length && linhas[k - 1].tipo === 'grupo' && !linhas[k - 1].vazio) { k--; h -= alt(linhas[k]); }   // título "ANTES/DEPOIS" vai junto com as fotos
+        if (k === i && i < linhas.length && y > topoPag) { pagina(); continue; }
+        if (k === i && i < linhas.length) k = i + 1, h += alt(linhas[i]);   // linha maior que a página: entra assim mesmo
+        const y0 = y; h += F3.pe; moldura(pdf, y0, h); topoFoto(pdf, p, y0, ix, iw, cont);
+        let cy = y0 + F3.topo;
+        for (let n = i; n < k; n++) { const l = linhas[n];
+          if (l.tipo === 'grupo') { fonte(pdf, 'bold', 9, C2.navy); pdf.text(l.rot, ix, cy + 5); pdf.setDrawColor(...C2.borda); pdf.setLineWidth(0.3); pdf.line(ix + pdf.getTextWidth(l.rot) + 3, cy + 4, ix + iw, cy + 4);
+            if (l.vazio) { fonte(pdf, 'normal', 8.4, [150, 160, 170]); pdf.text('Sem registro fotográfico', ix, cy + 11.5); } }
+          else if (l.tipo === 'fotos') l.fotos.forEach((im, m) => { const fx = ix + m * (cw + F3.g); fotoCobre(pdf, im, fx, cy, cw, F3.fotoH);
+            fonte(pdf, 'normal', 7.4, C2.cinza); pdf.text(p.numeroTxt + '  ·  ' + (l.rot === 'ANTES' ? 'Antes ' : 'Depois ') + (l.ini + m + 1), fx + cw / 2, cy + F3.fotoH + 3.8, { align: 'center' }); });
+          else painelPlanta(pdf, p.planta, p.plantaMsg, ix, cy + 1, iw, 45);
+          cy += alt(l); }
+        layout.push({ pend: p.numeroTxt, pagina: pdf.getNumberOfPages(), y0, y1: y0 + h });
+        y = y0 + h + 5; i = k; cont = true;
+        if (i < linhas.length) pagina();
+      }
+    }
+    const tot = pdf.getNumberOfPages(); for (let k = 1; k <= tot; k++) { pdf.setPage(k); rod2(pdf, o, vt, k, tot); }
+    return { pdf, layout };
+  }
+
   /* ---------------- geração ---------------- */
   // modelo: 'individual' | 'consolidado'; devolve { pdf, layout } (layout = posição de cada bloco, para conferir)
   function gerar(modelo, pends, o) {
     if (modelo === 'aberto' || modelo === 'pos') return gerarConsolidado(modelo, pends, o);
-    const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true });
-    const layout = []; const nomeModelo = modelo === 'individual' ? 'Individual' : 'Consolidado';
-    // propriedades do arquivo (aparecem no leitor de PDF e na busca do computador)
-    pdf.setProperties({ title: 'Relatório de pendências · ' + nomeModelo + ' · ' + o.obra, subject: 'Pendências da obra ' + o.obra + ' (' + pends.length + ')', author: o.empresa || '', creator: 'Ferramentas da Obra' });
-    if (modelo === 'individual') {
-      pends.forEach((p, i) => {
-        if (i) pdf.addPage();
-        const anexos = []; const r = paginaIndividual(pdf, o, p, anexos);
-        layout.push({ pend: p.numeroTxt, pagina: pdf.getNumberOfPages(), y0: r.y0, y1: r.y1 });
-        const itens = anexos.concat(excedentes(p)); if (itens.length) anexosPaginas(pdf, o, nomeModelo, [{ p, itens }]);
-      });
-    } else {
-      const c = MED.con, todos = [];
-      for (let i = 0; i < pends.length; i += 2) {
-        if (i) pdf.addPage();
-        cabecalho(pdf, o, 'CONSOLIDADO  •  ' + pends.length + ' pendência' + (pends.length > 1 ? 's' : ''));
-        fonte(pdf, 'bold', 10, COR.azul); pdf.text('REGISTROS SELECIONADOS', PG.M, c.tituloY);
-        if (o.resumo) { fonte(pdf, 'normal', 7.6, COR.cinza); pdf.text(uma(pdf, o.resumo, 100), PG.W - PG.M, c.tituloY, { align: 'right' }); }
-        for (let k = 0; k < 2 && i + k < pends.length; k++) {
-          const p = pends[i + k], y0 = c.bloco1Y + k * (c.blocoH + c.gap), anexos = [];
-          const r = bloco(pdf, p, y0, anexos);
-          layout.push({ pend: p.numeroTxt, pagina: pdf.getNumberOfPages(), y0: r.y0, y1: r.y1 });
-          todos.push({ p, itens: anexos.concat(excedentes(p)) });
-        }
-      }
-      if (todos.some(x => x.itens.length)) anexosPaginas(pdf, o, nomeModelo, todos);
-    }
-    const tot = pdf.getNumberOfPages(); for (let k = 1; k <= tot; k++) { pdf.setPage(k); rodape(pdf, o, nomeModelo, k, tot); }
+    if (modelo === 'fotografico') return gerarFotografico(pends, o);
+    // individual: uma página por pendência (e os anexos dela logo depois)
+    const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true }), layout = [], vt = 'Ficha individual';
+    pdf.setProperties({ title: 'Relatório de pendências · Individual · ' + o.obra, subject: 'Pendências da obra ' + o.obra + ' (' + pends.length + ')', author: o.empresa || '', creator: 'Ferramentas da Obra' });
+    pends.forEach((p, i) => {
+      if (i) pdf.addPage();
+      cab2(pdf, o, vt + '  ·  ' + p.numeroTxt, null);
+      const anexos = []; const r = paginaIndividual2(pdf, o, p, anexos);
+      layout.push({ pend: p.numeroTxt, pagina: pdf.getNumberOfPages(), y0: r.y0, y1: r.y1 });
+      const itens = anexos.concat(excedentes(p)); if (itens.length) anexosPaginas(pdf, o, vt, [{ p, itens }]);
+    });
+    const tot = pdf.getNumberOfPages(); for (let k = 1; k <= tot; k++) { pdf.setPage(k); rod2(pdf, o, vt, k, tot); }
     return { pdf, layout };
   }
 
