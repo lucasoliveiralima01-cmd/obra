@@ -1058,7 +1058,7 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('ovl'
     window.AppObra.itemMenu('Zerar o planejamento…', zerar);
   }
   if (q.get('aba')) history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA));
-  try { sb.channel('plan-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'frentes', filter: 'obra=eq.' + OBRA }, () => { if ($('ovl').hidden) { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); } }).subscribe(); } catch (e) {}
+  try { sb.channel('plan-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'frentes', filter: 'obra=eq.' + OBRA }, () => { if ($('ovl').hidden) { clearTimeout(iniciar.t); iniciar.t = setTimeout(() => AppObra.quandoVisivel(recarregar), 500); } }).subscribe(); } catch (e) {}
 })();
 })();
 </script>

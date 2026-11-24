@@ -57,7 +57,8 @@ Se o `config.js` ficar vazio, o site abre sem login, no **modo local**. Nesse ca
 | `config.js` | Onde você cola o endereço e a chave do Supabase |
 | `nuvem.js` | Login, perfil de quem entrou, cadastro de obras e conexão com o banco (não precisa mexer) |
 | `estilo.css` | Cores e fontes comuns a todas as páginas (tema claro e escuro) |
-| `banco.sql` | O banco inteiro: tabelas, regras de acesso e pasta de arquivos. Serve para instalar e para atualizar |
+| `banco.sql` | Atualização do banco (passos recentes). É o arquivo que se roda a cada mudança |
+| `banco-instalacao.sql` | Base do banco (passos 1 a 21: tabelas, regras de acesso e pasta de arquivos). Só para banco novo |
 | `admin.html`, `listas.html` | Administração (pessoas, perfis, obras, dados) e Listas e regras (ofícios, problemas, locais…) |
 | `supabase/functions/` | Funções `notificar` (avisos) e `usuarios` (convites, backup e limpeza da lixeira) |
 
@@ -84,8 +85,9 @@ Se o banco estiver desatualizado, a página de **Administração** avisa no topo
 
 1. Crie uma conta em [supabase.com](https://supabase.com) e um projeto novo (o plano gratuito serve para começar).
 2. No projeto, abra **SQL Editor → New query**.
-3. Abra o `banco.sql`, troque `SEU_EMAIL@exemplo.com` (no começo) pelo seu e-mail, cole tudo no editor e clique em **Run**. Você vira o primeiro administrador.
-4. Vá em **Project Settings → API** (ou **Data API / API Keys**) e copie:
+3. Abra o `banco-instalacao.sql`, troque `SEU_EMAIL@exemplo.com` (no começo) pelo seu e-mail, cole tudo no editor e clique em **Run**. Você vira o primeiro administrador.
+4. Numa query nova, cole o `banco.sql` inteiro e clique em **Run** (traz os passos recentes).
+5. Vá em **Project Settings → API** (ou **Data API / API Keys**) e copie:
    - **Project URL**, só o endereço, sem `/rest/v1/` no fim;
    - a chave **anon / publishable** (nunca a `service_role` / `secret`).
 

@@ -1043,8 +1043,8 @@ async function comprimir(arq) {
   // aberto pelo QR Code da etiqueta (câmera comum do celular): já abre o material
   if (q.get('m')) { const cod = q.get('m'); history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA)); abrirCodigo('M' === cod[0].toUpperCase() ? cod : 'M' + cod); }
   if (estoque()) setTimeout(() => detector().catch(() => {}), 1500);
-  try { sb.channel('alm-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'alm_movs', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'alm_materiais', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(recarregar, 500); }).subscribe(); } catch (e) {}
+  try { sb.channel('alm-' + OBRA).on('postgres_changes', { event: '*', schema: 'public', table: 'alm_movs', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(() => AppObra.quandoVisivel(recarregar), 500); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'alm_materiais', filter: 'obra=eq.' + OBRA }, () => { clearTimeout(iniciar.t); iniciar.t = setTimeout(() => AppObra.quandoVisivel(recarregar), 500); }).subscribe(); } catch (e) {}
 })();
 })();
 </script>

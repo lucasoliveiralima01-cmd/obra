@@ -269,7 +269,15 @@
     }));
   }
 
-  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema, pinca, lib };
+  // recarregar dados com a tela escondida é desperdício: guarda para quando ela voltar
+  const naVolta = new Set();
+  function quandoVisivel(fn) { if (!document.hidden) return fn(); naVolta.add(fn); }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !naVolta.size) return;
+    const l = [...naVolta]; naVolta.clear(); l.forEach(f => { try { f(); } catch (e) { console.warn(e); } });
+  });
+
+  window.AppObra = { ehIOS, instalado, registro: null, paraMenu, itemMenu, aplicarTema, pinca, lib, quandoVisivel };
   if ('serviceWorker' in navigator) window.AppObra.registro = navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw', e); return null; });
 
   function iniciar() {

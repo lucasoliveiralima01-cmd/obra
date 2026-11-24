@@ -395,9 +395,22 @@
         })
         .subscribe();
     } catch (e) { console.warn('Tempo real indisponível', e); }
-    // reforço: confere de novo ao voltar para a aba e a cada 30 s
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) agendar(null); });
-    setInterval(() => { if (!document.hidden) agendar(null); }, 30000);
+    // reforço (caso o tempo real perca algo): ao voltar para a aba e a cada 30 s, uma consulta
+    // pequena (quantos registros e o último horário) diz se mudou algo; só então baixa de novo
+    let ultimaMarca = null;
+    async function conferir() {
+      try {
+        const { data, count, error } = await sb.from(T).select('atualizado_em', { count: 'exact' })
+          .eq('painel', painel).order('atualizado_em', { ascending: false }).limit(1);
+        if (error) { agendar(null); return; }
+        const m = count + '|' + (data && data[0] ? data[0].atualizado_em : '');
+        if (ultimaMarca !== null && m !== ultimaMarca) agendar(null);
+        ultimaMarca = m;
+      } catch (e) { /* sem rede: tenta na próxima */ }
+    }
+    conferir();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) conferir(); });
+    setInterval(() => { if (!document.hidden) conferir(); }, 30000);
   }
 
   /* =====================================================================

@@ -758,7 +758,11 @@ window.addEventListener('online', () => { status(); sincronizar(); recarregar();
 window.addEventListener('offline', status);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { sincronizar(); recarregar(); } });
 let rt = null;
-function recarregar() { clearTimeout(rt); rt = setTimeout(async () => { if (!navigator.onLine || sincronizando || (!$('ovl').hidden && $('ovl').dataset.form)) return; try { await carregarServidor(); render(); reabrirDetalhe(); } catch (e) { console.warn(e); } }, 400); }
+function recarregar() { clearTimeout(rt); rt = setTimeout(() => AppObra.quandoVisivel(recarregarJa), 400); }
+async function recarregarJa() {
+  if (!navigator.onLine || sincronizando || (!$('ovl').hidden && $('ovl').dataset.form)) return;
+  try { await carregarServidor(); render(); reabrirDetalhe(); } catch (e) { console.warn(e); }
+}
 
 /* ======================= telas ======================= */
 function render() {
@@ -1626,10 +1630,12 @@ async function formAvisos() {
   const pAviso = new URLSearchParams(location.search).get('p');
   if (pAviso) { if (itens().some(x => x.id === pAviso)) detalhe(pAviso); else toast('Esta pendência não está mais disponível para você.'); history.replaceState(null, '', location.pathname + '?obra=' + encodeURIComponent(OBRA)); }
   // ao vivo: quando alguém muda uma pendência, a lista atualiza
+  // (fotos e histórico chegam de todas as obras que a pessoa vê: só recarrega se for desta)
+  const desta = ev => { const r = (ev && (ev.new && ev.new.pendencia ? ev.new : ev.old)) || {}; if (!r.pendencia || PEND.some(x => x.id === r.pendencia)) recarregar(); };
   try { sb.channel('pend-' + OBRA)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pendencias', filter: 'obra=eq.' + OBRA }, recarregar)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'pendencia_eventos' }, recarregar)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'pendencia_fotos' }, recarregar).subscribe(); } catch (e) {}
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pendencia_eventos' }, desta)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pendencia_fotos' }, desta).subscribe(); } catch (e) {}
   setInterval(() => { if (navigator.onLine) sincronizar(); }, 30000);
 })();
 })();

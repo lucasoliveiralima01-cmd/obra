@@ -1,5 +1,5 @@
-/* Leitor IFC (STEP) em JavaScript puro, sem WebAssembly (mesma cópia do Mapa de Concretagem).
-   Usado pelo Mapa de Fachadas para gerar as vistas das fachadas a partir do IFC da arquitetura. */
+/* Leitor IFC (STEP) em JavaScript puro, sem WebAssembly (o mesmo do Mapa de Concretagem, que tem a sua cópia embutida).
+   Usado pelo Mapa de Risco e pelo Mapa de Fachadas (vistas das fachadas a partir do IFC). */
 (function (root) {
   'use strict';
   const TAU = Math.PI * 2;

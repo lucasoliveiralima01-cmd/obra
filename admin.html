@@ -197,7 +197,7 @@ function confirmar(titulo, texto, botao, perigo) {
 function render() {
   const velho = VERSAO === null || VERSAO < BANCO_ESPERADO;
   $('main').innerHTML = `
-    ${velho ? `<div class="aviso"><b>O banco de dados precisa ser atualizado</b>${VERSAO ? ' (versão ' + VERSAO + ' de ' + BANCO_ESPERADO + ')' : ''}. No Supabase, abra <b>SQL Editor → New query</b>, cole o arquivo <b>banco.sql</b> inteiro e clique em <b>Run</b>. Depois recarregue esta página.</div>` : ''}
+    ${velho ? `<div class="aviso"><b>O banco de dados precisa ser atualizado</b>${VERSAO ? ' (versão ' + VERSAO + ' de ' + BANCO_ESPERADO + ')' : ''}. No Supabase, abra <b>SQL Editor → New query</b>, cole o arquivo <b>${VERSAO && VERSAO < 21 ? 'banco-instalacao.sql</b> inteiro e clique em <b>Run</b>; depois, numa query nova, o <b>banco.sql</b>' : 'banco.sql</b>'} inteiro e clique em <b>Run</b>. Depois recarregue esta página.</div>` : ''}
     <div class="tabs"><button class="tab" data-aba="pessoas" aria-pressed="${ABA === 'pessoas'}">Pessoas</button><button class="tab" data-aba="convidar" aria-pressed="${ABA === 'convidar'}">+ Convidar pessoa</button><button class="tab" data-aba="atividade" aria-pressed="${ABA === 'atividade'}">Atividade</button><button class="tab" data-aba="dados" aria-pressed="${ABA === 'dados'}">Dados</button><a class="tab" href="listas.html" title="Ofícios, tipos de problema e funcionários sem login">Ofícios e listas →</a></div>
     <div id="corpo"></div>`;
   $('main').querySelectorAll('[data-aba]').forEach(b => b.onclick = () => { ABA = b.dataset.aba; render(); });
