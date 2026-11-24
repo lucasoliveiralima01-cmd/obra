@@ -343,6 +343,7 @@ details.mais[open]>summary{margin-bottom:10px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
+<script src="foto-geo.js"></script>
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'almox';</script>
 <script src="nuvem.js"></script>
@@ -632,7 +633,7 @@ function formReceber(matId, pre) {
     $('rBar').onchange = () => { ler(); const a = acharCodigo(f.barra); if (a && !f.mat && !f.novo) f.mat = a.m.id; re(); };
     $('rMenos').onclick = () => { ler(); f.qtd = Math.max(0, (num(f.qtd) || 0) - 1); re(); };
     $('rMais').onclick = () => { ler(); f.qtd = (num(f.qtd) || 0) + 1; re(); };
-    $('rFoto').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; ler(); try { const b = await comprimir(a); if (foto) URL.revokeObjectURL(foto.url); foto = { blob: b, url: URL.createObjectURL(b) }; } catch (e) { toast('Não foi possível usar a foto.'); } re(); };
+    $('rFoto').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; ler(); try { const b = await fotoGeoOu(a); if (foto) URL.revokeObjectURL(foto.url); foto = { blob: b, url: URL.createObjectURL(b) }; } catch (e) { toast('Não foi possível usar a foto.'); } re(); };
     $('rOk').onclick = salvar;
   };
   const ler = () => {
@@ -1005,6 +1006,7 @@ $('viewer').onclick = () => { $('viewer').hidden = true; };
 $('viewerX').onclick = ev => { ev.stopPropagation(); $('viewer').hidden = true; };
 document.addEventListener('click', ev => { const img = ev.target.closest('img.etq'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
 
+const fotoGeoOu = async a => { if (window.FotoGeo) { try { return (await FotoGeo.processar(a, { origem: 'auto', avisar: t => toast(t, 7000) })).blob; } catch (e) { console.warn('foto-geo', e); } } return comprimir(a); };
 async function comprimir(arq) {
   const url = URL.createObjectURL(arq); const img = new Image();
   try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('não foi possível ler a imagem')); img.src = url; }); }

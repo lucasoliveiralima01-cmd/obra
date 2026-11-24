@@ -240,6 +240,7 @@ main>*{min-width:0}
 <script src="listas-comum.js"></script>
 <script src="fvq-modelos.js"></script>
 <script src="fvq-voz.js"></script>
+<script src="foto-geo.js"></script>
 <script>
 /* =====================================================================
    Conferência de serviços (FVQ) por voz, sem IA e sem custo
@@ -588,10 +589,14 @@ function emFoto(e) {
 async function tirarFoto() {
   const v = document.querySelector('.cam video');
   if (!v || !v.videoWidth) { dizer('A câmera ainda não está pronta. Toque em "Tirar foto".', ouvir); return; }
-  const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight)); const cv = document.createElement('canvas');
-  cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k); cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
-  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
-  NC.fotos.push({ blob, url: URL.createObjectURL(blob) }); desenharAtual();
+  // com data, hora e localização (marca na foto e no arquivo); se falhar, a foto entra sem elas
+  let blob = null, geo = null;
+  if (window.FotoGeo) { try { const quando = new Date(); const cv0 = document.createElement('canvas'); cv0.width = v.videoWidth; cv0.height = v.videoHeight; cv0.getContext('2d').drawImage(v, 0, 0);
+    ({ blob, geo } = await FotoGeo.processar(null, { origem: 'camera', imagem: cv0, quando, qualidade: 0.82, avisar: t => toast(t, 7000) })); cv0.width = cv0.height = 0; } catch (e) { console.warn('foto-geo', e); } }
+  if (!blob) { const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight)); const cv = document.createElement('canvas');
+    cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k); cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+    blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82)); }
+  NC.fotos.push({ blob, url: URL.createObjectURL(blob), geo }); desenharAtual();
   dizer(NC.fotos.length === 1 ? 'Foto tirada. Mais uma, ou pronto?' : 'Mais uma tirada. Mais alguma, ou pronto?', ouvir);
 }
 function perguntarPendencia() {
@@ -628,7 +633,10 @@ async function criarPendencia(it, nc) {
     const { error } = await sb.from('pendencias').insert(row); if (error) throw error;
     for (const f of nc.fotos) { const fid = uuid(); const cam = 'pendencias/' + OBRA + '/' + id + '/' + fid + '.jpg';
       const up = await sb.storage.from('arquivos').upload(cam, f.blob, { contentType: 'image/jpeg', upsert: false }); if (up.error) throw up.error;
-      const { error: e2 } = await sb.from('pendencia_fotos').insert({ id: fid, pendencia: id, tipo: 'antes', caminho: cam }); if (e2) throw e2; }
+      const fr = Object.assign({ id: fid, pendencia: id, tipo: 'antes', caminho: cam }, f.geo || {});
+      let { error: e2 } = await sb.from('pendencia_fotos').insert(fr);
+      if (e2 && f.geo && /tirada_em|lat|lng|precisao|endereco|column/i.test(e2.message || '')) { ['tirada_em', 'lat', 'lng', 'precisao', 'endereco'].forEach(k => delete fr[k]); ({ error: e2 } = await sb.from('pendencia_fotos').insert(fr)); }
+      if (e2) throw e2; }
     const { data } = await sb.from('pendencias').select('numero').eq('id', id).maybeSingle();
     return { ok: true, id, numero: data && data.numero };
   } catch (e) { console.error(e); return { ok: false, erro: (e && e.message) || 'sem conexão' }; }
@@ -806,6 +814,7 @@ function pararTudo() { pararOuvir(); try { speechSynthesis.cancel(); } catch (e)
 let STREAM = null;
 async function ligarCamera() {
   if (STREAM) return true;
+  if (window.FotoGeo) FotoGeo.preparar();
   try { STREAM = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false }); desenharAtual(); return true; }
   catch (e) { STREAM = null; return false; }
 }

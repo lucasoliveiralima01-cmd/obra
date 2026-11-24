@@ -302,6 +302,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 .com textarea{min-height:44px}
 .viewer .vx{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(20,30,40,.72);color:#fff;font:400 1.7rem/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .viewer .vx:hover{background:rgba(20,30,40,.92)}
+.viewer .vgeo{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:2;max-width:calc(100vw - 24px);background:rgba(20,30,40,.85);color:#fff;border-radius:10px;padding:8px 12px;font-size:.82rem;line-height:1.35;text-align:center}
+.viewer .vgeo a{color:#9fd3ff;font-weight:700;margin-left:6px}
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:grid;place-items:center;padding:10px}
 .viewer{touch-action:none}
 .viewer img{transition:transform .05s;max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);width:auto;height:auto;object-fit:contain;cursor:zoom-out}
@@ -351,12 +353,13 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 <button class="fab" id="fab" type="button" hidden>+ Nova pendência</button>
 
 <div class="overlay" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovlT"><header><h3 id="ovlT"></h3><button class="x" id="ovlX" type="button" aria-label="Fechar">×</button></header><div class="body" id="ovlB"></div><footer id="ovlF"></footer></div></div>
-<div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Foto ampliada"></div>
+<div class="viewer" id="viewer" hidden><button type="button" class="vx" id="viewerX" aria-label="Fechar a imagem" title="Fechar">×</button><img id="viewerImg" alt="Foto ampliada"><div class="vgeo" id="viewerGeo" hidden></div></div>
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
 <script src="relatorio-pdf.js"></script>
+<script src="foto-geo.js"></script>
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'pendencias';</script>
 <script src="nuvem.js"></script>
@@ -481,6 +484,13 @@ async function idbAll(st) {
 }
 
 /* ======================= fotos: reduz para 1600 px e JPEG ======================= */
+// com data, hora e localização (marca na foto e no arquivo); se algo falhar, entra só reduzida, como antes
+async function fotoNova(arq, origem) {
+  if (window.FotoGeo) { try { return await FotoGeo.processar(arq, { origem, avisar: t => toast(t, 7000) }); } catch (e) { console.warn('foto-geo', e); } }
+  return { blob: await comprimir(arq), geo: null };
+}
+const geoDe = x => x && x.geo ? x.geo : {};
+const fimPreparo = () => { const el = $('toast'); if (/^Preparando/.test(el.textContent)) el.hidden = true; };
 async function comprimir(arq) {
   const url = URL.createObjectURL(arq); const img = new Image();
   try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('não foi possível ler a imagem')); img.src = url; }); }
@@ -516,7 +526,12 @@ function pintarFotos(raiz) {
 }
 // foto aberta em tela cheia: pinça amplia, um dedo arrasta a foto ampliada, toque fecha
 const VZ = { s: 1, x: 0, y: 0 }; const vzAplica = () => { $('viewerImg').style.transform = `translate(${VZ.x}px,${VZ.y}px) scale(${VZ.s})`; };
-document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; Object.assign(VZ, { s: 1, x: 0, y: 0 }); vzAplica(); $('viewer').hidden = false; });
+document.addEventListener('click', ev => { const img = ev.target.closest('img[data-zoom]'); if (!img || !img.src) return; $('viewerImg').src = img.src; Object.assign(VZ, { s: 1, x: 0, y: 0 }); vzAplica(); $('viewer').hidden = false;
+  let g = null; try { g = img.dataset.foto ? JSON.parse(img.dataset.foto) : img.dataset.geo ? JSON.parse(img.dataset.geo) : null; } catch (e) {}
+  const vg = $('viewerGeo'); if (g && (g.tirada_em || g.lat != null)) {
+    vg.innerHTML = esc([g.tirada_em && window.FotoGeo ? FotoGeo.dataTxt(new Date(g.tirada_em)) : '', g.endereco || (g.lat != null ? g.lat.toFixed(6) + ', ' + g.lng.toFixed(6) : '')].filter(Boolean).join('  ·  '))
+      + (g.lat != null ? `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : ''); vg.hidden = false;
+    vg.onclick = ev => ev.stopPropagation(); } else vg.hidden = true; });
 let vzMexeu = false;
 $('viewer').onclick = () => { if (vzMexeu) { vzMexeu = false; return; } $('viewer').hidden = true; };
 $('viewerX').onclick = ev => { ev.stopPropagation(); vzMexeu = false; $('viewer').hidden = true; };
@@ -591,7 +606,7 @@ function editarFoto(x) {
       if (!formas.length) { x.formas = []; if (x.blob !== x.orig) { URL.revokeObjectURL(x.url); x.blob = x.orig; x.url = URL.createObjectURL(x.orig); } sair(true); return; }
       pintar(); const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .85); } catch (e) { r(null); } });
       if (!b) { toast('Não foi possível salvar a marcação. Tente de novo.'); return; }
-      URL.revokeObjectURL(x.url); x.blob = b; x.url = URL.createObjectURL(b); x.formas = formas; sair(true);
+      const b2 = x.geo && window.FotoGeo ? await FotoGeo.regravar(b, x.geo) : b; URL.revokeObjectURL(x.url); x.blob = b2; x.url = URL.createObjectURL(b2); x.formas = formas; sair(true);
     };
   });
 }
@@ -695,7 +710,10 @@ async function enviarFotos(op) {
     if (f.ok) continue;
     const b = await idbGet('blobs', f.fid); const caminho = 'pendencias/' + OBRA + '/' + op.id + '/' + f.fid + '.jpg';
     if (b) { const { error } = await sb.storage.from((window.MAPA_CONFIG || {}).bucket || 'arquivos').upload(caminho, b, { contentType: 'image/jpeg', upsert: false }); if (error && !jaExiste(error)) throw error; }
-    const { error: e2 } = await sb.from('pendencia_fotos').insert({ id: f.fid, pendencia: op.id, tipo: f.tipo, caminho });
+    const row = { id: f.fid, pendencia: op.id, tipo: f.tipo, caminho };
+    if (f.tirada_em) Object.assign(row, { tirada_em: f.tirada_em, lat: f.lat, lng: f.lng, precisao: f.precisao, endereco: f.endereco });
+    let { error: e2 } = await sb.from('pendencia_fotos').insert(row);
+    if (e2 && row.tirada_em && /tirada_em|lat|lng|precisao|endereco|column/i.test(e2.message || '')) { ['tirada_em', 'lat', 'lng', 'precisao', 'endereco'].forEach(k => delete row[k]); ({ error: e2 } = await sb.from('pendencia_fotos').insert(row)); }
     if (e2 && !jaExiste(e2)) throw e2;
     f.ok = true; await idbPut('fila', op.k, op);
     if (b) { const u = URLS.get(f.fid); URLS.delete(f.fid); if (u) URLS.set(caminho, u); await idbDel('blobs', f.fid); }
@@ -1005,6 +1023,7 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (docu
 /* ---------------- registro rápido / edição ---------------- */
 // encaminhar: quem avalia abre a pendência "em avaliação" para escolher quem corrige e encaminhar
 function formPend(id, encaminhar) {
+  if (window.FotoGeo) FotoGeo.preparar();   // já pede a localização (a foto sai com o local)
   const ed = id ? itens().find(p => p.id === id) : null;
   if (ed && !editor(ed)) return;
   // a Segurança vê os tipos de segurança (se a lista tiver algum); os outros perfis veem todos
@@ -1038,7 +1057,7 @@ function formPend(id, encaminhar) {
     const uns = unidadesDe(f.pavimento);
     $('ovlB').innerHTML = `
       <div class="fld"><span class="l">Fotos do antes ${ed ? '' : '<span class="req">*</span>'}</span>
-        <div class="fotos">${(ed ? ed.fotos.filter(x => x.tipo === 'antes') : []).map(x => `<span class="ft"><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden></span>`).join('')}${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto nova" src="${x.url}"><button type="button" data-rm="${i}" aria-label="Remover foto">×</button><button type="button" class="ft-ed" data-ed="${i}">✏️ Marcar</button></span>`).join('')}</div>${novas.length ? '<p class="muted" style="margin:0">Toque em <b>✏️ Marcar</b> para circular, apontar com seta ou escrever na foto.</p>' : ''}
+        <div class="fotos">${(ed ? ed.fotos.filter(x => x.tipo === 'antes') : []).map(x => `<span class="ft"><img data-zoom alt="Foto" data-foto='${esc(JSON.stringify(x))}' hidden></span>`).join('')}${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto nova" src="${x.url}" data-geo='${esc(JSON.stringify(x.geo || {}))}'><button type="button" data-rm="${i}" aria-label="Remover foto">×</button><button type="button" class="ft-ed" data-ed="${i}">✏️ Marcar</button></span>`).join('')}</div>${novas.length ? '<p class="muted" style="margin:0">Toque em <b>✏️ Marcar</b> para circular, apontar com seta ou escrever na foto.</p>' : ''}
         <div class="addft"><label>📷 Tirar foto<input type="file" accept="image/*" capture="environment" id="fCam"></label><label>🖼 Da galeria<input type="file" accept="image/*" multiple id="fGal"></label></div></div>
       <div class="fld"><span class="l">Pavimento <span class="req">*</span></span>${grupo('Pavimento', CFG.pavimentos.map(x => x.nome), f.pavimento, 'pavimento', 'small')}</div>
       ${f.pavimento && plantaDe(f.pavimento) ? `<div class="fld" id="plBox"><span class="l">Local na planta ${obrig('ponto') ? '<span class="req">*</span>' : '(opcional)'}</span>${plantaBox(plantaDe(f.pavimento), f.ponto && f.ponto.pav === plantaDe(f.pavimento) ? [{ u: f.ponto.u, v: f.ponto.v, cor: '#c23b2f' }] : [], true)}
@@ -1099,8 +1118,8 @@ function formPend(id, encaminhar) {
     B.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { lerTextos(); const x = novas.splice(+b.dataset.rm, 1)[0]; URL.revokeObjectURL(x.url); desenhar(); });
     B.querySelectorAll('[data-ed]').forEach(b => b.onclick = async () => { lerTextos(); const open = B.querySelector('details.mais') && B.querySelector('details.mais').open; const rol = B.scrollTop;
       if (await editarFoto(novas[+b.dataset.ed])) { desenhar(); if (B.querySelector('details.mais')) B.querySelector('details.mais').open = open; B.scrollTop = rol; } });
-    const addFotos = async files => { lerTextos(); for (const arq of files) { try { const blob = await comprimir(arq); novas.push({ fid: uuid(), blob, url: URL.createObjectURL(blob) }); } catch (e) { toast('Não foi possível ler a foto.'); } } desenhar(); };
-    $('fCam').onchange = e => addFotos([...e.target.files]); $('fGal').onchange = e => addFotos([...e.target.files]);
+    const addFotos = async (files, origem) => { lerTextos(); if (files.length) toast(origem === 'camera' ? 'Preparando a foto (data e local)…' : 'Preparando as fotos…', 4000); for (const arq of files) { try { const { blob, geo } = await fotoNova(arq, origem); novas.push({ fid: uuid(), blob, url: URL.createObjectURL(blob), geo }); } catch (e) { toast('Não foi possível ler a foto.'); } } fimPreparo(); desenhar(); };
+    $('fCam').onchange = e => addFotos([...e.target.files], 'camera'); $('fGal').onchange = e => addFotos([...e.target.files], 'galeria');
     pintarFotos(B);
     // planta: toque marca o local (só troca o alfinete, sem redesenhar o formulário)
     const inn = B.querySelector('#plBox .pl-in');
@@ -1153,7 +1172,7 @@ function formPend(id, encaminhar) {
     $('pOk').disabled = true; $('pMsg').className = 'msg'; $('pMsg').textContent = 'Registrando…';
     try {
     for (const x of novas) await idbPut('blobs', x.fid, x.blob);
-    const fotos = novas.map(x => ({ fid: x.fid, tipo: 'antes' }));
+    const fotos = novas.map(x => Object.assign({ fid: x.fid, tipo: 'antes' }, geoDe(x)));
     novas.forEach(x => URLS.set(x.fid, x.url));
     // sugestão de quem é de campo e pendência mandada para a Segurança nascem "em avaliação"
     if (!ed && (m === 'sugestao' || m === 'seg')) row.status = 'avaliacao';
@@ -1261,13 +1280,13 @@ function formCorrigida(p) {
   const novas = [];
   const desenhar = () => {
     $('ovlB').innerHTML = `<p style="margin:0"><b>${p.numero ? '#' + p.numero : 'Pendência'}</b> · ${esc(rotLocal(p))} · ${esc(p.tipo)}</p>
-      <div class="fld"><span class="l">Foto do depois <span class="req">*</span></span><div class="fotos">${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto" src="${x.url}"><button type="button" data-rm="${i}" aria-label="Remover">×</button><button type="button" class="ft-ed" data-ed="${i}">✏️ Marcar</button></span>`).join('')}</div>
+      <div class="fld"><span class="l">Foto do depois <span class="req">*</span></span><div class="fotos">${novas.map((x, i) => `<span class="ft"><img data-zoom alt="Foto" src="${x.url}" data-geo='${esc(JSON.stringify(x.geo || {}))}'><button type="button" data-rm="${i}" aria-label="Remover">×</button><button type="button" class="ft-ed" data-ed="${i}">✏️ Marcar</button></span>`).join('')}</div>
         <div class="addft"><label>📷 Tirar foto<input type="file" accept="image/*" capture="environment" id="cCam"></label><label>🖼 Da galeria<input type="file" accept="image/*" multiple id="cGal"></label></div></div>
       <div class="fld"><label for="cCom">Comentário (opcional)</label><textarea id="cCom" placeholder="O que foi feito">${esc(desenhar.c || '')}</textarea></div>
       <p class="muted" style="margin:0">${p.seguranca ? 'A Segurança' : 'A Engenharia'} confere e dá a baixa final.</p>`;
     $('cCom').oninput = e => { desenhar.c = e.target.value; };
-    const add = async files => { for (const a of files) { try { const blob = await comprimir(a); novas.push({ fid: uuid(), blob, url: URL.createObjectURL(blob) }); } catch (e) { toast('Não foi possível ler a foto.'); } } desenhar(); };
-    $('cCam').onchange = e => add([...e.target.files]); $('cGal').onchange = e => add([...e.target.files]);
+    const add = async (files, origem) => { if (files.length) toast('Preparando a foto (data e local)…', 4000); for (const a of files) { try { const { blob, geo } = await fotoNova(a, origem); novas.push({ fid: uuid(), blob, url: URL.createObjectURL(blob), geo }); } catch (e) { toast('Não foi possível ler a foto.'); } } fimPreparo(); desenhar(); };
+    $('cCam').onchange = e => add([...e.target.files], 'camera'); $('cGal').onchange = e => add([...e.target.files], 'galeria');
     $('ovlB').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { const x = novas.splice(+b.dataset.rm, 1)[0]; URL.revokeObjectURL(x.url); desenhar(); });
     $('ovlB').querySelectorAll('[data-ed]').forEach(b => b.onclick = async () => { if (await editarFoto(novas[+b.dataset.ed])) desenhar(); });
   };
@@ -1279,7 +1298,7 @@ function formCorrigida(p) {
     $('cOk').disabled = true;
     try {
     for (const x of novas) { await idbPut('blobs', x.fid, x.blob); URLS.set(x.fid, x.url); }
-    await enfileirar({ op: 'fotos', id: p.id, fotos: novas.map(x => ({ fid: x.fid, tipo: 'depois' })) });
+    await enfileirar({ op: 'fotos', id: p.id, fotos: novas.map(x => Object.assign({ fid: x.fid, tipo: 'depois' }, geoDe(x))) });
     await enfileirar({ op: 'status', id: p.id, para: 'corrigida', comentario: String(desenhar.c || '').trim() || null });
     } catch (e) { console.error(e); $('cOk').disabled = false; $('cMsg').className = 'msg err'; $('cMsg').textContent = 'Não foi possível salvar: ' + ((e && e.message) || e) + '. Tente de novo.'; return; }
     delete $('ovl').dataset.form; toast('Marcada como corrigida. ' + (p.seguranca ? 'A Segurança' : 'A Engenharia') + ' vai conferir.', 5000); detalhe(p.id);

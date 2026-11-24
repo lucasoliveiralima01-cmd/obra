@@ -791,6 +791,23 @@ $p25$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 26: Fotos georreferenciadas (data, hora e local de cada foto)
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 26 then return; end if;
+  execute $p26$
+-- quando e onde a foto foi tirada (a mesma informação vai marcada na foto e no arquivo)
+alter table public.pendencia_fotos add column if not exists tirada_em timestamptz;
+alter table public.pendencia_fotos add column if not exists lat       double precision;
+alter table public.pendencia_fotos add column if not exists lng       double precision;
+alter table public.pendencia_fotos add column if not exists precisao  real;
+alter table public.pendencia_fotos add column if not exists endereco  text;
+$p26$;
+  update public.banco_versao set versao = 26, atualizado_em = now();
+  raise notice 'Passo 26 aplicado: fotos georreferenciadas';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin

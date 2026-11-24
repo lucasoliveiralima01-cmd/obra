@@ -290,6 +290,7 @@ details.mais[open]>summary{margin-bottom:10px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
+<script src="foto-geo.js"></script>
 <script src="config.js"></script>
 <script>window.NUVEM_FERRAMENTA = 'ceramica';</script>
 <script src="nuvem.js"></script>
@@ -704,7 +705,7 @@ function formPallet(id, pre) {
     if ($('fpCopia')) $('fpCopia').onclick = () => { ler(); for (const k of ['produto', 'qualidade', 'tonalidade', 'tamanho', 'lote', 'mar', 'tp', 'ordem_fab', 'turno', 'fabricado']) if (ultimo[k] != null) f[k] = ultimo[k]; novoProd = false; desenhar(); toast('Copiado. Confira com a etiqueta deste pallet.'); };
     $('fpLer').onclick = async () => { ler(); const c = await lerCodigo('Leia o código da etiqueta'); if (c) { f.serie = c; desenhar(); } };
     $('fpFoto').onchange = async ev => { const a = ev.target.files && ev.target.files[0]; if (!a) return; ler();
-      try { const b = await comprimir(a); if (foto) URL.revokeObjectURL(foto.url); foto = { blob: b, url: URL.createObjectURL(b) };
+      try { const b = await fotoGeoOu(a); if (foto) URL.revokeObjectURL(foto.url); foto = { blob: b, url: URL.createObjectURL(b) };
         // a foto também serve para ler o código, se ainda não tem
         if (!f.serie) { const c = await decodificarArquivo(a).catch(() => null); if (c) { f.serie = c; toast('Código lido da foto: ' + c); } }
       } catch (e) { toast('Não foi possível usar a foto: ' + (e.message || e)); } desenhar(); };
@@ -1005,6 +1006,7 @@ $('viewer').onclick = () => { $('viewer').hidden = true; };
 $('viewerX').onclick = ev => { ev.stopPropagation(); $('viewer').hidden = true; };
 document.addEventListener('click', ev => { const img = ev.target.closest('img.etq'); if (!img || !img.src) return; $('viewerImg').src = img.src; $('viewer').hidden = false; });
 
+const fotoGeoOu = async a => { if (window.FotoGeo) { try { return (await FotoGeo.processar(a, { origem: 'auto', avisar: t => toast(t, 7000) })).blob; } catch (e) { console.warn('foto-geo', e); } } return comprimir(a); };
 async function comprimir(arq) {
   const url = URL.createObjectURL(arq); const img = new Image();
   try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('não foi possível ler a imagem')); img.src = url; }); }
