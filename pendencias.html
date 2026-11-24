@@ -1440,7 +1440,7 @@ async function prepararPend(p, comPlanta, contar) {
     servico: p.tipo, responsavel: [p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : '', p.responsavel_nome || (p.equipe ? EQUIPE[p.equipe] : '')].filter(Boolean).join(' · ') || 'A definir',
     bloqueia: (p.bloqueios || []).map(b => b.servico + (b.local ? ' (' + b.local + ')' : '')).join('; '),
     registrada: fmtDH(p.criado_em) + ' · ' + nomeDe(p.criado_por), regEm: fmtDH(p.criado_em), regPor: nomeDe(p.criado_por),
-    prazoTxt: p.prazo ? 'Prazo ' + fmtD(p.prazo).slice(0, 5) + (p.status !== 'fechada' && p.status !== 'corrigida' && p.prazo < hoje() ? ' · atrasada' : '') : '',
+    prazoTxt: p.prazo ? 'Prazo ' + fmtD(p.prazo).slice(0, 5) : '',
     respOficio: p.disciplina && p.disciplina !== A_DEFINIR ? p.disciplina : 'A definir', respNome: p.responsavel_nome || (p.equipe ? EQUIPE[p.equipe] : ''),
     atrasada: !!(p.prazo && p.status !== 'fechada' && p.status !== 'corrigida' && p.prazo < hoje()),
     fotos: { antes: await Promise.all(antes.map(carregar)), depois: await Promise.all(depois.map(carregar)) },
