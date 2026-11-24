@@ -230,9 +230,16 @@
   function faixa(pdf, x, y, w, h, cols, anexos) {
     pdf.setFillColor(...C2.faixa); pdf.roundedRect(x, y, w, h, 2.2, 2.2, 'F');
     const tot = cols.reduce((a, c) => a + c.peso, 0), comSub = cols.some(c => c.sub); let cx = x;
+    // largura de cada coluna pelo que ela precisa mostrar (rótulo e valor inteiros); o que sobra é dividido pelo peso
+    const precisa = cols.map(c => { const ps = (Array.isArray(c.val) ? c.val : [{ t: c.val || '—' }]).filter(q => q && q.t);
+      fonte(pdf, 'normal', 9.2, C2.tinta); const v = ps.reduce((a, q) => a + pdf.getTextWidth(q.t), 0);
+      fonte(pdf, 'bold', 7.2, C2.rot); const r = pdf.getTextWidth(c.rot.toUpperCase());
+      fonte(pdf, 'normal', 7.2, C2.cinza); const sb = c.sub ? pdf.getTextWidth(c.sub) : 0; return Math.max(v, r, sb) + 9.5; });
+    const somaP = precisa.reduce((a, n) => a + n, 0);
+    const largs = somaP <= w ? precisa.map((n, i) => n + (w - somaP) * cols[i].peso / tot) : precisa.map(n => w * n / somaP);
     const yr = comSub ? (h < 18 ? 4.75 : 5.4) : h / 2 - 1.5, yv = comSub ? (h < 18 ? 9.3 : 10.6) : h / 2 + 3.4;
     cols.forEach((c, i) => {
-      const cw = w * c.peso / tot, px = cx + (i ? 4.5 : 5.5), lw = cw - 8;
+      const cw = largs[i], px = cx + (i ? 4.5 : 5.5), lw = cw - 8;
       if (i) { pdf.setDrawColor(196, 206, 216); pdf.setLineWidth(0.3); pdf.line(cx, y + 2.6, cx, y + h - 2.6); }
       fonte(pdf, 'bold', 7.2, C2.rot); pdf.text(c.rot.toUpperCase(), px, y + yr);
       const partes = (Array.isArray(c.val) ? c.val : [{ t: c.val || '—', cor: c.cor }]).filter(q => q && q.t);
