@@ -196,10 +196,11 @@
   }
   function moldura(pdf, y, H) {
     const X = PG.M, W = PG.L;
-    pdf.setFillColor(...C2.navy); pdf.roundedRect(X, y, W, 6, 2.5, 2.5, 'F');
-    pdf.setFillColor(255, 255, 255); pdf.rect(X + 0.25, y + 2.2, W - 0.5, 4.2, 'F');
+    // faixa azul no topo, recortada pela própria moldura (segue a curva dos cantos)
+    pdf.saveGraphicsState(); pdf.roundedRect(X, y, W, H, 2.5, 2.5, null); pdf.clip(); pdf.discardPath();
+    pdf.setFillColor(...C2.navy); pdf.rect(X - 1, y - 1, W + 2, 3.2, 'F');
+    pdf.restoreGraphicsState();
     pdf.setDrawColor(...C2.borda); pdf.setLineWidth(0.35); pdf.roundedRect(X, y, W, H, 2.5, 2.5, 'S');
-    pdf.setFillColor(...C2.navy); pdf.rect(X + 1.2, y, W - 2.4, 2.1, 'F');
   }
   // número e título: o título não é cortado (a letra diminui um pouco e, se preciso, vai para 2 linhas)
   function medirTopo(pdf, p, iw, cont) {
