@@ -875,7 +875,7 @@ const ANDAMENTO = ['avaliacao', 'aberta', 'em_correcao', 'corrigida'];
 const SIT = [['andamento', 'Em andamento', ANDAMENTO], ['aberta', 'Abertas', ['aberta']], ['em_correcao', 'Em correção', ['em_correcao']], ['avaliacao', 'Em avaliação', ['avaliacao']], ['corrigida', 'Corrigidas', ['corrigida']], ['fechada', 'Fechadas', ['fechada']], ['todas', 'Todas', ST_ORD]];
 const SIT_TXT = { andamento: 'em andamento', aberta: 'abertas', em_correcao: 'em correção', avaliacao: 'em avaliação', corrigida: 'corrigidas', fechada: 'fechadas', todas: '' };
 const sitAtual = () => { const k = SIT.find(s => s[2].length === F.st.size && s[2].every(x => F.st.has(x))); return k ? k[0] : ''; };
-const ORDENS = { pri: 'Prioridade e prazo', prazo: 'Prazo mais próximo', recentes: 'Mais recentes', numero: 'Número', apto: 'Apartamento (finais 01 a 12)' };
+const ORDENS = { pri: 'Prioridade', prazo: 'Prazo', recentes: 'Recentes', apto: 'Apartamento' };
 // apartamento 712 -> final 12, andar 7; o que não é apartamento numerado vai para o fim
 const iPav = n => { const i = ((CFG && CFG.pavimentos) || []).findIndex(x => x.nome === n); return i < 0 ? 999 : i; };
 const aptoNum = p => { const m = /(\d{3,4})\s*$/.exec(String(p.unidade || '').trim()); return m ? +m[1] : null; };
@@ -883,7 +883,6 @@ const ORDEM = {
   pri: (a, b) => (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9')) || (b.numero || 1e9) - (a.numero || 1e9),
   prazo: (a, b) => String(a.prazo || '9').localeCompare(String(b.prazo || '9')) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade),
   recentes: (a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')),
-  numero: (a, b) => (b.numero || 1e9) - (a.numero || 1e9),
   // finais 01, 02… 12; dentro do mesmo final, do andar mais baixo para o mais alto
   apto: (a, b) => { const x = aptoNum(a), y = aptoNum(b);
     if (x == null || y == null) return (x == null) - (y == null) || iPav(a.pavimento) - iPav(b.pavimento) || (a.numero || 1e9) - (b.numero || 1e9);
@@ -960,7 +959,7 @@ function renderLista(its) {
 </div>
       <div class="frow so-cel rol">${sit !== 'andamento' ? `<button type="button" class="chip" data-tira="st" aria-pressed="true">${(SIT.find(s => s[0] === sit) || [0, 'Situação'])[1]} ✕</button>` : '<span class="chip" aria-pressed="true">Em andamento</span>'}${rapidosHtml(its, ['venc', 'blq', 'meu'])}</div>
     </div>
-    <div class="lhead"><h2>${titulo}</h2><span class="lh-d so-pc">${ativos.length ? '<button type="button" class="lnk" data-limpar>Limpar filtros</button>' : ''}<select class="fsel ford" data-ord aria-label="Ordenar">${Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>Ordenar: ${v.toLowerCase()}</option>`).join('')}</select></span><button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
+    <div class="lhead"><h2>${titulo}</h2><span class="lh-d so-pc">${ativos.length ? '<button type="button" class="lnk" data-limpar>Limpar filtros</button>' : ''}<select class="fsel ford" data-ord aria-label="Ordenar">${Object.entries(ORDENS).map(([k, v]) => `<option value="${k}" ${F.ord === k ? 'selected' : ''}>${v}</option>`).join('')}</select></span><button type="button" class="lnk so-cel" id="bOrd">${ORDENS[F.ord]}</button></div>
     ${vis.length ? `<div class="lista">${vis.map(cardHtml).join('')}</div>` : `<div class="vazio"><h3>${its.length ? 'Nenhuma pendência com estes filtros' : 'Nenhuma pendência registrada'}</h3><p class="muted" style="margin:0">${its.length ? 'Mude ou limpe os filtros.' : podeCriar() ? 'Toque em “+ Nova pendência” para registrar a primeira.' : 'Quando houver pendências do seu ofício, elas aparecem aqui.'}</p>${ativos.length ? '<button type="button" class="btn ghost" data-limpar>Limpar filtros</button>' : ''}</div>`}`;
   const b = $('tabBody');
   ligarFiltros(b, render);
