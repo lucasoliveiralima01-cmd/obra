@@ -225,8 +225,7 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .an-cores [data-c]{width:30px;height:30px;border-radius:50%;background:var(--c);border:2px solid rgba(255,255,255,.35);padding:0}
 .an-cores [data-c][aria-pressed="true"]{outline:3px solid #62aed3;outline-offset:2px}
 .an-desf{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px;font:600 .82rem var(--f-body);margin-left:6px}
-.an-dica{margin:0;text-align:center;font-size:.76rem;color:#9fb6c6}
-.an-dica[hidden],.an-sel[hidden]{display:none}
+.an-sel[hidden]{display:none}
 .an-sel{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .an-sel button{min-width:46px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;font:700 .84rem var(--f-body)}
 .an-sel button.ok{background:#62aed3;border-color:#62aed3;color:#06202e}
@@ -564,7 +563,6 @@ function editarFoto(x) {
       <div class="an-area"><canvas></canvas></div>
       <div class="an-bar"><div class="an-ferr">${ANOT_FERR.map(([k, r, ic]) => `<button type="button" data-f="${k}" aria-pressed="${k === ferr}" title="${r}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg><span>${r.split(' ')[0]}</span></button>`).join('')}</div>
         <div class="an-cores">${ANOT_CORES.map(c => `<button type="button" data-c="${c}" aria-pressed="${c === cor}" style="--c:${c}" aria-label="Cor"></button>`).join('')}<button type="button" class="an-desf" data-a="desfazer" title="Desfazer">↶ Desfazer</button></div>
-        <p class="an-dica">Arraste sobre a foto para marcar. No Texto, toque onde quer escrever; depois arraste o texto para mover.</p>
         <div class="an-sel" hidden><button type="button" data-s="menor" title="Diminuir">A−</button><button type="button" data-s="maior" title="Aumentar">A+</button><button type="button" data-s="editar">Editar</button><button type="button" data-s="apagar">Apagar</button><button type="button" data-s="ok" class="ok">OK</button></div></div>`;
     document.body.appendChild(box);
     const cv = box.querySelector('canvas'), ctx = cv.getContext('2d');
@@ -586,9 +584,12 @@ function editarFoto(x) {
     function forma(f) {
       ctx.save(); ctx.strokeStyle = f.c; ctx.fillStyle = f.c; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = lw;
-      if (f.t === 'seta') { const [x1, y1] = f.a, [x2, y2] = f.b, ang = Math.atan2(y2 - y1, x2 - x1), h = lw * 4.5;
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - h * Math.cos(ang - .45), y2 - h * Math.sin(ang - .45)); ctx.lineTo(x2 - h * Math.cos(ang + .45), y2 - h * Math.sin(ang + .45)); ctx.closePath(); ctx.fill(); }
+      if (f.t === 'seta') { const [x1, y1] = f.a, [x2, y2] = f.b, ang = Math.atan2(y2 - y1, x2 - x1), comp = Math.hypot(x2 - x1, y2 - y1), h = Math.min(lw * 4.5, comp * .7), ab = .45;
+        // a seta inteira num desenho só (haste + ponta), sem emenda nem linha aparecendo na ponta
+        const c = Math.cos(ang), sn = Math.sin(ang), nx = -sn * lw / 2, ny = c * lw / 2, base = Math.max(0, comp - h * Math.cos(ab)), bx = x1 + c * base, by = y1 + sn * base;
+        ctx.beginPath(); ctx.arc(x1, y1, lw / 2, ang + Math.PI / 2, ang - Math.PI / 2);
+        ctx.lineTo(bx - nx, by - ny); ctx.lineTo(x2 - h * Math.cos(ang + ab), y2 - h * Math.sin(ang + ab)); ctx.lineTo(x2, y2);
+        ctx.lineTo(x2 - h * Math.cos(ang - ab), y2 - h * Math.sin(ang - ab)); ctx.lineTo(bx + nx, by + ny); ctx.closePath(); ctx.fill(); }
       else if (f.t === 'circ') { ctx.beginPath(); ctx.ellipse((f.a[0] + f.b[0]) / 2, (f.a[1] + f.b[1]) / 2, Math.max(2, Math.abs(f.b[0] - f.a[0]) / 2), Math.max(2, Math.abs(f.b[1] - f.a[1]) / 2), 0, 0, Math.PI * 2); ctx.stroke(); }
       else if (f.t === 'ret') { ctx.strokeRect(Math.min(f.a[0], f.b[0]), Math.min(f.a[1], f.b[1]), Math.abs(f.b[0] - f.a[0]), Math.abs(f.b[1] - f.a[1])); }
       else if (f.t === 'livre') { ctx.beginPath(); f.p.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.stroke(); }
@@ -617,8 +618,8 @@ function editarFoto(x) {
     const textoEm = p => { for (let i = formas.length - 1; i >= 0; i--) { const f = formas[i]; if (f.t !== 'texto') continue; const k = caixa(f), m = 8 * escalaTela();
       if (p[0] >= k.bx - m && p[0] <= k.bx + k.w + m && p[1] >= k.by - m && p[1] <= k.by + k.hh + m) return f; } return null; };
     // barra do texto selecionado
-    const bs = box.querySelector('.an-sel'), dica = box.querySelector('.an-dica');
-    function barraSel() { bs.hidden = !sel; dica.hidden = !!sel; }
+    const bs = box.querySelector('.an-sel');
+    function barraSel() { bs.hidden = !sel; }
     const tamanho = d => { if (!sel) return; marco(); sel.k = Math.min(4, Math.max(.35, +((sel.k || fonte / FT0) * d).toFixed(3))); pintar(); };
     bs.querySelector('[data-s="menor"]').onclick = () => tamanho(1 / 1.2);
     bs.querySelector('[data-s="maior"]').onclick = () => tamanho(1.2);
