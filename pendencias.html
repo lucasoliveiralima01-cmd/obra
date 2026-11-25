@@ -875,12 +875,19 @@ const ANDAMENTO = ['avaliacao', 'aberta', 'em_correcao', 'corrigida'];
 const SIT = [['andamento', 'Em andamento', ANDAMENTO], ['aberta', 'Abertas', ['aberta']], ['em_correcao', 'Em correção', ['em_correcao']], ['avaliacao', 'Em avaliação', ['avaliacao']], ['corrigida', 'Corrigidas', ['corrigida']], ['fechada', 'Fechadas', ['fechada']], ['todas', 'Todas', ST_ORD]];
 const SIT_TXT = { andamento: 'em andamento', aberta: 'abertas', em_correcao: 'em correção', avaliacao: 'em avaliação', corrigida: 'corrigidas', fechada: 'fechadas', todas: '' };
 const sitAtual = () => { const k = SIT.find(s => s[2].length === F.st.size && s[2].every(x => F.st.has(x))); return k ? k[0] : ''; };
-const ORDENS = { pri: 'Prioridade e prazo', prazo: 'Prazo mais próximo', recentes: 'Mais recentes', numero: 'Número' };
+const ORDENS = { pri: 'Prioridade e prazo', prazo: 'Prazo mais próximo', recentes: 'Mais recentes', numero: 'Número', apto: 'Apartamento (finais 01 a 12)' };
+// apartamento 712 -> final 12, andar 7; o que não é apartamento numerado vai para o fim
+const iPav = n => { const i = ((CFG && CFG.pavimentos) || []).findIndex(x => x.nome === n); return i < 0 ? 999 : i; };
+const aptoNum = p => { const m = /(\d{3,4})\s*$/.exec(String(p.unidade || '').trim()); return m ? +m[1] : null; };
 const ORDEM = {
   pri: (a, b) => (+vencida(b) - +vencida(a)) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade) || String(a.prazo || '9').localeCompare(String(b.prazo || '9')) || (b.numero || 1e9) - (a.numero || 1e9),
   prazo: (a, b) => String(a.prazo || '9').localeCompare(String(b.prazo || '9')) || PRI_ORD.indexOf(a.prioridade) - PRI_ORD.indexOf(b.prioridade),
   recentes: (a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')),
-  numero: (a, b) => (b.numero || 1e9) - (a.numero || 1e9)
+  numero: (a, b) => (b.numero || 1e9) - (a.numero || 1e9),
+  // finais 01, 02… 12; dentro do mesmo final, do andar mais baixo para o mais alto
+  apto: (a, b) => { const x = aptoNum(a), y = aptoNum(b);
+    if (x == null || y == null) return (x == null) - (y == null) || iPav(a.pavimento) - iPav(b.pavimento) || (a.numero || 1e9) - (b.numero || 1e9);
+    return x % 100 - y % 100 || Math.floor(x / 100) - Math.floor(y / 100) || (a.numero || 1e9) - (b.numero || 1e9); }
 };
 function filtrar(its) {
   const q = F.q.trim().toLowerCase();
