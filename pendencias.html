@@ -226,6 +226,16 @@ main{max-width:1240px;margin:0 auto;padding:14px 16px 24px;display:grid;gap:14px
 .an-cores [data-c][aria-pressed="true"]{outline:3px solid #62aed3;outline-offset:2px}
 .an-desf{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px;font:600 .82rem var(--f-body);margin-left:6px}
 .an-dica{margin:0;text-align:center;font-size:.76rem;color:#9fb6c6}
+.an-dica[hidden],.an-sel[hidden]{display:none}
+.an-sel{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.an-sel button{min-width:46px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;font:700 .84rem var(--f-body)}
+.an-sel button.ok{background:#62aed3;border-color:#62aed3;color:#06202e}
+.an-txt{position:absolute;inset:0;z-index:3;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:calc(70px + env(safe-area-inset-top,0px)) 14px 14px}
+.an-txt-c{width:min(420px,100%);background:#14222e;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px;display:grid;gap:8px}
+.an-txt-c label{font:700 .8rem var(--f-body);color:#9fb6c6}
+.an-txt-c textarea{width:100%;font:600 1rem var(--f-body);padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:#0b141b;color:#fff;resize:vertical}
+.an-txt-b{display:flex;gap:8px;justify-content:flex-end}
+.an-txt-b .btn.ghost{color:#fff;border-color:rgba(255,255,255,.4)}
 /* botão flutuante */
 .fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:var(--accent-ink);border:0;border-radius:28px;padding:14px 20px;font:700 1rem var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.28)}
 
@@ -554,7 +564,8 @@ function editarFoto(x) {
       <div class="an-area"><canvas></canvas></div>
       <div class="an-bar"><div class="an-ferr">${ANOT_FERR.map(([k, r, ic]) => `<button type="button" data-f="${k}" aria-pressed="${k === ferr}" title="${r}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg><span>${r.split(' ')[0]}</span></button>`).join('')}</div>
         <div class="an-cores">${ANOT_CORES.map(c => `<button type="button" data-c="${c}" aria-pressed="${c === cor}" style="--c:${c}" aria-label="Cor"></button>`).join('')}<button type="button" class="an-desf" data-a="desfazer" title="Desfazer">↶ Desfazer</button></div>
-        <p class="an-dica">Arraste sobre a foto para marcar. No Texto, toque onde quer escrever.</p></div>`;
+        <p class="an-dica">Arraste sobre a foto para marcar. No Texto, toque onde quer escrever; depois arraste o texto para mover.</p>
+        <div class="an-sel" hidden><button type="button" data-s="menor" title="Diminuir">A−</button><button type="button" data-s="maior" title="Aumentar">A+</button><button type="button" data-s="editar">Editar</button><button type="button" data-s="apagar">Apagar</button><button type="button" data-s="ok" class="ok">OK</button></div></div>`;
     document.body.appendChild(box);
     const cv = box.querySelector('canvas'), ctx = cv.getContext('2d');
     const url = URL.createObjectURL(x.orig); const img = new Image();
@@ -564,6 +575,14 @@ function editarFoto(x) {
     const lw = Math.max(4, Math.round(Math.max(cv.width, cv.height) / 140));
     const fonte = Math.max(18, Math.round(Math.max(cv.width, cv.height) / 26));
     const escuro = c => ['#ffffff', '#f5c400'].includes(c);
+    const FT0 = Math.max(16, Math.round(Math.max(cv.width, cv.height) / 34));   // tamanho inicial do texto
+    // caixa do texto (centro em f.a, tamanho f.k), sempre dentro da foto
+    function caixa(f) {
+      const fs = Math.round((f.k ? FT0 * f.k : fonte)); ctx.save(); ctx.font = `700 ${fs}px system-ui, -apple-system, sans-serif`;
+      const linhas = String(f.s).split('\n'), pad = fs * .35, w = Math.max(...linhas.map(l => ctx.measureText(l).width)) + pad * 2, hh = linhas.length * fs * 1.2 + pad * 1.6; ctx.restore();
+      const bx = Math.min(Math.max(0, f.a[0] - w / 2), Math.max(0, cv.width - w)), by = Math.min(Math.max(0, f.a[1] - hh / 2), Math.max(0, cv.height - hh));
+      return { fs, linhas, pad, w, hh, bx, by };
+    }
     function forma(f) {
       ctx.save(); ctx.strokeStyle = f.c; ctx.fillStyle = f.c; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = lw;
@@ -574,37 +593,86 @@ function editarFoto(x) {
       else if (f.t === 'ret') { ctx.strokeRect(Math.min(f.a[0], f.b[0]), Math.min(f.a[1], f.b[1]), Math.abs(f.b[0] - f.a[0]), Math.abs(f.b[1] - f.a[1])); }
       else if (f.t === 'livre') { ctx.beginPath(); f.p.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.stroke(); }
       else if (f.t === 'texto') {
-        ctx.font = `700 ${fonte}px system-ui, -apple-system, sans-serif`; ctx.textBaseline = 'top';
-        const linhas = String(f.s).split('\n'), pad = fonte * .35, w = Math.max(...linhas.map(l => ctx.measureText(l).width)) + pad * 2, hh = linhas.length * fonte * 1.2 + pad * 1.6;
-        const bx = Math.min(Math.max(0, f.a[0] - w / 2), cv.width - w), by = Math.min(Math.max(0, f.a[1] - hh / 2), cv.height - hh);
-        ctx.fillRect(bx, by, w, hh); ctx.shadowBlur = 0; ctx.fillStyle = escuro(f.c) ? '#111' : '#fff';
-        linhas.forEach((l, i) => ctx.fillText(l, bx + pad, by + pad * .8 + i * fonte * 1.2));
+        const k = caixa(f); ctx.font = `700 ${k.fs}px system-ui, -apple-system, sans-serif`; ctx.textBaseline = 'top';
+        ctx.fillRect(k.bx, k.by, k.w, k.hh); ctx.shadowBlur = 0; ctx.fillStyle = escuro(f.c) ? '#111' : '#fff';
+        k.linhas.forEach((l, i) => ctx.fillText(l, k.bx + k.pad, k.by + k.pad * .8 + i * k.fs * 1.2));
       }
       ctx.restore();
     }
-    const pintar = () => { ctx.drawImage(img, 0, 0); formas.forEach(forma); if (atual) forma(atual); };
-    pintar();
+    let sel = null, modo = null, toque = null, editando = false;
+    const escalaTela = () => { const r = cv.getBoundingClientRect(); return r.width ? cv.width / r.width : 1; };
+    // texto selecionado: moldura tracejada e alça no canto (só na tela, não vai para a foto)
+    function moldura(f) {
+      const k = caixa(f), e = escalaTela(), m = 6 * e, r = 13 * e;
+      ctx.save(); ctx.setLineDash([10 * e, 7 * e]); ctx.lineWidth = 3 * e; ctx.strokeStyle = '#62aed3'; ctx.strokeRect(k.bx - m, k.by - m, k.w + m * 2, k.hh + m * 2); ctx.setLineDash([]);
+      // a bolinha fica sempre dentro da foto (texto encostado na borda)
+      const hx = Math.min(k.bx + k.w + m, cv.width - r - 2 * e), hy = Math.min(k.by + k.hh + m, cv.height - r - 2 * e);
+      ctx.fillStyle = '#62aed3'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * e; ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore(); return { hx, hy, r };
+    }
+    const pintar = () => { ctx.drawImage(img, 0, 0); formas.forEach(forma); if (atual) forma(atual); if (sel) moldura(sel); barraSel(); };
+    // histórico para o Desfazer (inclui mover, mudar o tamanho, editar e apagar textos)
+    const hist = []; const marco = () => { hist.push(JSON.stringify(formas)); if (hist.length > 60) hist.shift(); };
     const pos = ev => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; };
+    const textoEm = p => { for (let i = formas.length - 1; i >= 0; i--) { const f = formas[i]; if (f.t !== 'texto') continue; const k = caixa(f), m = 8 * escalaTela();
+      if (p[0] >= k.bx - m && p[0] <= k.bx + k.w + m && p[1] >= k.by - m && p[1] <= k.by + k.hh + m) return f; } return null; };
+    // barra do texto selecionado
+    const bs = box.querySelector('.an-sel'), dica = box.querySelector('.an-dica');
+    function barraSel() { bs.hidden = !sel; dica.hidden = !!sel; }
+    const tamanho = d => { if (!sel) return; marco(); sel.k = Math.min(4, Math.max(.35, +((sel.k || fonte / FT0) * d).toFixed(3))); pintar(); };
+    bs.querySelector('[data-s="menor"]').onclick = () => tamanho(1 / 1.2);
+    bs.querySelector('[data-s="maior"]').onclick = () => tamanho(1.2);
+    bs.querySelector('[data-s="editar"]').onclick = () => { if (sel) editorTexto(sel.s, s2 => { marco(); sel.s = s2; pintar(); }); };
+    bs.querySelector('[data-s="apagar"]').onclick = () => { if (!sel) return; marco(); formas.splice(formas.indexOf(sel), 1); sel = null; pintar(); };
+    bs.querySelector('[data-s="ok"]').onclick = () => { sel = null; pintar(); };
+    // editor de texto dentro da tela (no lugar da caixa do navegador)
+    function editorTexto(ini, ok) {
+      editando = true; const ed = document.createElement('div'); ed.className = 'an-txt';
+      ed.innerHTML = `<div class="an-txt-c"><label>Texto na foto</label><textarea rows="2" maxlength="140" placeholder="Ex.: falta montante"></textarea>
+        <div class="an-txt-b"><button type="button" class="btn ghost" data-t="c">Cancelar</button><button type="button" class="btn" data-t="ok">OK</button></div></div>`;
+      box.appendChild(ed); const ta = ed.querySelector('textarea'); ta.value = ini || ''; setTimeout(() => ta.focus(), 50);
+      const fecha = v => { ed.remove(); setTimeout(() => { editando = false; }, 250); if (v) ok(v); };
+      ed.querySelector('[data-t="c"]').onclick = () => fecha('');
+      ed.querySelector('[data-t="ok"]').onclick = () => fecha(ta.value.trim());
+      ed.addEventListener('pointerdown', ev => ev.stopPropagation());
+    }
+    pintar();
     cv.addEventListener('pointerdown', ev => {
-      ev.preventDefault(); const p = pos(ev);
-      if (ferr === 'texto') {
-        const s = (prompt('Texto para escrever na foto:') || '').trim(); if (s) { formas.push({ t: 'texto', a: p, s, c: cor }); pintar(); } return; }
+      ev.preventDefault(); if (editando) return; const p = pos(ev);
+      // texto: tocar nele seleciona; arrastar move; a bolinha do canto muda o tamanho
+      if (sel) { const h = moldura(sel); if (Math.hypot(p[0] - h.hx, p[1] - h.hy) <= h.r * 1.8) {
+        const k = caixa(sel); marco(); modo = { t: 'escala', cx: k.bx + k.w / 2, cy: k.by + k.hh / 2, d0: Math.max(1, Math.hypot(p[0] - (k.bx + k.w / 2), p[1] - (k.by + k.hh / 2))), k0: sel.k || fonte / FT0 };
+        cv.setPointerCapture(ev.pointerId); return; } }
+      const t = textoEm(p);
+      if (t) { sel = t; const k = caixa(t); marco(); modo = { t: 'mover', dx: p[0] - (k.bx + k.w / 2), dy: p[1] - (k.by + k.hh / 2), mexeu: false }; cv.setPointerCapture(ev.pointerId); pintar(); return; }
+      if (sel) { sel = null; pintar(); if (ferr === 'texto') return; }   // com o Texto, tocar fora só tira a seleção
+      if (ferr === 'texto') { toque = { p, x: ev.clientX, y: ev.clientY }; return; }   // o texto abre ao soltar (um toque, sem arrastar)
       cv.setPointerCapture(ev.pointerId);
       atual = ferr === 'livre' ? { t: 'livre', p: [p], c: cor } : { t: ferr, a: p, b: p, c: cor };
     });
-    cv.addEventListener('pointermove', ev => { if (!atual) return; const p = pos(ev); if (atual.t === 'livre') atual.p.push(p); else atual.b = p; pintar(); });
-    const solta = () => { if (!atual) return; const f = atual; atual = null;
+    cv.addEventListener('pointermove', ev => {
+      if (modo && sel) { const p = pos(ev);
+        if (modo.t === 'mover') { sel.a = [p[0] - modo.dx, p[1] - modo.dy]; modo.mexeu = true; }
+        else { sel.k = Math.min(4, Math.max(.35, modo.k0 * Math.hypot(p[0] - modo.cx, p[1] - modo.cy) / modo.d0)); sel.a = [modo.cx, modo.cy]; }
+        pintar(); return; }
+      if (!atual) return; const p = pos(ev); if (atual.t === 'livre') atual.p.push(p); else atual.b = p; pintar(); });
+    const solta = ev => {
+      if (modo) { if (modo.t === 'mover' && !modo.mexeu) hist.pop(); modo = null; pintar(); return; }
+      if (toque) { const t0 = toque; toque = null; if (ev.type === 'pointerup' && Math.hypot(ev.clientX - t0.x, ev.clientY - t0.y) < 12 && !editando)
+        editorTexto('', s2 => { marco(); const f = { t: 'texto', a: t0.p, s: s2, c: cor, k: 1 }; formas.push(f); sel = f; pintar(); }); return; }
+      if (!atual) return; const f = atual; atual = null;
       const util = f.t === 'livre' ? f.p.length > 2 : Math.hypot(f.b[0] - f.a[0], f.b[1] - f.a[1]) > lw * 2;
-      if (util) formas.push(f); pintar(); };
+      if (util) { marco(); formas.push(f); } pintar(); };
     cv.addEventListener('pointerup', solta); cv.addEventListener('pointercancel', solta);
     const sair = ok => { box.remove(); URL.revokeObjectURL(url); cv.width = cv.height = 0; fim(ok); };
     box.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { ferr = b.dataset.f; box.querySelectorAll('[data-f]').forEach(z => z.setAttribute('aria-pressed', String(z === b))); });
-    box.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { cor = b.dataset.c; box.querySelectorAll('[data-c]').forEach(z => z.setAttribute('aria-pressed', String(z === b))); });
-    box.querySelector('[data-a="desfazer"]').onclick = () => { formas.pop(); pintar(); };
+    box.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { cor = b.dataset.c; box.querySelectorAll('[data-c]').forEach(z => z.setAttribute('aria-pressed', String(z === b)));
+      if (sel && sel.c !== cor) { marco(); sel.c = cor; pintar(); } });
+    box.querySelector('[data-a="desfazer"]').onclick = () => { if (!hist.length) return; const v = JSON.parse(hist.pop()); formas.splice(0, formas.length, ...v); sel = null; pintar(); };
     box.querySelector('[data-a="cancelar"]').onclick = () => sair(false);
     box.querySelector('[data-a="ok"]').onclick = async () => {
       if (!formas.length) { x.formas = []; if (x.blob !== x.orig) { URL.revokeObjectURL(x.url); x.blob = x.orig; x.url = URL.createObjectURL(x.orig); } sair(true); return; }
-      pintar(); const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .85); } catch (e) { r(null); } });
+      sel = null; pintar(); const b = await new Promise(r => { try { cv.toBlob(r, 'image/jpeg', .85); } catch (e) { r(null); } });
       if (!b) { toast('Não foi possível salvar a marcação. Tente de novo.'); return; }
       const b2 = x.geo && window.FotoGeo ? await FotoGeo.regravar(b, x.geo) : b; URL.revokeObjectURL(x.url); x.blob = b2; x.url = URL.createObjectURL(b2); x.formas = formas; sair(true);
     };
