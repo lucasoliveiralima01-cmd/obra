@@ -213,6 +213,9 @@ table.fr th:first-child,table.fr td:first-child{text-align:left;position:sticky;
 .ap{display:grid;gap:1px;text-align:left;background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:6px 8px;color:inherit;min-width:0}
 .ap:hover{border-color:var(--accent)}
 .ap b{font:700 .88rem var(--f-body)} .ap small{font-size:.74rem;color:var(--muted);overflow-wrap:anywhere}
+.mvsel{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer}
+.mvsel input{margin-top:3px;width:18px;height:18px;flex:none} .mvsel small{display:block;color:var(--muted);font-size:.78rem}
+.ap small.et{color:var(--ink)} .ap small.et .okk{color:var(--ok);font-weight:700}
 .ap.parcial{border-left-color:var(--warn)} .ap.ok{border-left-color:var(--ok)} .ap.acima{border-left-color:var(--bad)} .ap.mist{box-shadow:inset 0 0 0 2px var(--bad)}
 /* estimativa */
 .tw{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
@@ -325,11 +328,12 @@ const PAV_PADRAO = ['Térreo', 'Pavimento 02', 'Pavimento 03', 'Pavimento 04', '
 // ofícios de quem assenta cerâmica (aparecem primeiro na entrega)
 const ASSENTA = ['azulejista', 'ceramista', 'revestimento', 'ladrilheiro', 'assentador'];
 const TIPOS = { entrega: 'Entrega', devolucao: 'Devolução', quebra: 'Quebra', ajuste: 'Ajuste' };
+const ETAPAS = { piso: 'Piso', parede: 'Parede', completo: 'Completo' };
 
 let NV = null, sb = null, OBRA = null, OBRA_NOME = '';
 let CFG = { pavimentos: [] }, PROD = [], EST = [], PAL = [], MOV = [], FUNC = [];
 let TAB = 'entregas';
-const ULT = { func: '', pav: '' };   // última pessoa e pavimento escolhidos (entregas em sequência)
+const ULT = { func: '', pav: '', etapa: 'piso' };   // última pessoa e pavimento escolhidos (entregas em sequência)
 const F = { pav: '', func: '', tipo: '' };
 
 /* ---------------- quem pode o quê (o banco confere de novo) ---------------- */
@@ -379,12 +383,29 @@ function ambientesDe(un, produto) {
   return a.sort((x, y) => (x.ordem || 0) - (y.ordem || 0));
 }
 const estDe = (un, amb, produto) => ambientesDe(un, produto).find(e => e.ambiente === amb) || null;
-// o que já foi para um destino: peças líquidas e as partidas
+// o que já foi para um destino: peças líquidas (total e por etapa) e as partidas
 function noDestino(pav, un, amb, exceto) {
-  const r = { pecas: 0, partidas: new Map(), movs: [] };
+  const r = { pecas: 0, piso: 0, parede: 0, sem: 0, partidas: new Map(), movs: [] };
   for (const m of MOV) { if (m.id === exceto || destK(m.pavimento, m.unidade, m.ambiente) !== destK(pav, un, amb) || !['entrega', 'devolucao'].includes(m.tipo)) continue;
-    r.movs.push(m); r.pecas += m.tipo === 'entrega' ? m.pecas : -m.pecas; const p = palDe(m.pallet); if (p && m.tipo === 'entrega') r.partidas.set(partidaK(p), p); }
+    const v = m.tipo === 'entrega' ? m.pecas : -m.pecas; r.movs.push(m); r.pecas += v; r[m.etapa === 'piso' || m.etapa === 'parede' ? m.etapa : 'sem'] += v;
+    const p = palDe(m.pallet); if (p && m.tipo === 'entrega') r.partidas.set(partidaK(p), p); }
   return r;
+}
+/* Etapas do banheiro: primeiro o piso, depois (com o piso curado) a parede.
+   Piso = as peças da parte "Piso" da estimativa; Parede = o resto (parede, rodapé e a perda).
+   Entrega antiga, sem etapa, conta primeiro para o piso. O que passa do piso (sobra da caixa) conta para a parede.
+   Trava: piso + parede nunca passa do total do banheiro. */
+function etapasDe(e) {
+  if (!e) return null; const pt = (e.partes || []).find(x => /^piso$/i.test(String(x.parte || '').trim()));
+  const tot = totalEst(e), piso = pt ? pecasParte(pt, prodDe(e.produto)) : 0;
+  return piso > 0 && piso < tot ? { tot, piso, parede: tot - piso } : null;
+}
+function faltas(pav, un, amb, produto) {
+  const e = estDe(un || null, amb, produto); if (!e) return null;
+  const d = noDestino(pav, un, amb), tot = totalEst(e), et = etapasDe(e), resto = Math.max(0, tot - d.pecas);
+  if (!et) return { e, d, tot, et: null, total: resto, piso: resto, parede: resto };
+  const piso = Math.min(Math.max(0, et.piso - Math.max(0, d.piso + d.sem)), resto);
+  return { e, d, tot, et, total: resto, piso, parede: Math.max(0, resto - piso), pisoEnt: et.piso - Math.max(0, et.piso - Math.max(0, d.piso + d.sem)) };
 }
 
 /* ---------------- dados ---------------- */
@@ -478,10 +499,11 @@ function renderEntregas() {
       <select class="fsel${F.func ? ' on' : ''}" id="fFunc" aria-label="Pessoa"><option value="">Todas as pessoas</option>${pess.map(n => `<option ${n === F.func ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
     </div>
     ${vis.length ? [...dias.entries()].map(([d, ms]) => `<section class="dia"><h3>${d === diaDe(new Date()) ? 'Hoje' : fmtD(d + 'T12:00:00')}</h3>${ms.map(m => { const p = palDe(m.pallet) || {}, n = p.id ? pcx(p) : 6;
-        return `<div class="mv ${m.tipo}"><span class="h">${fmtH(m.em)}</span><span class="t">${m.tipo === 'entrega' ? esc(m.funcionario_nome || 'Sem pessoa') + ' · ' + esc(locTxt(m)) : TIPOS[m.tipo] + (m.unidade || m.pavimento ? ' · ' + esc(destTxt(m)) : '')}
+        return `<div class="mv ${m.tipo}"><span class="h">${fmtH(m.em)}</span><span class="t">${m.tipo === 'entrega' ? esc(m.funcionario_nome || 'Sem pessoa') + ' · ' + esc(locTxt(m)) + (m.etapa ? ' <span class="tag">' + ETAPAS[m.etapa] + '</span>' : '') : TIPOS[m.tipo] + (m.unidade || m.pavimento ? ' · ' + esc(destTxt(m)) : '')}
           <small>${esc(plt(p))} · ${esc(partidaTxt(p))} · por ${esc(nomeDe(m.por))}${m.obs ? ' · ' + esc(m.obs) : ''}${m.excecao ? ' · <b style="color:var(--bad)">outra partida liberada pela Engenharia: ' + esc(m.excecao) + '</b>' : ''}</small></span>
-          <span style="display:grid;justify-items:end"><span class="q">${m.tipo === 'devolucao' ? '+' : ''}${fmtQ(m.pecasT, n)}</span>${podeApagar(m) ? `<button type="button" class="x" data-del="${esc(m.entrega || m.id)}" data-ent="${m.entrega ? 1 : ''}">Desfazer</button>` : ''}</span></div>`; }).join('')}</section>`).join('')
+          <span style="display:grid;justify-items:end"><span class="q">${m.tipo === 'devolucao' ? '+' : ''}${fmtQ(m.pecasT, n)}</span>${edita() && ['entrega', 'devolucao'].includes(m.tipo) ? `<button type="button" class="x" data-cor='${esc(JSON.stringify(m.locais.map(x => x.id)))}'>Corrigir</button>` : ''}${podeApagar(m) ? `<button type="button" class="x" data-del="${esc(m.entrega || m.id)}" data-ent="${m.entrega ? 1 : ''}">Desfazer</button>` : ''}</span></div>`; }).join('')}</section>`).join('')
       : `<div class="vazio"><h3>${MOV.length ? 'Nenhum movimento com estes filtros' : 'Nenhuma entrega registrada'}</h3><p class="muted" style="margin:0">${estoque() ? 'Para entregar, toque em <b>Ler etiqueta</b> e aponte o celular para o código do pallet.' : 'As entregas do almoxarifado aparecem aqui.'}</p></div>`}`;
+  B.querySelectorAll('[data-cor]').forEach(b => b.onclick = () => corrigirDestino(JSON.parse(b.dataset.cor)));
   $('fTipo').onchange = e => { F.tipo = e.target.value; renderEntregas(); };
   $('fPav').onchange = e => { F.pav = e.target.value; renderEntregas(); };
   $('fFunc').onchange = e => { F.func = e.target.value; renderEntregas(); };
@@ -497,6 +519,12 @@ function situacao(pav, un, e) {
   const k = d.pecas <= 0 ? '' : d.pecas > lim ? 'acima' : d.pecas >= est ? 'ok' : 'parcial';
   return { d, est, k, mist: d.partidas.size > 1 };
 }
+// "Piso ✓ · Parede falta 4 cx" (só quando o ambiente tem as etapas e já recebeu algo)
+function etapaTxt(pav, un, e) {
+  const x = faltas(pav, un, e.ambiente, e.produto); if (!x || !x.et || x.d.pecas <= 0 || x.total === 0) return '';
+  const np = pcx({ produto: e.produto }), q = v => v ? 'falta ' + fmtQ(v, np) : '✓';
+  return `<small class="et"><span class="${x.piso ? '' : 'okk'}">Piso ${q(x.piso)}</span> · <span class="${x.parede ? '' : 'okk'}">Parede ${q(x.parede)}</span></small>`;
+}
 function renderAptos() {
   const B = $('tabBody'); const n = +((PROD[0] || PROD0).pecas_cx) || 6;
   const pavs = CFG.pavimentos.filter(p => (p.unidades || []).some(u => ambientesDe(u).length) || ambientesDe(null).length);
@@ -505,7 +533,7 @@ function renderAptos() {
     const cel = [];
     for (const u of p.unidades || []) for (const e of ambientesDe(u)) { const s = situacao(p.nome, u, e); nTot++; if (s.k === 'ok') nOk++; else if (s.k === 'parcial') nPar++; else if (s.k === 'acima') nAc++; if (s.mist) nMist++;
       const np = pcx({ produto: e.produto });
-      cel.push(`<button type="button" class="ap ${s.k}${s.mist ? ' mist' : ''}" data-ap='${esc(JSON.stringify([p.nome, u, e.ambiente]))}'><b>${esc(u)}${ambientesDe(u).length > 1 ? ' · ' + esc(e.ambiente.replace(/^Banheiro\s*/i, '') || e.ambiente) : ''}</b><small>${s.d.pecas ? fmtQ(s.d.pecas, np) + ' de ' + Math.ceil(s.est / np) + ' cx' : Math.ceil(s.est / np) + ' cx · nada entregue'}${s.mist ? ' · <b style="color:var(--bad)">2 partidas</b>' : ''}</small></button>`); }
+      cel.push(`<button type="button" class="ap ${s.k}${s.mist ? ' mist' : ''}" data-ap='${esc(JSON.stringify([p.nome, u, e.ambiente]))}'><b>${esc(u)}${ambientesDe(u).length > 1 ? ' · ' + esc(e.ambiente.replace(/^Banheiro\s*/i, '') || e.ambiente) : ''}</b><small>${s.d.pecas ? fmtQ(s.d.pecas, np) + ' de ' + Math.ceil(s.est / np) + ' cx' : Math.ceil(s.est / np) + ' cx · nada entregue'}${s.mist ? ' · <b style="color:var(--bad)">2 partidas</b>' : ''}</small>${etapaTxt(p.nome, u, e)}</button>`); }
     for (const e of ambientesDe(null)) { const s = situacao(p.nome, '', e); nTot++; const np = pcx({ produto: e.produto });
       cel.push(`<button type="button" class="ap ${s.k}${s.mist ? ' mist' : ''}" data-ap='${esc(JSON.stringify([p.nome, '', e.ambiente]))}'><b>${esc(e.ambiente)}</b><small>${s.d.pecas ? fmtQ(s.d.pecas, np) + ' de ' + Math.ceil(s.est / np) + ' cx' : Math.ceil(s.est / np) + ' cx · nada entregue'}</small></button>`); }
     return cel.length ? `<section class="pav"><h3>${esc(p.nome)}</h3><div class="aps">${cel.join('')}</div></section>` : '';
@@ -523,8 +551,69 @@ function fichaDestino(pav, un, amb) {
   openSheet((un ? 'Apto ' + un : pav) + ' · ' + amb, `<div style="display:grid;gap:12px">
     ${e ? `<div class="tot"><span>Estimado: <b>${est} peças (${fmtCx(est, np)})</b>${+e.perda ? ' · com ' + n2(e.perda) + '% de perda' : ''}</span><span>Entregue: <b>${d.pecas} peças (${fmtQ(d.pecas, np)})</b>${d.pecas > limCx(est, np) ? ' · <b style="color:var(--bad)">' + (d.pecas - est) + ' peças acima</b>' : d.pecas > est ? ' · ' + (d.pecas - est) + ' peças de sobra da última caixa' : d.pecas < est ? ' · faltam ' + (est - d.pecas) + ' peças' : ''}</span></div>` : ''}
     ${d.partidas.size > 1 ? `<div class="aviso2 bad"><b>Este ambiente recebeu ${d.partidas.size} partidas diferentes.</b> Tonalidade, tamanho ou lote diferentes no mesmo ambiente podem dar diferença de cor ou de junta. Confira antes de assentar.<br>${[...d.partidas.values()].map(p => esc(partidaTxt(p))).join('<br>')}</div>` : ''}
+    ${(() => { const x = e ? faltas(pav, un, amb, e.produto) : null; if (!x || !x.et) return '';
+      const lin = (t, est, falta) => `<span>${t}: estimado <b>${est} peças (${fmtQ(est, np)})</b> · ${falta ? 'falta <b>' + fmtQ(falta, np) + '</b>' : '<b style="color:var(--ok)">entregue ✓</b>'}</span>`;
+      return `<div class="tot">${lin('Piso', x.et.piso, x.piso)}${lin('Parede e rodapé', x.et.parede, x.parede)}</div>`; })()}
     <h4 style="margin:0;font:700 1rem var(--f-disp)">Movimentos (${d.movs.length})</h4>
-    ${d.movs.length ? d.movs.map(m => { const p = palDe(m.pallet) || {}; return `<div class="mv ${m.tipo}"><span class="h">${fmtD(m.em)}</span><span class="t">${TIPOS[m.tipo]}${m.funcionario_nome ? ' · ' + esc(m.funcionario_nome) : ''}<small>${esc(plt(p))} · ${esc(partidaTxt(p))}</small></span><span class="q">${fmtQ(m.pecas, np)}</span></div>`; }).join('') : '<p class="muted" style="margin:0">Nada entregue ainda.</p>'}</div>`, '');
+    ${d.movs.length ? d.movs.map(m => { const p = palDe(m.pallet) || {}; return `<div class="mv ${m.tipo}"><span class="h">${fmtD(m.em)}</span><span class="t">${TIPOS[m.tipo]}${m.etapa ? ' <span class="tag">' + ETAPAS[m.etapa] + '</span>' : ''}${m.funcionario_nome ? ' · ' + esc(m.funcionario_nome) : ''}<small>${esc(plt(p))} · ${esc(partidaTxt(p))}${m.obs ? ' · ' + esc(m.obs) : ''}</small></span><span class="q">${fmtQ(m.pecas, np)}</span></div>`; }).join('') : '<p class="muted" style="margin:0">Nada entregue ainda.</p>'}
+    ${edita() && d.movs.length ? `<button type="button" class="btn ghost" id="dCor">Corrigir destino ou etapa destas entregas</button>` : ''}</div>`, '');
+  if ($('dCor')) $('dCor').onclick = () => corrigirDestino(d.movs.map(m => m.id));
+}
+
+/* ---------------- Corrigir o destino (e a etapa) de entregas já feitas ----------------
+   Para quando o material foi usado em outro lugar do que o registrado (ex.: entregue para o
+   401, assentado no 407). Só Engenharia e administradores. O banco confere de novo o saldo e a
+   regra de uma partida por andar; a observação guarda de onde veio. */
+function corrigirDestino(ids) {
+  const movs = ids.map(id => MOV.find(m => m.id === id)).filter(Boolean); if (!movs.length) return;
+  const m0 = movs[0], prod = (palDe(m0.pallet) || {}).produto;
+  const f = { sel: new Set(movs.map(m => m.id)), pav: m0.pavimento || '', un: m0.unidade || '', amb: m0.ambiente || '', etapa: 'manter' };
+  const desenhar = () => {
+    const uns = f.pav ? unidadesDe(f.pav) : [], ambs = f.pav ? ambientesDe(f.un || null, prod) : [];
+    if (ambs.length === 1) f.amb = ambs[0].ambiente; else if (ambs.length && !ambs.some(e => e.ambiente === f.amb)) f.amb = '';
+    const escolhidos = movs.filter(m => f.sel.has(m.id)), q = escolhidos.reduce((a, m) => a + (m.tipo === 'entrega' ? m.pecas : -m.pecas), 0), np = pcx(palDe(m0.pallet) || {});
+    const mesmo = escolhidos.length && escolhidos.every(m => m.pavimento === f.pav && (m.unidade || '') === (f.un || '') && m.ambiente === f.amb);
+    const x = f.pav && f.amb ? faltas(f.pav, f.un, f.amb, prod) : null;
+    const depois = x ? x.d.pecas + (mesmo ? 0 : q) : 0;
+    openSheet('Corrigir destino', `<div style="display:grid;gap:12px">
+      <p class="muted" style="margin:0">Use quando o material foi usado em outro lugar do que o registrado. A entrega continua com a mesma data, pessoa e pallet; muda só para onde foi${movs.some(m => m.tipo === 'entrega') ? ' (e, se quiser, a etapa)' : ''}.</p>
+      <div class="fld"><span class="l">Entregas a corrigir</span><div style="display:grid;gap:6px">${movs.map(m => `<label class="mvsel"><input type="checkbox" data-m="${esc(m.id)}" ${f.sel.has(m.id) ? 'checked' : ''}>
+        <span><b>${esc(destTxt(m))}</b>${m.etapa ? ' <span class="tag">' + ETAPAS[m.etapa] + '</span>' : ''}<small>${TIPOS[m.tipo]} · ${fmtD(m.em)}${m.funcionario_nome ? ' · ' + esc(m.funcionario_nome) : ''} · ${fmtQ(m.pecas, np)}</small></span></label>`).join('')}</div></div>
+      <div class="fld"><span class="l">Foi usado em (pavimento)</span><div class="opts">${CFG.pavimentos.map(x => `<button type="button" class="opt" data-pav="${esc(x.nome)}" aria-pressed="${f.pav === x.nome}">${esc(x.nome)}</button>`).join('')}</div></div>
+      ${f.pav && (uns.length || ambientesDe(null, prod).length) ? `<div class="fld"><span class="l">Apartamento</span><div class="opts">${uns.map(u => `<button type="button" class="opt" data-un="${esc(u)}" aria-pressed="${f.un === u}">${esc(u)}</button>`).join('')}${ambientesDe(null, prod).length ? `<button type="button" class="opt" data-un="" aria-pressed="${!f.un}">Áreas do pavimento</button>` : ''}</div></div>` : ''}
+      ${ambs.length > 1 ? `<div class="fld"><span class="l">Ambiente</span><div class="opts">${ambs.map(e => `<button type="button" class="opt" data-amb="${esc(e.ambiente)}" aria-pressed="${f.amb === e.ambiente}">${esc(e.ambiente)}</button>`).join('')}</div></div>` : ''}
+      ${movs.some(m => m.tipo === 'entrega') ? `<div class="fld"><span class="l">Etapa</span><div class="opts">${[['manter', 'Manter como está'], ['piso', 'Piso'], ['parede', 'Parede'], ['sem', 'Banheiro completo']].map(([k, t]) => `<button type="button" class="opt" data-et="${k}" aria-pressed="${f.etapa === k}">${t}</button>`).join('')}</div></div>` : ''}
+      ${x ? `<div class="tot"><span>${esc(f.un ? 'Apto ' + f.un : f.pav)} · ${esc(f.amb)}: estimado <b>${fmtQ(x.tot, np)}</b> · já tem <b>${fmtQ(x.d.pecas, np)}</b></span><span>Depois da correção: <b>${fmtQ(depois, np)}</b>${depois > limCx(x.tot, np) ? ' · <b style="color:var(--bad)">acima do estimado</b>' : ''}</span></div>` : ''}
+    </div>`, `<span class="msg" id="cMsg"></span><button class="btn" type="button" id="cOk">Salvar correção</button>`, true);
+    const B = $('ovlB'), re = () => { const y = B.scrollTop; desenhar(); $('ovlB').scrollTop = y; };
+    B.querySelectorAll('[data-m]').forEach(c => c.onchange = () => { if (c.checked) f.sel.add(c.dataset.m); else f.sel.delete(c.dataset.m); re(); });
+    B.querySelectorAll('[data-pav]').forEach(b => b.onclick = () => { if (f.pav !== b.dataset.pav) { f.pav = b.dataset.pav; f.un = ''; f.amb = ''; } re(); });
+    B.querySelectorAll('[data-un]').forEach(b => b.onclick = () => { f.un = b.dataset.un; f.amb = ''; re(); });
+    B.querySelectorAll('[data-amb]').forEach(b => b.onclick = () => { f.amb = b.dataset.amb; re(); });
+    B.querySelectorAll('[data-et]').forEach(b => b.onclick = () => { f.etapa = b.dataset.et; re(); });
+    $('cOk').onclick = async () => {
+      const erro = t => { $('cMsg').className = 'msg err'; $('cMsg').textContent = t; };
+      const lista = movs.filter(m => f.sel.has(m.id));
+      if (!lista.length) return erro('Marque ao menos uma entrega.');
+      if (!f.pav || (unidadesDe(f.pav).length && !f.un && !ambientesDe(null, prod).length)) return erro('Escolha o apartamento.');
+      if (ambientesDe(f.un || null, prod).length && !f.amb) return erro('Escolha o ambiente.');
+      $('cOk').disabled = true; let feitas = 0;
+      const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), quem = nomeDe(NV.usuario.email);
+      for (const m of lista) {
+        const muda = m.pavimento !== f.pav || (m.unidade || '') !== (f.un || '') || (m.ambiente || null) !== (f.amb || null);
+        const c = { pavimento: f.pav, unidade: f.un || null, ambiente: f.amb || null };
+        if (m.tipo === 'entrega' && f.etapa !== 'manter') c.etapa = f.etapa === 'sem' ? null : f.etapa;
+        if (muda) c.obs = [m.obs, 'Corrigido em ' + hoje + ' por ' + quem + ' (era ' + destTxt(m) + ')'].filter(Boolean).join(' · ');
+        if (!muda && !('etapa' in c && c.etapa !== (m.etapa || null))) { feitas++; continue; }
+        const { error } = await sb.from('cer_movs').update(c).eq('id', m.id);
+        if (error) { $('cOk').disabled = false; await recarregar(); return erro((feitas ? feitas + ' corrigida(s); parou em ' + destTxt(m) + ': ' : '') + (/etapa/i.test(error.message || '') ? 'falta atualizar o banco (rode o banco.sql).' : erroMsg(error))); }
+        feitas++;
+      }
+      delete $('ovl').dataset.form; closeSheet(); await recarregar();
+      toast(feitas + ' entrega(s) corrigida(s) para ' + (f.un ? 'Apto ' + f.un : f.pav) + (f.amb ? ' · ' + f.amb : '') + '.', 6000);
+    };
+  };
+  desenhar();
 }
 
 /* ---------------- Estimativa ---------------- */
@@ -760,17 +849,21 @@ function outrasPartidas(pav, p) {
 function formEntrega(palId) {
   const p = palDe(palId); if (!p) return;
   const pr = prodDe(p.produto), n = pcx(p);
-  const f = { func: ULT.func, pav: ULT.pav || '', sel: [], cx: null, cxMao: false, pc: 0, obs: '', todos: false, exc: '' };
+  const f = { func: ULT.func, pav: ULT.pav || '', etapa: ULT.etapa || 'piso', sel: [], cx: null, cxMao: false, pc: 0, obs: '', todos: false, exc: '' };
   const assenta = FUNC.filter(x => (x.cargos || []).some(c => ASSENTA.includes(String(c).toLowerCase())));
   const K = d => destK(d.pav, d.un, d.amb);
   // quanto um local ainda precisa (peças), pela estimativa; null = sem estimativa
-  const precisa = d => { const e = estDe(d.un || null, d.amb, p.produto); if (!e) return null; return Math.max(0, totalEst(e) - noDestino(d.pav, d.un, d.amb).pecas); };
+  // na etapa escolhida (piso, parede ou o banheiro completo)
+  const precisa = d => { const x = faltas(d.pav, d.un, d.amb, p.produto); if (!x) return null; return f.etapa === 'completo' || !x.et ? x.total : x[f.etapa]; };
   const rot = d => (d.un ? d.un : 'Pav.') + (ambientesDe(d.un || null, p.produto).length > 1 || !d.un ? ' · ' + (d.un ? d.amb.replace(/^Banheiro\s*/i, '') || d.amb : d.amb) : '');
   const desenhar = () => {
     const s = saldo(p);
     const bloq = pav => outrasPartidas(pav, p);
     const N = f.sel.reduce((a, d) => a + (precisa(d) || 0), 0), B = Math.ceil(N / n - 1e-9);
-    if (!f.cxMao) { f.cx = f.sel.length ? B : null; f.pc = 0; }
+    // piso e parede: a quantidade exata (caixas + peças avulsas), para o banheiro fechar sem sobra; completo: caixas fechadas
+    if (!f.cxMao) { if (f.etapa === 'completo') { f.cx = f.sel.length ? B : null; f.pc = 0; } else { f.cx = f.sel.length ? Math.floor(N / n) : null; f.pc = f.sel.length ? N % n : 0; } }
+    // trava do banheiro: piso + parede nunca passa do total estimado (arredondado para a caixa)
+    const teto = f.sel.reduce((a, d) => { const x = faltas(d.pav, d.un, d.amb, p.produto); return a + (x ? Math.max(0, limCx(x.tot, n) - x.d.pecas) : 0); }, 0);
     const q = (f.cx || 0) * n + (f.pc || 0);
     // validação: as caixas têm que fechar com os locais (a última caixa pode sobrar umas peças)
     let ok = false, aviso = '';
@@ -778,6 +871,7 @@ function formEntrega(palId) {
     else if (!N) aviso = 'Os locais marcados já receberam tudo o estimado.';
     else if (q > s) aviso = `O pallet tem só ${fmtQ(s, n)}. Desmarque locais (os marcados precisam de ${fmtQ(N, n)}).`;
     else if (q > limCx(N, n)) aviso = `${fmtQ(q, n)} é mais do que os locais marcados usam (${B} cx). Marque mais locais ou diminua para ${B} cx.`;
+    else if (q > teto) aviso = `Com ${fmtQ(q, n)} o banheiro passa do total estimado. O máximo para os locais marcados é ${fmtQ(teto, n)}.`;
     else if (q <= (B - 1) * n) aviso = `${fmtQ(q, n)} não cobre os locais marcados (precisam de ${B} cx). Aumente para ${B} cx ou desmarque um local.`;
     else ok = true;
     const pavAtual = f.pav ? CFG.pavimentos.find(x => x.nome === f.pav) : null, uns = pavAtual ? pavAtual.unidades || [] : [];
@@ -792,6 +886,8 @@ function formEntrega(palId) {
       <div class="palinfo"><b>${esc(plt(p))} · ${esc(pr.nome)}</b><span class="tags"><span class="tag">${esc(partidaTxt(p))}</span>${p.qualidade ? `<span class="tag${p.qualidade !== 'A' ? ' warn' : ''}">Qual ${esc(p.qualidade)}</span>` : ''}</span><span>Saldo do pallet: <b>${fmtQ(s, n)}</b></span></div>
       <div class="fld"><span class="l">Para quem <span class="req">*</span></span><div class="opts">${(f.todos || !assenta.length ? FUNC : assenta).map(x => `<button type="button" class="opt" data-func="${esc(x.id)}" aria-pressed="${f.func === x.id}">${esc(x.nome)}</button>`).join('')}
         ${assenta.length && !f.todos ? '<button type="button" class="opt" data-todos style="border-style:dashed">Outra pessoa…</button>' : ''}</div>${!FUNC.length ? '<span class="muted">Nenhum funcionário cadastrado nesta obra (Listas e regras → Funcionários).</span>' : ''}</div>
+      <div class="fld"><span class="l">Para qual etapa <span class="req">*</span></span><div class="opts">${Object.entries(ETAPAS).map(([k, t]) => `<button type="button" class="opt" data-etapa="${k}" aria-pressed="${f.etapa === k}">${k === 'completo' ? 'Banheiro completo' : t}</button>`).join('')}</div>
+        <span class="muted" style="font-size:.82rem">${f.etapa === 'piso' ? 'Só o piso. A parede é entregue depois, com o piso curado.' : f.etapa === 'parede' ? 'Parede e rodapé: o saldo do banheiro depois do piso.' : 'Piso e parede juntos.'}</span></div>
       <div class="fld"><span class="l">Para onde <span class="req">*</span> <span style="text-transform:none;letter-spacing:0">(marque um ou vários locais)</span></span>
         <div class="opts">${CFG.pavimentos.map(x => { const b = bloq(x.nome).length, k = selDoPav(x.nome);
           return `<button type="button" class="opt" data-pav="${esc(x.nome)}" aria-pressed="${f.pav === x.nome}"${b ? ' style="border-color:var(--bad)"' : ''}>${esc(x.nome)}${k ? ' <b>(' + k + ')</b>' : ''}${b ? ' ⛔' : ''}</button>`; }).join('')}</div></div>
@@ -814,6 +910,7 @@ function formEntrega(palId) {
     Bx.querySelectorAll('[data-func]').forEach(b => b.onclick = () => { ler(); f.func = b.dataset.func; re(); });
     Bx.querySelectorAll('[data-todos]').forEach(b => b.onclick = () => { ler(); f.todos = true; re(); });
     Bx.querySelectorAll('[data-pav]').forEach(b => b.onclick = () => { ler(); f.pav = b.dataset.pav; re(); });
+    Bx.querySelectorAll('[data-etapa]').forEach(b => b.onclick = () => { ler(); f.etapa = b.dataset.etapa; f.sel = f.sel.filter(d => (precisa(d) || 0) > 0); f.cxMao = false; re(); });
     Bx.querySelectorAll('[data-sel]').forEach(b => b.onclick = () => { ler(); const d = JSON.parse(b.dataset.sel), k = K(d), i = f.sel.findIndex(x => K(x) === k); if (i >= 0) f.sel.splice(i, 1); else f.sel.push(d); f.cxMao = false; re(); });
     Bx.querySelectorAll('[data-tira]').forEach(b => b.onclick = () => { ler(); f.sel = f.sel.filter(x => K(x) !== b.dataset.tira); f.cxMao = false; re(); });
     if ($('eTodosPav')) $('eTodosPav').onclick = () => { ler(); if (outras.length && !liberadoPorExc) return; for (const d of locais) if ((precisa(d) || 0) > 0 && !f.sel.some(x => K(x) === K(d))) f.sel.push(d); f.cxMao = false; re(); };
@@ -832,14 +929,15 @@ function formEntrega(palId) {
       // reparte as peças: cada local recebe o que falta, e a sobra da última caixa fica no último
       const q2 = (f.cx || 0) * n + (f.pc || 0); let resta = q2; const ent = uuid(), fu = FUNC.find(x => x.id === f.func);
       const rows = f.sel.map((d, i) => { const dar = i === f.sel.length - 1 ? resta : Math.min(precisa(d) || 0, resta); resta -= dar;
-        return { id: uuid(), obra: OBRA, pallet: p.id, tipo: 'entrega', pecas: dar, pavimento: d.pav, unidade: d.un || null, ambiente: d.amb, entrega: ent,
+        const x = faltas(d.pav, d.un, d.amb, p.produto), et = f.etapa !== 'completo' && x && x.et ? f.etapa : null;
+        return { id: uuid(), obra: OBRA, pallet: p.id, tipo: 'entrega', pecas: dar, pavimento: d.pav, unidade: d.un || null, ambiente: d.amb, entrega: ent, etapa: et,
           funcionario: fu ? fu.id : null, funcionario_nome: fu ? fu.nome : null, obs: f.obs || null, excecao: pavsBloq.includes(d.pav) ? f.exc.trim() : null }; }).filter(r => r.pecas > 0);
       $('mOk').disabled = true;
       const { error } = await sb.from('cer_movs').insert(rows);
-      if (error) { $('mOk').disabled = false; return erro('Não foi possível: ' + erroMsg(error)); }
-      ULT.func = f.func; ULT.pav = f.pav;
+      if (error) { $('mOk').disabled = false; return erro(/etapa/i.test(error.message || '') ? 'Falta atualizar o banco: rode o banco.sql no Supabase (entrega por etapa).' : 'Não foi possível: ' + erroMsg(error)); }
+      ULT.func = f.func; ULT.pav = f.pav; ULT.etapa = f.etapa;
       delete $('ovl').dataset.form; closeSheet(); await recarregar();
-      toast('Entregue: ' + fmtQ(q2, n) + ' para ' + (fu ? fu.nome : '') + ' · ' + rows.length + ' local(is): ' + rows.map(r => (r.unidade || r.pavimento) + (ambientesDe(r.unidade || null, p.produto).length > 1 ? ' ' + r.ambiente.replace(/^Banheiro\s*/i, '') : '')).join(', ') + '.', 6000);
+      toast('Entregue (' + (f.etapa === 'completo' ? 'banheiro completo' : ETAPAS[f.etapa].toLowerCase()) + '): ' + fmtQ(q2, n) + ' para ' + (fu ? fu.nome : '') + ' · ' + rows.length + ' local(is): ' + rows.map(r => (r.unidade || r.pavimento) + (ambientesDe(r.unidade || null, p.produto).length > 1 ? ' ' + r.ambiente.replace(/^Banheiro\s*/i, '') : '')).join(', ') + '.', 6000);
     };
   };
   desenhar();

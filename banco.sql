@@ -808,6 +808,22 @@ $p26$;
 end $passo$;
 
 -- =====================================================================
+-- Passo 27: Cerâmicas: entrega por etapa (piso e parede)
+-- =====================================================================
+do $passo$ begin
+  if (select versao from public.banco_versao) >= 27 then return; end if;
+  execute $p27$
+-- o piso é assentado antes (e cura) e a parede depois: cada entrega diz para qual etapa foi
+-- (vazio = banheiro completo, como as entregas antigas)
+alter table public.cer_movs add column if not exists etapa text;
+alter table public.cer_movs drop constraint if exists cer_movs_etapa;
+alter table public.cer_movs add constraint cer_movs_etapa check (etapa is null or etapa in ('piso', 'parede'));
+$p27$;
+  update public.banco_versao set versao = 27, atualizado_em = now();
+  raise notice 'Passo 27 aplicado: entrega de cerâmica por etapa (piso e parede)';
+end $passo$;
+
+-- =====================================================================
 -- Conferência final
 -- =====================================================================
 do $fim$ begin
